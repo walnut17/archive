@@ -62,8 +62,119 @@ INSERT INTO user (username, display_name, password_hash, email, role_id, departm
 ('admin', '系统管理员', '$2a$10$wjN3YFZDlu.ThmfrRe0XvOA9A1AW2TybgeKAddA/TTxTEhEGvg/Ve', 'admin@example.com', 1, '信息技术部', '在岗');
 
 -- ==========================================================
+-- 4. 项目表(M1-1)
+-- ==========================================================
+DROP TABLE IF EXISTS project;
+CREATE TABLE project (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code VARCHAR(64) NOT NULL UNIQUE COMMENT '项目编号,如 PRJ-2026-001',
+    name VARCHAR(256) NOT NULL COMMENT '项目名称',
+    category VARCHAR(64) COMMENT '业务类别:股权类/固收类/混合类/其他',
+    owner_id BIGINT COMMENT '项目经理 ID(关联 user.id)',
+    amount_wan BIGINT COMMENT '投资金额(万元)',
+    summary VARCHAR(2000) COMMENT '摘要',
+    status VARCHAR(32) NOT NULL DEFAULT '草稿' COMMENT '草稿/待审议/审议中/通过/暂缓/否决/撤回',
+    scheduled_meeting_at DATE COMMENT '投委会审议日期',
+    remark VARCHAR(2000) COMMENT '备注',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by VARCHAR(64) COMMENT '创建人',
+    updated_by VARCHAR(64) COMMENT '更新人',
+    INDEX idx_code (code),
+    INDEX idx_status (status),
+    INDEX idx_owner_id (owner_id),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='项目';
+
+-- ==========================================================
+-- 5. 议案表(M1-1)
+-- ==========================================================
+DROP TABLE IF EXISTS proposal;
+CREATE TABLE proposal (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code VARCHAR(64) NOT NULL UNIQUE COMMENT '议案编号',
+    title VARCHAR(256) NOT NULL COMMENT '议案标题',
+    project_id BIGINT NOT NULL COMMENT '所属项目 ID',
+    type VARCHAR(32) COMMENT '主体/担保/联合/调整/终止/其他',
+    summary VARCHAR(2000) COMMENT '摘要',
+    status VARCHAR(32) NOT NULL DEFAULT '草稿' COMMENT '草稿/已提交/审议中/通过/暂缓/否决/撤回',
+    reviewed_at DATE COMMENT '审议日期',
+    decision VARCHAR(2000) COMMENT '审议结论',
+    remark VARCHAR(2000) COMMENT '备注',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by VARCHAR(64),
+    updated_by VARCHAR(64),
+    INDEX idx_code (code),
+    INDEX idx_project_id (project_id),
+    INDEX idx_status (status),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='议案';
+
+-- ==========================================================
+-- 6. 材料表(M1-1)
+-- ==========================================================
+DROP TABLE IF EXISTS material;
+CREATE TABLE material (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    proposal_id BIGINT NOT NULL COMMENT '所属议案 ID',
+    title VARCHAR(256) NOT NULL COMMENT '材料标题',
+    category VARCHAR(64) COMMENT '尽调报告/法律意见/财务审计/风险评估/投委会决议/其他',
+    current_version_id BIGINT COMMENT '当前生效版本 ID',
+    status VARCHAR(32) NOT NULL DEFAULT '草稿' COMMENT '草稿/评审中/已通过/已归档/已作废',
+    description VARCHAR(1000) COMMENT '说明',
+    tags VARCHAR(500) COMMENT '标签(逗号分隔)',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by VARCHAR(64),
+    updated_by VARCHAR(64),
+    INDEX idx_proposal_id (proposal_id),
+    INDEX idx_category (category),
+    INDEX idx_status (status),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='材料';
+
+-- ==========================================================
+-- 7. 材料版本表(M1-1)
+-- ==========================================================
+DROP TABLE IF EXISTS material_version;
+CREATE TABLE material_version (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    material_id BIGINT NOT NULL COMMENT '所属材料 ID',
+    version_no INT NOT NULL COMMENT '版本号(从 1 开始)',
+    original_filename VARCHAR(256) NOT NULL COMMENT '原始文件名',
+    storage_path VARCHAR(1024) NOT NULL COMMENT '存储路径(相对 file-root)',
+    parsed_text_path VARCHAR(1024) COMMENT 'Tika 解析后文本路径(相对 parsed-root)',
+    file_size BIGINT NOT NULL COMMENT '文件大小(字节)',
+    mime_type VARCHAR(128) COMMENT 'MIME 类型',
+    sha256 VARCHAR(64) COMMENT 'SHA-256 校验和',
+    parse_status VARCHAR(16) NOT NULL DEFAULT 'pending' COMMENT 'pending/running/success/failed',
+    parsed_at DATETIME COMMENT '解析完成时间',
+    parse_error VARCHAR(2000) COMMENT '解析错误信息',
+    uploaded_by VARCHAR(64) COMMENT '上传人',
+    change_note VARCHAR(1000) COMMENT '版本说明',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by VARCHAR(64),
+    updated_by VARCHAR(64),
+    INDEX idx_material_id (material_id),
+    INDEX idx_sha256 (sha256),
+    INDEX idx_parse_status (parse_status),
+    INDEX idx_uploaded_by (uploaded_by),
+    UNIQUE KEY uk_material_version (material_id, version_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='材料版本';
+
+-- ==========================================================
 -- 验证
 -- ==========================================================
 SELECT 'roles' AS table_name, COUNT(*) AS count FROM role
 UNION ALL
-SELECT 'users', COUNT(*) FROM user;
+SELECT 'users', COUNT(*) FROM user
+UNION ALL
+SELECT 'projects', COUNT(*) FROM project
+UNION ALL
+SELECT 'proposals', COUNT(*) FROM proposal
+UNION ALL
+SELECT 'materials', COUNT(*) FROM material
+UNION ALL
+SELECT 'material_versions', COUNT(*) FROM material_version;
