@@ -1,61 +1,63 @@
-# startup.ps1 - 投委会档案系统后端一键启动脚本
-# 用途:git pull 最新代码 + mvn clean package + 启动后端
-# 使用:在 PowerShell 里 .\startup.ps1
+# startup.ps1 - Archive system backend one-click startup
+# Usage: PowerShell .\startup.ps1
+# This script: git pull + mvn clean package + start backend
 
-# 切换到脚本所在目录
+$ErrorActionPreference = "Stop"
+
 Set-Location -Path $PSScriptRoot
 
 Write-Host "================================" -ForegroundColor Cyan
-Write-Host " 投委会档案 - 后端一键启动" -ForegroundColor Cyan
+Write-Host " Archive System - Backend Startup" -ForegroundColor Cyan
 Write-Host "================================" -ForegroundColor Cyan
 Write-Host ""
 
-# ============ 步骤 1:git pull 拉最新代码 ============
-Write-Host "[1/4] 拉取最新代码..." -ForegroundColor Yellow
+# Step 1: git pull
+Write-Host "[1/4] Pulling latest code from Gitee..." -ForegroundColor Yellow
 Set-Location ..
-git pull origin minimax
+$gitResult = git pull origin minimax 2>&1
+Write-Host $gitResult
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "git pull 失败!请检查网络或 SSH key" -ForegroundColor Red
-    Read-Host "按 Enter 退出"
+    Write-Host "git pull FAILED! Check network or SSH key" -ForegroundColor Red
+    Read-Host "Press Enter to exit"
     exit 1
 }
+Write-Host "OK" -ForegroundColor Green
+Write-Host ""
+
 Set-Location backend
-Write-Host "✓ 拉取成功" -ForegroundColor Green
-Write-Host ""
 
-# ============ 步骤 2:mvn clean package ============
-Write-Host "[2/4] 重新构建 JAR(首次 5-10 分钟,慢请耐心)..." -ForegroundColor Yellow
-mvn clean package -DskipTests
+# Step 2: mvn clean package
+Write-Host "[2/4] Building JAR (first run 5-10 min, please wait)..." -ForegroundColor Yellow
+mvn clean package -DskipTests 2>&1 | Tee-Object -FilePath "build.log" | Select-Object -Last 20
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "mvn 构建失败!请看上方错误" -ForegroundColor Red
-    Read-Host "按 Enter 退出"
+    Write-Host "mvn build FAILED! Check build.log for details" -ForegroundColor Red
+    Read-Host "Press Enter to exit"
     exit 1
 }
-Write-Host "✓ 构建成功" -ForegroundColor Green
+Write-Host "OK" -ForegroundColor Green
 Write-Host ""
 
-# ============ 步骤 3:确保日志目录存在 ============
-Write-Host "[3/4] 准备日志目录..." -ForegroundColor Yellow
+# Step 3: prepare log dir
+Write-Host "[3/4] Preparing log directory..." -ForegroundColor Yellow
 $logDir = "D:\archive\logs"
 if (!(Test-Path $logDir)) {
     New-Item -ItemType Directory -Force -Path $logDir | Out-Null
-    Write-Host "✓ 创建日志目录:$logDir" -ForegroundColor Green
+    Write-Host "Created log dir: $logDir" -ForegroundColor Green
 } else {
-    Write-Host "✓ 日志目录已存在" -ForegroundColor Green
+    Write-Host "Log dir exists" -ForegroundColor Green
 }
 Write-Host ""
 
-# ============ 步骤 4:启动后端 ============
-Write-Host "[4/4] 启动后端..." -ForegroundColor Yellow
-Write-Host "  端口:8080" -ForegroundColor Gray
-Write-Host "  日志:D:\archive\logs\backend.log" -ForegroundColor Gray
-Write-Host "  访问:http://localhost:8080/api/health" -ForegroundColor Gray
+# Step 4: start backend
+Write-Host "[4/4] Starting backend..." -ForegroundColor Yellow
+Write-Host "  Port: 8080" -ForegroundColor Gray
+Write-Host "  Log:  D:\archive\logs\backend.log" -ForegroundColor Gray
+Write-Host "  URL:  http://localhost:8080/api/health" -ForegroundColor Gray
 Write-Host ""
-Write-Host "提示:看到 'Tomcat started on port 8080' 和 'Started ArchiveApplication' 就是跑通了" -ForegroundColor Magenta
-Write-Host "      按 Ctrl+C 退出" -ForegroundColor Magenta
+Write-Host "Wait for: 'Tomcat started on port 8080' + 'Started ArchiveApplication'" -ForegroundColor Magenta
+Write-Host "Press Ctrl+C to stop" -ForegroundColor Magenta
 Write-Host ""
 Write-Host "================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 启动
 java "-Dfile.encoding=UTF-8" -jar ".\target\archive.jar"
