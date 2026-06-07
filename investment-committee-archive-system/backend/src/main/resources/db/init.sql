@@ -56,10 +56,10 @@ INSERT INTO role (code, name, description, permissions) VALUES
 ('employee', '普通员工', '基础查询、提交流转', JSON_ARRAY('project:read', 'qa:ask'));
 
 -- 1 个预置 admin 账号(密码: admin123)
--- BCrypt 哈希(强度 10):$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+-- BCrypt 哈希(强度 10):$2a$10$wjN3YFZDlu.ThmfrRe0XvOA9A1AW2TybgeKAddA/TTxTEhEGvg/Ve
 -- 这是 BCrypt 编码后的 "admin123"
 INSERT INTO user (username, display_name, password_hash, email, role_id, department, status) VALUES
-('admin', '系统管理员', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'admin@example.com', 1, '信息技术部', '在岗');
+('admin', '系统管理员', '$2a$10$wjN3YFZDlu.ThmfrRe0XvOA9A1AW2TybgeKAddA/TTxTEhEGvg/Ve', 'admin@example.com', 1, '信息技术部', '在岗');
 
 -- ==========================================================
 -- 验证
