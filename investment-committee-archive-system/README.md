@@ -43,10 +43,67 @@ investment-committee-archive-system/
 ├── architecture-v1-full.md         # v1,已废弃,留作演进记录
 ├── architecture-v2-lite.md         # v2,过渡版
 ├── architecture-v3-final.md        # v3,**当前定稿**
-└── config/
-    ├── README.md                   # 配置文件使用说明
-    └── config.example.json         # 配置模板(用户复制为 config.json 填值)
+├── backend/                        # 🆕 Spring Boot 后端(M0 完整)
+│   ├── pom.xml
+│   ├── README.md                    # 后端部署 + 验证步骤
+│   ├── .gitignore
+│   └── src/main/{java/com/archive,resources/{db,META-INF}}
+├── frontend/                       # 🆕 Vue 3 前端(M0 完整)
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── README.md                    # 前端启动 + 构建步骤
+│   ├── .gitignore
+│   └── src/{api,store,router,views,assets}
+├── deploy/                         # 🆕 部署文件
+│   ├── README.md                    # 完整部署手册
+│   ├── winsw/backend.xml            # WinSW 服务配置
+│   ├── caddy/Caddyfile              # 反代 + 静态托管
+│   ├── sql/init-db.bat              # Windows 数据库初始化
+│   └── scripts/{build-backend,register-services}.bat
+└── config/                         # 配置文件(原 v1 bundle 的)
+    ├── README.md
+    └── config.example.json
 ```
+
+## 开发进度
+
+| 阶段 | 内容 | 状态 |
+|---|---|---|
+| **M0** | 脚手架 + 用户登录 + 部署 | ✅ 完成(6 个 commit 推到 minimax) |
+| **M1** | 项目-议案-材料三级 CRUD + Tika 解析 | ⏳ 下一步 |
+| **M2** | 知识库问答(FULLTEXT + 智谱) | ⏳ |
+| **M3** | 时点提取 + 邮件 | ⏳ |
+| **M4** | 规则引擎(Aviator) | ⏳ |
+| **M5** | 打磨 + 上线 | ⏳ |
+
+## 快速验证 M0(本机 30 分钟跑通)
+
+```bash
+# 1. 准备环境(JDK 17 / MySQL 8 / Node 20 / Maven 3.8+)
+
+# 2. 初始化数据库
+mysql -u root -p < backend/src/main/resources/db/init.sql
+
+# 3. 准备 config.json
+cp config/config.example.json D:/archive/config/config.json
+# 填好 glm.apiKey / database.password / jwt.secret
+
+# 4. 构建后端
+cd backend && mvn clean package -DskipTests
+
+# 5. 跑后端
+java -jar -Dfile.encoding=UTF-8 target/archive.jar
+# 等到看到 "Started ArchiveApplication in X seconds"
+
+# 6. 跑前端(dev 模式)
+cd ../frontend && npm install && npm run dev
+# 打开 http://localhost:5173 → 登录页
+
+# 7. 登录 admin / admin123
+# 看到工作台 + 后端健康: UP ✅ M0 通了
+```
+
+跑通后,告诉我,**开始 M1 档案 CRUD**。
 
 > **配置约定**:`config/config.json` 是真实配置,**不进 Git**(加 .gitignore);`config.example.json` 是模板,可以进 Git。详见 `config/README.md`。
 
