@@ -2,7 +2,7 @@
 # Usage: PowerShell .\startup.ps1
 # This script: git pull + mvn clean package + start backend
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 Set-Location -Path $PSScriptRoot
 
@@ -12,11 +12,13 @@ Write-Host "================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Step 1: git pull
+# Note: redirect to file then read file, because PowerShell 5.x treats
+# git's stderr (e.g. "From gitee.com...") as RemoteException even on success.
 Write-Host "[1/4] Pulling latest code from Gitee..." -ForegroundColor Yellow
 Set-Location ..
-# Use cmd /c to avoid PowerShell 5.x stderr noise that triggers RemoteException
-$gitResult = cmd /c "git pull origin minimax" 2>&1
-Write-Host $gitResult
+& git pull origin minimax *>&1 | Out-Null
+$gitLog = & git pull origin minimax 2>&1 | Out-String
+Write-Host $gitLog
 if ($LASTEXITCODE -ne 0) {
     Write-Host "git pull FAILED! Check network or SSH key" -ForegroundColor Red
     Read-Host "Press Enter to exit"
@@ -27,9 +29,10 @@ Write-Host ""
 
 Set-Location backend
 
-# Step 2: mvn clean package (cmd /c wraps it to avoid PowerShell stderr noise)
+# Step 2: mvn clean package
+# Note: redirect to build.log file, then read tail on failure
 Write-Host "[2/4] Building JAR (first run 5-10 min, please wait)..." -ForegroundColor Yellow
-cmd /c "mvn clean package -DskipTests > build.log 2>&1"
+& mvn clean package -DskipTests *> build.log
 if ($LASTEXITCODE -ne 0) {
     Write-Host "mvn build FAILED! Check build.log for details" -ForegroundColor Red
     Get-Content build.log -Tail 30
