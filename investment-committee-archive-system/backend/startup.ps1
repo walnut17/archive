@@ -14,7 +14,8 @@ Write-Host ""
 # Step 1: git pull
 Write-Host "[1/4] Pulling latest code from Gitee..." -ForegroundColor Yellow
 Set-Location ..
-$gitResult = git pull origin minimax 2>&1
+# Use cmd /c to avoid PowerShell 5.x stderr noise that triggers RemoteException
+$gitResult = cmd /c "git pull origin minimax" 2>&1
 Write-Host $gitResult
 if ($LASTEXITCODE -ne 0) {
     Write-Host "git pull FAILED! Check network or SSH key" -ForegroundColor Red
@@ -26,11 +27,12 @@ Write-Host ""
 
 Set-Location backend
 
-# Step 2: mvn clean package
+# Step 2: mvn clean package (cmd /c wraps it to avoid PowerShell stderr noise)
 Write-Host "[2/4] Building JAR (first run 5-10 min, please wait)..." -ForegroundColor Yellow
-mvn clean package -DskipTests 2>&1 | Tee-Object -FilePath "build.log" | Select-Object -Last 20
+cmd /c "mvn clean package -DskipTests > build.log 2>&1"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "mvn build FAILED! Check build.log for details" -ForegroundColor Red
+    Get-Content build.log -Tail 30
     Read-Host "Press Enter to exit"
     exit 1
 }
