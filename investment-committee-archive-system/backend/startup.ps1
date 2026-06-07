@@ -62,6 +62,16 @@ if (!(Test-Path $cfgPath)) {
     exit 1
 }
 Write-Host "config.json found: $cfgPath" -ForegroundColor Green
+
+# Check for UTF-8 BOM (Windows Notepad adds it, breaks Jackson parser)
+$cfgBytes = [System.IO.File]::ReadAllBytes($cfgPath)
+if ($cfgBytes.Length -ge 3 -and $cfgBytes[0] -eq 0xEF -and $cfgBytes[1] -eq 0xBB -and $cfgBytes[2] -eq 0xBF) {
+    Write-Host "WARNING: config.json has UTF-8 BOM (Windows Notepad default)" -ForegroundColor Yellow
+    Write-Host "         Removing BOM..." -ForegroundColor Yellow
+    $cfgClean = $cfgBytes[3..($cfgBytes.Length - 1)]
+    [System.IO.File]::WriteAllBytes($cfgPath, $cfgClean)
+    Write-Host "         BOM removed" -ForegroundColor Green
+}
 Write-Host ""
 
 # Step 4: start backend
