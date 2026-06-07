@@ -47,6 +47,10 @@ public class ConfigJsonLoader implements EnvironmentPostProcessor {
 
         try {
             String json = Files.readString(configPath, StandardCharsets.UTF_8);
+            // Strip UTF-8 BOM if present (Windows Notepad default UTF-8 saves with BOM)
+            if (!json.isEmpty() && json.charAt(0) == '\uFEFF') {
+                json = json.substring(1);
+            }
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(json);
 
