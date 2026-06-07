@@ -28,8 +28,8 @@ spring:
     open-in-view: false
   servlet:
     multipart:
-      max-file-size: ${app.storage.upload-max-size-mb:100}MB
-      max-request-size: ${app.storage.upload-max-size-mb:100}MB
+      max-file-size: 100MB
+      max-request-size: 100MB
   mail:
     host: ${app.mail.host:smtp.internal.example.cn}
     port: ${app.mail.port:25}
@@ -56,21 +56,21 @@ server:
 # 应用专属配置(从 config.json 注入,见 ConfigJsonLoader)
 app:
   glm:
-    api-key: ${app.glm.api-key:}
-    chat-url: ${app.glm.chat-url:https://open.bigmodel.cn/api/paas/v4/chat/completions}
-    vision-url: ${app.glm.vision-url:https://open.bigmodel.cn/api/paas/v4/vision}
-    chat-model: ${app.glm.chat-model:glm-4-flash}
-    vision-model: ${app.glm.vision-model:glm-4v}
-    timeout-seconds: ${app.glm.timeout-seconds:60}
+    api-key: 
+    chat-url: https://open.bigmodel.cn/api/paas/v4/chat/completions
+    vision-url: https://open.bigmodel.cn/api/paas/v4/vision
+    chat-model: glm-4-flash
+    vision-model: glm-4v
+    timeout-seconds: 60
   storage:
-    file-root: ${app.storage.file-root:D:/archive/files}
-    parsed-root: ${app.storage.parsed-root:D:/archive/parsed}
-    log-root: ${app.storage.log-root:D:/archive/logs}
-    upload-max-size-mb: ${app.storage.upload-max-size-mb:100}
+    file-root: D:/archive/files
+    parsed-root: D:/archive/parsed
+    log-root: D:/archive/logs
+    upload-max-size-mb: 100
   jwt:
     # 实际从 config.json 读,这里给开发期默认
-    secret: ${app.jwt.secret:change-me-please-this-is-a-default-secret-key-32bytes-long}
-    expiration-seconds: ${app.jwt.expiration-seconds:28800}
+    secret: change-me-please-this-is-a-default-secret-key-32bytes-long
+    expiration-seconds: 28800
 
 management:
   endpoints:
@@ -92,6 +92,6 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
   file:
-    name: ${app.storage.log-root:D:/archive/logs}/backend.log
+    name: D:/archive/logs/backend.log
     max-size: 100MB
     max-history: 30
