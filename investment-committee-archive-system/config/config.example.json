@@ -19,7 +19,7 @@
     "database": "archive_db",
     "username": "archive_app",
     "password": "在此填 MySQL 密码",
-    "params": "useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true",
+    "params": "useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true",
     "poolMaxSize": 10,
     "poolMinIdle": 2
   },
