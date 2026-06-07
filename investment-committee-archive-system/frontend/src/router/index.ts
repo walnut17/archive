@@ -19,6 +19,32 @@ const router = createRouter({
           name: 'dashboard',
           component: () => import('@/views/Dashboard.vue'),
         },
+        // M1 档案 CRUD
+        {
+          path: 'projects',
+          name: 'project-list',
+          component: () => import('@/views/ProjectList.vue'),
+        },
+        {
+          path: 'projects/new',
+          name: 'project-form',
+          component: () => import('@/views/ProjectForm.vue'),
+        },
+        {
+          path: 'projects/:id',
+          name: 'project-detail',
+          component: () => import('@/views/ProjectDetail.vue'),
+        },
+        {
+          path: 'projects/:id/edit',
+          name: 'project-edit',
+          component: () => import('@/views/ProjectForm.vue'),
+        },
+        {
+          path: 'proposals/:id',
+          name: 'proposal-detail',
+          component: () => import('@/views/ProposalDetail.vue'),
+        },
         // 后续模块加在这里
       ],
     },
