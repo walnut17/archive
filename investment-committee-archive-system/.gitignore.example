@@ -1,0 +1,54 @@
+# 投委会档案管理系统 - 子项目 .gitignore 模板
+# 复制本文件为 .gitignore 后即可
+
+# === 本地配置(绝对不能进 Git) ===
+# 模板可以进,真实配置不行
+config/config.json
+!/config/config.example.json
+
+# === 运行时数据(本地生成) ===
+# 原始文件存储
+storage/files/*
+!storage/files/.gitkeep
+storage/parsed/*
+!storage/parsed/.gitkeep
+storage/logs/*
+!storage/logs/.gitkeep
+
+# === 编译产物(开发时) ===
+# 后端
+backend/target/
+backend/*.class
+backend/.gradle/
+backend/build/
+*.jar
+!backend/archive-*.jar  # 允许发布版本的 jar 进版本控制(可选)
+
+# 前端
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
+frontend/npm-debug.log*
+
+# === IDE / 编辑器 ===
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.settings/
+.classpath
+.project
+
+# === OS 临时文件 ===
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# === 备份目录 ===
+backup/
+*.bak
+*.sql.gz
+*.dump

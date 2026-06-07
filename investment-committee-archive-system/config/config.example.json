@@ -1,0 +1,89 @@
+{
+  "_comment_top": "投委会档案管理系统 - 本地配置文件模板。复制本文件为 config.json 后填入真实值,config.json 不会进 Git。",
+  "_comment_security": "不要把 config.json 提交到任何 Git 仓库!建议加进 .gitignore。",
+
+  "glm": {
+    "_comment": "智谱 AI 配置 — 去 https://open.bigmodel.cn 注册并开通 GLM-4-Flash + GLM-4V",
+    "apiKey": "在此填你的智谱 API key,形如 eyJhbGciOiJIUzI1NiJ9...",
+    "chatUrl": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+    "visionUrl": "https://open.bigmodel.cn/api/paas/v4/vision",
+    "chatModel": "glm-4-flash",
+    "visionModel": "glm-4v",
+    "timeoutSeconds": 60
+  },
+
+  "database": {
+    "_comment": "MySQL 8.0.16 配置 — 库名和账号需要先用 DBA 账号创建,本服务用最小权限账号",
+    "host": "localhost",
+    "port": 3306,
+    "database": "archive_db",
+    "username": "archive_app",
+    "password": "在此填 MySQL 密码",
+    "params": "useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true",
+    "poolMaxSize": 10,
+    "poolMinIdle": 2
+  },
+
+  "databaseBackup": {
+    "_comment": "备份专用账号 — 只对 archive_db 有 SELECT 和 LOCK TABLES 权限,密码独立",
+    "host": "localhost",
+    "port": 3306,
+    "username": "backup_operator",
+    "password": "在此填 backup_operator 密码"
+  },
+
+  "mail": {
+    "_comment": "内网邮件中继 — 用内网 Postfix / hMailServer / IIS SMTP。如果暂时不接邮件功能,password 留空",
+    "host": "smtp.internal.example.cn",
+    "port": 25,
+    "useTls": false,
+    "username": "archive@example.com",
+    "password": "在此填 SMTP 密码(无密码则留空)",
+    "fromAddress": "archive@example.com",
+    "fromName": "投委会档案系统"
+  },
+
+  "storage": {
+    "_comment": "本机存储路径 — Windows 路径用正斜杠或反斜杠都行",
+    "fileRoot": "D:/archive/files",
+    "parsedRoot": "D:/archive/parsed",
+    "logRoot": "D:/archive/logs",
+    "uploadMaxSizeMB": 100
+  },
+
+  "backup": {
+    "_comment": "备份配置 — 每天 mysqldump 到 backupRoot/mysql/,robocopy 同步文件到 backupRoot/files/",
+    "enabled": true,
+    "backupRoot": "E:/backup",
+    "mysqlDumpPath": "C:/Program Files/MySQL/MySQL Server 8.0/bin/mysqldump.exe",
+    "mysqlBackupDir": "E:/backup/mysql",
+    "filesBackupDir": "E:/backup/files",
+    "keepDays": 30,
+    "scheduleCron": "0 0 2 * * ?"
+  },
+
+  "server": {
+    "port": 8080,
+    "contextPath": "/",
+    "maxUploadSizeMB": 100
+  },
+
+  "desensitize": {
+    "_comment": "脱敏配置 — 只脱敏证件号和人名,其他不动",
+    "enabled": true,
+    "patterns": {
+      "idCard": "\\d{17}[\\dXx]|\\d{15}",
+      "passport": "[A-Z]\\d{8}",
+      "bankCard": "\\d{16,19}"
+    },
+    "personNameDetection": "hanlp",
+    "useMockIfHanlpUnavailable": true
+  },
+
+  "monitoring": {
+    "_comment": "健康检查 + 告警 — 轻量级,不上 Prometheus",
+    "healthCheckCron": "0 */10 * * * ?",
+    "alertMailTo": "you@example.com",
+    "diskAlertThresholdPercent": 10
+  }
+}
