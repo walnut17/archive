@@ -6,7 +6,7 @@ spring:
   # 占位符从 config.json 注入(由 ConfigJsonLoader 加载,见 META-INF/spring.factories)
   # 如果 config.json 不存在,用这里的默认值(开发环境)
   datasource:
-    url: jdbc:mysql://${app.database.host:localhost}:${app.database.port:3306}/${app.database.database:archive_db}?${app.database.params:useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
+    url: jdbc:mysql://${app.database.host:localhost}:${app.database.port:3306}/${app.database.database:archive_db}?${app.database.params:useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
     username: ${app.database.username:archive_app}
     password: ${app.database.password:}
     driver-class-name: com.mysql.cj.jdbc.Driver
