@@ -119,7 +119,7 @@ public class GlmService {
 
         StringBuilder prompt = new StringBuilder();
         prompt.append("用户问题:").append(question).append("\n\n");
-        prompt.append("以下是候选文档片段(已按 MySQL 全文检索打分排序),请你按"和用户问题的相关度"重新排序:\n\n");
+        prompt.append("以下是候选文档片段(已按 MySQL 全文检索打分排序),请你按\"和用户问题的相关度\"重新排序:\n\n");
         for (int i = 0; i < candidates.size(); i++) {
             KnowledgeSearchService.SearchResult r = candidates.get(i);
             prompt.append("[").append(i + 1).append("] ");
