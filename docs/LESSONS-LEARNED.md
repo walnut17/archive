@@ -157,6 +157,33 @@ try (ByteArrayInputStream bis = new ByteArrayInputStream(bytes)) {
 - 写一个 Service 后,**真去跑一遍那个核心方法**——不要相信 IDE 自动补全的名字
 - Tika 2.9 官方 API:`parseToString(InputStream / Path / File / URL)` 4 个,**`detect(byte[])` 还有**但 `parseToString` 没了
 
+### 2.3 Tika 2.9 `detect(byte[])` 不抛 IOException (M1-3)
+
+**Commit**: `0cb59ff`
+
+**症状**:
+```
+在相应的 try 语句主体中不能抛出异常错误 java.io.IOException
+```
+
+**根因**:
+- Tika 2.x 文档说 `detect(byte[])` 抛 `IOException`,但**实际编译时方法签名不抛**
+- Java 编译器看到 `try { ... } catch (IOException e)` → 报"unreachable catch"
+- 同样的问题在 `detect(byte[], String)` 也存在
+
+**修复**:
+```java
+} catch (Exception e) {  // 不是 IOException
+    log.warn("MimeType detect failed for filename={}", filename, e);
+    return "application/octet-stream";
+}
+```
+
+**教训**:
+- **编译器权威,文档可能滞后**——Tika 2.9 的真实 API 签名跟 2.0/2.5 文档略有差异
+- 对于**可能不抛 checked exception 的方法调用**,catch Exception 更安全
+- 写完 Service **真编译一次**才是真理
+
 ---
 
 ## 3. 工具/环境类
@@ -428,6 +455,7 @@ git@gitee.com: Permission denied (publickey).
 | 1.3 | admin 密码 hash 错 | 5bb2439 |
 | 2.1 | MaterialResponse 缺 import | 137e4cb |
 | 2.2 | Tika parseToString(byte[]) API 错 | 165d430 |
+| 2.3 | Tika detect 不抛 IOException | 0cb59ff |
 | 3.1 | PowerShell 5.x 中文 UTF-8 脚本 | ceb2502 |
 | 3.2 | PowerShell curl 别名 | 22ab893 |
 | 3.3 | PowerShell 5.x RemoteException | a8fc056, 3ae81e4, cd8b59c |
