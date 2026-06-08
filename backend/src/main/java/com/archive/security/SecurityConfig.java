@@ -26,7 +26,10 @@ import java.util.List;
  * - Session 策略:无状态(STATELESS)
  * - JWT 过滤器放在 UsernamePasswordAuthenticationFilter 之前
  * - 公开路径:/api/auth/login、/api/health、/actuator/**
- * - 其他 /api/** 需要认证
+ * - 字典管理(除查询选项外) → admin 权限
+ * - 字典查询选项 → 已认证即可
+ * - 抽取方法/比对方法/审计日志 → admin 权限
+ * - 其他 /api/** → 需要认证
  *
  * @author Mavis
  */
@@ -54,6 +57,18 @@ public class SecurityConfig {
                         .requestMatchers("/api/health").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/error").permitAll()
+                        // 字典查询选项(公开字典数据):任何已认证用户可用(必须在 /api/dict/** 之前)
+                        .requestMatchers(HttpMethod.GET, "/api/dict/options/**").authenticated()
+                        // 字典管理:增删改查全部需要 admin 权限
+                        .requestMatchers(HttpMethod.GET, "/api/dict/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/dict/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/dict/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/dict/**").hasAuthority("ROLE_ADMIN")
+                        // 抽取方法/比对方法/审计日志:仅 admin
+                        .requestMatchers("/api/extraction-methods/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/comparison-methods/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/audit-logs/**").hasAuthority("ROLE_ADMIN")
+                        // 其他 /api/** 需要认证(任意角色)
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
                 )
