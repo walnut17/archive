@@ -35,7 +35,7 @@ export const projectStatusOptions = [
 
 export const projectCategoryOptions = ['股权类', '固收类', '混合类', '其他']
 
-export function listProjects(params: { page?: number; size?: number; status?: string; keyword?: string }) {
+export async function listProjects(params: { page?: number; size?: number; status?: string; keyword?: string }): Promise<PageResponse<Project>> {
   return getData<PageResponse<Project>>(await http.get<any>('/projects', { params }))
 }
 
