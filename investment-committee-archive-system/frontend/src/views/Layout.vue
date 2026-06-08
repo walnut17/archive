@@ -63,6 +63,10 @@ function onLogout() {
             <el-icon><Folder /></el-icon>
             <span>项目管理</span>
           </el-menu-item>
+          <el-menu-item index="/knowledge">
+            <el-icon><Document /></el-icon>
+            <span>知识库问答</span>
+          </el-menu-item>
           <!-- 后续模块加在这里 -->
           <!-- M1 启用:项目菜单已可点 -->
           <el-menu-item index="/knowledge" disabled>

@@ -45,6 +45,12 @@ const router = createRouter({
           name: 'proposal-detail',
           component: () => import('@/views/ProposalDetail.vue'),
         },
+        // M2 知识库问答
+        {
+          path: 'knowledge',
+          name: 'knowledge',
+          component: () => import('@/views/Knowledge.vue'),
+        },
         // 后续模块加在这里
       ],
     },

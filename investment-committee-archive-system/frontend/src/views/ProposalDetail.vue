@@ -104,7 +104,7 @@ async function onUploadVersion(m: Material) {
     const note = prompt('版本说明(可选):') || ''
     try {
       const resp: any = await uploadVersion(m.id!, file, note)
-      ElMessage.success(`上传成功 v${resp.data.versionNo},解析状态:${resp.data.parseStatus}`)
+      ElMessage.success(`上传成功 v${resp.versionNo},解析状态:${resp.parseStatus}`)
       openVersions(m)
       fetch()
     } catch {}

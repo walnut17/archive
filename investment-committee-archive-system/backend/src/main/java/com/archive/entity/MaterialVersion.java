@@ -81,6 +81,10 @@ public class MaterialVersion extends BaseEntity {
     @Builder.Default
     private String parseStatus = "pending";
 
+    /** 解析后的纯文本内容(M2 知识库问答用,FULLTEXT 索引字段). */
+    @Column(name = "parsed_text", columnDefinition = "LONGTEXT")
+    private String parsedText;
+
     /** 解析完成时间. */
     @Column(name = "parsed_at")
     private LocalDateTime parsedAt;
