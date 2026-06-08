@@ -30,6 +30,8 @@ public interface MaterialVersionRepository extends JpaRepository<MaterialVersion
 
     long countByMaterialId(Long materialId);
 
+    Optional<MaterialVersion> findByMaterialIdAndSha256(Long materialId, String sha256);
+
     @Query("SELECT mv FROM MaterialVersion mv WHERE mv.sha256 = :sha256")
     List<MaterialVersion> findBySha256(@Param("sha256") String sha256);
 

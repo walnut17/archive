@@ -89,6 +89,15 @@ public class MaterialVersionService {
             throw new RuntimeException("读上传文件失败", e);
         }
         String sha256 = sha256Hex(bytes);
+
+        // 检查同一材料下是否已存在相同 SHA-256 的文件(去重)
+        Optional<MaterialVersion> existing = materialVersionRepository
+                .findByMaterialIdAndSha256(materialId, sha256);
+        if (existing.isPresent()) {
+            MaterialVersion dup = existing.get();
+            throw new IllegalArgumentException("文件已存在,版本 v" + dup.getVersionNo());
+        }
+
         String mimeType = tikaService.detectMimeType(bytes, file.getOriginalFilename());
 
         // 存盘(路径: project/{projectId}/proposal/{proposalId}/material/{materialId}/v{n}/{filename})
