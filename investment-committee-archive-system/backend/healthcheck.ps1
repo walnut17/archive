@@ -1,7 +1,10 @@
 # healthcheck.ps1 - Archive system backend health check
 # Usage: PowerShell .\healthcheck.ps1
 # Tests: GET /api/health + POST /api/auth/login (admin/admin123)
-# Requires: curl.exe in PATH (curl.se/windows, choco install curl, or winget)
+# Tries to locate curl.exe in this order:
+#   1. PATH (curl.exe)
+#   2. Git for Windows bundled curl (C:\Program Files\Git\mingw64\bin\curl.exe)
+#   3. Fallback: .NET HttpClient (always works, last resort)
 
 $ErrorActionPreference = "Continue"
 
@@ -10,52 +13,108 @@ Write-Host " Archive System - Health Check" -ForegroundColor Cyan
 Write-Host "================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Verify curl.exe is available
-$curlPath = (Get-Command curl.exe -ErrorAction SilentlyContinue).Source
-if (-not $curlPath) {
-    Write-Host "ERROR: curl.exe not found in PATH" -ForegroundColor Red
-    Write-Host "" -ForegroundColor Red
-    Write-Host "Install one of:" -ForegroundColor Yellow
-    Write-Host "  - choco install curl -y" -ForegroundColor Gray
-    Write-Host "  - winget install cURL.cURL" -ForegroundColor Gray
-    Write-Host "  - manual: download from https://curl.se/windows/" -ForegroundColor Gray
-    Write-Host "" -ForegroundColor Red
-    Read-Host "Press Enter to exit"
-    exit 1
+# Locate curl.exe
+$curlPath = $null
+$candidates = @(
+    (Get-Command curl.exe -ErrorAction SilentlyContinue).Source,
+    "C:\Program Files\Git\mingw64\bin\curl.exe",
+    "C:\Program Files (x86)\Git\mingw64\bin\curl.exe",
+    "C:\tools\curl\bin\curl.exe"
+)
+foreach ($c in $candidates) {
+    if ($c -and (Test-Path $c)) {
+        $curlPath = $c
+        break
+    }
 }
 
-# Test 1: health
-Write-Host "[1/2] GET /api/health" -ForegroundColor Yellow
-$healthJson = & curl.exe -s -m 10 http://localhost:8080/api/health
-$exitCode = $LASTEXITCODE
-if ($exitCode -ne 0 -or [string]::IsNullOrEmpty($healthJson)) {
-    Write-Host "FAILED - cannot reach backend (curl exit=$exitCode)" -ForegroundColor Red
-    Write-Host "  Please run .\startup.ps1 first" -ForegroundColor Red
-    Read-Host "Press Enter to exit"
-    exit 1
-}
-Write-Host $healthJson
-Write-Host ""
-if ($healthJson -notmatch '"status":"UP"') {
-    Write-Host "FAILED - /api/health did not return UP" -ForegroundColor Red
-    Read-Host "Press Enter to exit"
-    exit 1
+if ($curlPath) {
+    Write-Host "Using curl at: $curlPath" -ForegroundColor Gray
+    Write-Host ""
+
+    # Test 1: health
+    Write-Host "[1/2] GET /api/health" -ForegroundColor Yellow
+    $healthJson = & $curlPath -s -m 10 http://localhost:8080/api/health
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrEmpty($healthJson)) {
+        Write-Host "FAILED - cannot reach backend" -ForegroundColor Red
+        Write-Host "  Please run .\startup.ps1 first" -ForegroundColor Red
+        Read-Host "Press Enter to exit"
+        exit 1
+    }
+    Write-Host $healthJson
+    Write-Host ""
+    if ($healthJson -notmatch '"status":"UP"') {
+        Write-Host "FAILED - /api/health did not return UP" -ForegroundColor Red
+        Read-Host "Press Enter to exit"
+        exit 1
+    }
+
+    # Test 2: login
+    Write-Host "[2/2] POST /api/auth/login (admin/admin123)" -ForegroundColor Yellow
+    $loginJson = & $curlPath -s -m 10 -X POST -H "Content-Type: application/json" `
+        -d '{"username":"admin","password":"admin123"}' `
+        http://localhost:8080/api/auth/login
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrEmpty($loginJson)) {
+        Write-Host "FAILED - login request error" -ForegroundColor Red
+        Read-Host "Press Enter to exit"
+        exit 1
+    }
+    Write-Host $loginJson
+    Write-Host ""
+} else {
+    # No curl -- fall back to .NET HttpClient
+    Write-Host "INFO: curl.exe not found, using .NET HttpClient" -ForegroundColor Yellow
+    Add-Type -AssemblyName System.Net.Http
+    function Get-HealthJson {
+        $c = New-Object System.Net.Http.HttpClient
+        $c.Timeout = [TimeSpan]::FromSeconds(10)
+        $r = $c.GetAsync("http://localhost:8080/api/health").GetAwaiter().GetResult()
+        $b = $r.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+        $c.Dispose()
+        return $b
+    }
+    function Post-Login {
+        param([string]$body)
+        $c = New-Object System.Net.Http.HttpClient
+        $c.Timeout = [TimeSpan]::FromSeconds(10)
+        $content = New-Object System.Net.Http.StringContent(
+            $body, [System.Text.Encoding]::UTF8, "application/json")
+        $r = $c.PostAsync("http://localhost:8080/api/auth/login", $content).GetAwaiter().GetResult()
+        $b = $r.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+        $c.Dispose()
+        return $b
+    }
+
+    Write-Host "[1/2] GET /api/health" -ForegroundColor Yellow
+    try {
+        $healthJson = Get-HealthJson
+    } catch {
+        Write-Host "FAILED - cannot reach backend: $_" -ForegroundColor Red
+        Write-Host "  Please run .\startup.ps1 first" -ForegroundColor Red
+        Read-Host "Press Enter to exit"
+        exit 1
+    }
+    Write-Host $healthJson
+    Write-Host ""
+    if ($healthJson -notmatch '"status":"UP"') {
+        Write-Host "FAILED - /api/health did not return UP" -ForegroundColor Red
+        Read-Host "Press Enter to exit"
+        exit 1
+    }
+
+    Write-Host "[2/2] POST /api/auth/login (admin/admin123)" -ForegroundColor Yellow
+    try {
+        $loginJson = Post-Login '{"username":"admin","password":"admin123"}'
+    } catch {
+        Write-Host "FAILED - login request error: $_" -ForegroundColor Red
+        Read-Host "Press Enter to exit"
+        exit 1
+    }
+    Write-Host $loginJson
+    Write-Host ""
 }
 
-# Test 2: login
-Write-Host "[2/2] POST /api/auth/login (admin/admin123)" -ForegroundColor Yellow
-$loginJson = & curl.exe -s -m 10 -X POST -H "Content-Type: application/json" `
-    -d '{"username":"admin","password":"admin123"}' `
-    http://localhost:8080/api/auth/login
-$exitCode = $LASTEXITCODE
-if ($exitCode -ne 0 -or [string]::IsNullOrEmpty($loginJson)) {
-    Write-Host "FAILED - login request error (curl exit=$exitCode)" -ForegroundColor Red
-    Read-Host "Press Enter to exit"
-    exit 1
-}
-Write-Host $loginJson
-Write-Host ""
-
+# Common: report
 if ($loginJson -match '"token":"eyJ') {
     Write-Host "================================" -ForegroundColor Green
     Write-Host " M0 Backend PASSED!" -ForegroundColor Green
