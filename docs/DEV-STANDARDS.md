@@ -26,7 +26,7 @@
 ## 2. 仓库结构(必读)
 
 ```
-projects-online/investment-committee-archive-system/
+projects-online/
 ├── backend/
 │   ├── src/main/java/com/archive/
 │   │   ├── ArchiveApplication.java

@@ -52,7 +52,7 @@ mysql -u root -p
 
 ### 3.2 准备 config.json
 ```powershell
-# 从 investment-committee-archive-system/config/config.example.json 复制
+# 从 config/config.example.json 复制
 copy config\config.example.json D:\archive\config\config.json
 notepad D:\archive\config\config.json
 # 填好 glm.apiKey / database.password / jwt.secret 等
@@ -61,7 +61,7 @@ notepad D:\archive\config\config.json
 ### 3.3 构建后端 JAR
 ```powershell
 # 在 backend 目录
-cd investment-committee-archive-system\backend
+cd backend
 mvn clean package -DskipTests
 # 或用 deploy\scripts\build-backend.bat
 ```
@@ -89,7 +89,7 @@ type D:\archive\logs\backend.log
 ### 3.5 部署前端
 ```powershell
 # 在 frontend 目录
-cd investment-committee-archive-system\frontend
+cd frontend
 npm install
 npm run build
 # 拷贝 dist/ 到 D:\archive\apps\frontend\dist

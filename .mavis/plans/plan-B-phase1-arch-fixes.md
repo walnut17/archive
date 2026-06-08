@@ -13,7 +13,7 @@
 3. `docs/DB-SCHEMA-v2.md` § 新增表
 4. `docs/DEV-STANDARDS.md`
 5. `docs/TEAM-ARCHIVE.md`
-6. `investment-committee-archive-system/SUPPLEMENTARY-REQUIREMENTS.md` § Phase 1
+6. `SUPPLEMENTARY-REQUIREMENTS.md` § Phase 1
 
 ## 范围(4 个子项)
 

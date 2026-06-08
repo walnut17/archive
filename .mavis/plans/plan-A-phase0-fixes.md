@@ -14,7 +14,7 @@
 4. `docs/DEV-STANDARDS.md`(本规范)
 5. `docs/TEAM-ARCHIVE.md`(环境)
 6. `docs/LESSONS-LEARNED.md`(踩坑)
-7. `investment-committee-archive-system/SUPPLEMENTARY-REQUIREMENTS.md` § Phase 0
+7. `SUPPLEMENTARY-REQUIREMENTS.md` § Phase 0
 
 ## 范围(6 个子项)
 
@@ -24,7 +24,7 @@
 
 **具体操作**:
 ```bash
-cd investment-committee-archive-system
+cd backend
 grep -rn "resp\.data\." frontend/src/
 grep -rn "as any" frontend/src/
 ```

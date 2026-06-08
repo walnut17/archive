@@ -148,7 +148,7 @@ SELECT id, username, display_name, status FROM user;
 | 步骤 | 命令 | 结果 |
 |---|---|---|
 | 构建 | `mvn clean package -DskipTests` | ✅ **BUILD SUCCESS** |
-| 产物 | `D:\projects-online\investment-committee-archive-system\backend\target\archive.jar` | ✅ 存在 |
+| 产物 | `D:\projects_new\projects-online\backend\target\archive.jar` | ✅ 存在 |
 | 首次依赖下载 | `C:\Users\Administrator\.m2\repository\` | 已缓存,后续构建快 |
 
 ---
@@ -170,7 +170,7 @@ SELECT id, username, display_name, status FROM user;
 **修复用的 sed 命令(已发给用户):**
 
 ```powershell
-$file = "D:\projects-online\investment-committee-archive-system\backend\src\main\resources\application.yml"
+$file = "D:\projects_new\projects-online\backend\src\main\resources\application.yml"
 $content = Get-Content $file -Raw
 $content = $content -replace 'log-root: \$\{app\.storage\.log-root:D:/archive/logs\}', 'log-root: D:/archive/logs'
 $content = $content -replace 'name: \$\{app\.storage\.log-root:D:/archive/logs\}/backend\.log', 'name: D:/archive/logs/backend.log'
@@ -185,7 +185,7 @@ Set-Content -Path $file -Value $content -Encoding UTF8
 ### 第二次启动待验证
 
 ```powershell
-cd D:\projects-online\investment-committee-archive-system\backend
+cd D:\projects_new\projects-online\backend
 mvn clean package -DskipTests
 java "-Dfile.encoding=UTF-8" -jar .\target\archive.jar
 ```
@@ -231,7 +231,7 @@ curl -Method POST -Uri http://localhost:8080/api/auth/login -ContentType "applic
 ## 9. 前端(⏳ 未启动)
 
 ```powershell
-cd D:\projects-online\investment-committee-archive-system\frontend
+cd D:\projects_new\projects-online\frontend
 npm install              # 首次 3-5 分钟
 npm run dev
 ```
