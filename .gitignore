@@ -1,0 +1,15 @@
+# ============================================================
+# Sandbox-only secrets and machine-local state
+# ============================================================
+
+# SSH keys used by sandbox agents to push to Gitee.
+# These are per-machine state, MUST NEVER enter the repo.
+# (Sandbox stores them under <repo>/.ssh/ so they survive container restart,
+#  but they are not part of the project — never commit.)
+.ssh/
+
+# Per-sandbox scratch / cache / tools
+.version/
+NOTES.md
+scratch/
+*.tmp
