@@ -219,28 +219,32 @@ try (ByteArrayInputStream bis = new ByteArrayInputStream(bytes)) {
 
 ---
 
-### 3.2 PowerShell 5.x `curl` 是 `Invoke-WebRequest` 的别名 (M0)
+### 3.2 PowerShell 5.x `curl` 是 `Invoke-WebRequest` 的别名,Windows Server 默认没 curl.exe (M0)
 
-**Commit**: `22ab893`
+**Commits**: `22ab893`, `f3932d6`
 
 **症状**:
 ```
-[1/2] GET /api/health
-FAILED - backend may not be running
+& : 无法将"curl.exe"项识别为 cmdlet、函数、脚本文件或可运行程序的名称。
+请检查名称的拼写,如果包括路径,请确保路径正确
 ```
 
-(其实后端正常,`/api/health` 返回了 UP,但 healthcheck 脚本解析错以为失败)
-
 **根因**:
-- `curl` 在 PowerShell 5.x 是 `Invoke-WebRequest` 的别名,返回**对象**(`StatusCode / Content / Headers` 等)
-- 我用 `& curl` 调,返回对象不是字符串 → `$healthResp -match '...'` 失败 → catch 兜底报失败
+- 第一次修:`curl` 在 PowerShell 5.x 是 `Invoke-WebRequest` 的别名,返回对象不是字符串
+- 改成 `& curl.exe`,但 **Windows Server 2012 默认没装 curl.exe**(curl.exe 是 Win10 1803+ / Server 2019+ 自带)
+- Server 2012 R2 上 `curl.exe` 找不到,`& curl.exe` 报 CommandNotFoundException
 
-**修复**: 用 `& curl.exe` 强制调**真实**的 curl(系统带的),返回字符串
+**修复**: 用 `Invoke-WebRequest -UseBasicParsing`(PowerShell 5.x 自带,不依赖 IE 渲染引擎)
+
+```powershell
+$resp = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 10
+$json = $resp.Content
+```
 
 **教训**:
-- **PowerShell 里 `curl` 不等于 bash 的 `curl`**——PowerShell 5.x 是别名,7.x 才兼容
-- 凡是要返回字符串的 HTTP 调用,用 `curl.exe` 或 `Invoke-RestMethod` 替代
-- 写 healthcheck 类脚本,先在 PowerShell ISE 跑一次验证
+- **任何 healthcheck / API 测试脚本,用 `Invoke-WebRequest` + `Invoke-RestMethod`,不要用 curl**
+- PowerShell 5.x / Server 2012 R2 都没 curl.exe
+- 加 `-UseBasicParsing` 避免依赖 IE;加 `-TimeoutSec` 避免卡死
 
 ---
 
@@ -457,7 +461,7 @@ git@gitee.com: Permission denied (publickey).
 | 2.2 | Tika parseToString(byte[]) API 错 | 165d430 |
 | 2.3 | Tika detect 不抛 IOException | 0cb59ff |
 | 3.1 | PowerShell 5.x 中文 UTF-8 脚本 | ceb2502 |
-| 3.2 | PowerShell curl 别名 | 22ab893 |
+| 3.2 | PowerShell curl 别名 / curl.exe 缺失 | 22ab893, f3932d6 |
 | 3.3 | PowerShell 5.x RemoteException | a8fc056, 3ae81e4, cd8b59c |
 | 3.4 | PowerShell -D 参数解析 | (M0-3 解决) |
 | 4.1 | UTF-8 BOM | 1af3dc0, 2140440 |
