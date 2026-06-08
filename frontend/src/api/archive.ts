@@ -224,3 +224,131 @@ export async function batchUploadMaterials(
 export async function regenerateSummary(proposalId: number): Promise<Proposal> {
   return getData<Proposal>(await http.post<any>(`/proposals/${proposalId}/regenerate-summary`))
 }
+
+// ========== Dict Admin ==========
+export interface DictType {
+  id?: number
+  typeCode: string
+  typeName: string
+  description?: string
+  sortOrder?: number
+  isSystem?: boolean
+}
+
+export interface DictItem {
+  id?: number
+  typeCode: string
+  itemKey: string
+  itemValue: string
+  sortOrder?: number
+  isDefault?: boolean
+  enabled?: boolean
+  isSystem?: boolean
+  remark?: string
+}
+
+export async function listDictTypes(): Promise<DictType[]> {
+  return getData<DictType[]>(await http.get<any>('/dict/types'))
+}
+
+export async function createDictType(data: Partial<DictType>): Promise<DictType> {
+  return getData<DictType>(await http.post<any>('/dict/types', data))
+}
+
+export async function listDictItems(typeCode: string): Promise<DictItem[]> {
+  return getData<DictItem[]>(await http.get<any>(`/dict/items?typeCode=${typeCode}`))
+}
+
+export async function createDictItem(data: Partial<DictItem>): Promise<DictItem> {
+  return getData<DictItem>(await http.post<any>('/dict/items', data))
+}
+
+export async function updateDictItem(id: number, data: Partial<DictItem>): Promise<DictItem> {
+  return getData<DictItem>(await http.put<any>(`/dict/items/${id}`, data))
+}
+
+export async function deleteDictItem(id: number): Promise<void> {
+  await http.delete(`/dict/items/${id}`)
+}
+
+// ========== Extraction Methods ==========
+export interface ExtractionMethod {
+  id?: number
+  name: string
+  targetField?: string
+  promptTemplate?: string
+  isBuiltin?: boolean
+  enabled?: boolean
+  createdAt?: string
+}
+
+export async function listExtractionMethods(): Promise<ExtractionMethod[]> {
+  return getData<ExtractionMethod[]>(await http.get<any>('/extraction-methods'))
+}
+
+export async function createExtractionMethod(data: Partial<ExtractionMethod>): Promise<ExtractionMethod> {
+  return getData<ExtractionMethod>(await http.post<any>('/extraction-methods', data))
+}
+
+export async function updateExtractionMethod(id: number, data: Partial<ExtractionMethod>): Promise<ExtractionMethod> {
+  return getData<ExtractionMethod>(await http.put<any>(`/extraction-methods/${id}`, data))
+}
+
+export async function deleteExtractionMethod(id: number): Promise<void> {
+  await http.delete(`/extraction-methods/${id}`)
+}
+
+// ========== Comparison Methods ==========
+export interface ComparisonMethod {
+  id?: number
+  name: string
+  promptTemplate?: string
+  isBuiltin?: boolean
+  enabled?: boolean
+  createdAt?: string
+}
+
+export async function listComparisonMethods(): Promise<ComparisonMethod[]> {
+  return getData<ComparisonMethod[]>(await http.get<any>('/comparison-methods'))
+}
+
+export async function createComparisonMethod(data: Partial<ComparisonMethod>): Promise<ComparisonMethod> {
+  return getData<ComparisonMethod>(await http.post<any>('/comparison-methods', data))
+}
+
+export async function updateComparisonMethod(id: number, data: Partial<ComparisonMethod>): Promise<ComparisonMethod> {
+  return getData<ComparisonMethod>(await http.put<any>(`/comparison-methods/${id}`, data))
+}
+
+export async function deleteComparisonMethod(id: number): Promise<void> {
+  await http.delete(`/comparison-methods/${id}`)
+}
+
+// ========== Trigger Rules ==========
+export interface TriggerRule {
+  id?: number
+  name: string
+  description?: string
+  eventType?: string
+  actionType?: string
+  actionConfig?: string
+  enabled?: boolean
+  isBuiltin?: boolean
+  createdAt?: string
+}
+
+export async function listTriggerRules(): Promise<TriggerRule[]> {
+  return getData<TriggerRule[]>(await http.get<any>('/trigger-rules'))
+}
+
+export async function createTriggerRule(data: Partial<TriggerRule>): Promise<TriggerRule> {
+  return getData<TriggerRule>(await http.post<any>('/trigger-rules', data))
+}
+
+export async function updateTriggerRule(id: number, data: Partial<TriggerRule>): Promise<TriggerRule> {
+  return getData<TriggerRule>(await http.put<any>(`/trigger-rules/${id}`, data))
+}
+
+export async function deleteTriggerRule(id: number): Promise<void> {
+  await http.delete(`/trigger-rules/${id}`)
+}

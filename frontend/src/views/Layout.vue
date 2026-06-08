@@ -3,7 +3,7 @@ import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/store/auth'
-import { DataLine, Folder, Document, AlarmClock, SetUp } from '@element-plus/icons-vue'
+import { DataLine, Folder, Document, AlarmClock, SetUp, Setting } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -17,7 +17,7 @@ onMounted(async () => {
 function onLogout() {
   auth.logout()
   ElMessage.success('已退出登录')
-  router.push('/login')
+  window.location.replace('/login')
 }
 </script>
 
@@ -78,6 +78,17 @@ function onLogout() {
             <el-icon><SetUp /></el-icon>
             <span>规则引擎(M4 启用)</span>
           </el-menu-item>
+          <!-- E-2 Admin: only visible for admin role -->
+          <el-sub-menu v-if="auth.isAdmin" index="admin">
+            <template #title>
+              <el-icon><Setting /></el-icon>
+              <span>参数管理</span>
+            </template>
+            <el-menu-item index="/admin/dict">字典管理</el-menu-item>
+            <el-menu-item index="/admin/extraction">抽取方法</el-menu-item>
+            <el-menu-item index="/admin/comparison">对比方法</el-menu-item>
+            <el-menu-item index="/admin/triggers">触发规则</el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </el-aside>
 

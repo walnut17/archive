@@ -51,7 +51,31 @@ const router = createRouter({
           name: 'knowledge',
           component: () => import('@/views/Knowledge.vue'),
         },
-        // 后续模块加在这里
+        // E-2 Admin pages (requires admin role)
+        {
+          path: 'admin/dict',
+          name: 'admin-dict',
+          component: () => import('@/views/AdminDict.vue'),
+          meta: { requiresAdmin: true },
+        },
+        {
+          path: 'admin/extraction',
+          name: 'admin-extraction',
+          component: () => import('@/views/AdminExtraction.vue'),
+          meta: { requiresAdmin: true },
+        },
+        {
+          path: 'admin/comparison',
+          name: 'admin-comparison',
+          component: () => import('@/views/AdminComparison.vue'),
+          meta: { requiresAdmin: true },
+        },
+        {
+          path: 'admin/triggers',
+          name: 'admin-triggers',
+          component: () => import('@/views/AdminTrigger.vue'),
+          meta: { requiresAdmin: true },
+        },
       ],
     },
   ],
@@ -66,6 +90,11 @@ router.beforeEach((to, _from, next) => {
   }
   if (!auth.token) {
     next({ name: 'login', query: { redirect: to.fullPath } })
+    return
+  }
+  // Admin role check
+  if (to.meta.requiresAdmin && auth.user?.role !== 'admin') {
+    next({ name: 'dashboard' })
     return
   }
   next()
