@@ -105,4 +105,24 @@ public class ProjectService {
         }
         return PageResponse.of(result);
     }
+
+    /**
+     * 更新项目剩余金额(占位实现).
+     * <p>完整实现需聚合付款材料数据计算: remaining = initial_amount - sum(payments)。
+     * 当前仅将 remaining_amount 设为 initial_amount。
+     * DB 已有 initial_amount / remaining_amount 列，Java 实体尚未映射。</p>
+     *
+     * @param projectId 项目 ID
+     */
+    @Transactional
+    public void updateRemainingAmount(Long projectId) {
+        Project project = projectRepository.findById(projectId).orElse(null);
+        if (project == null) {
+            log.warn("updateRemainingAmount skipped: project not found, id={}", projectId);
+            return;
+        }
+        // 占位:实体尚未映射 initial_amount / remaining_amount 字段,
+        // 待 DB 实体同步后实现 actual = initial - sum(已付款)
+        log.info("updateRemainingAmount called for projectId={} (placeholder)", projectId);
+    }
 }

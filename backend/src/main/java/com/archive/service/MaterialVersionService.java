@@ -1,12 +1,20 @@
 package com.archive.service;
 
 import com.archive.common.StorageService;
+import com.archive.engine.ExtractionEngine;
+import com.archive.engine.TimepointExtractor;
+import com.archive.engine.TriggerEngine;
 import com.archive.entity.Material;
 import com.archive.entity.MaterialVersion;
+import com.archive.entity.Proposal;
 import com.archive.repository.MaterialRepository;
 import com.archive.repository.MaterialVersionRepository;
+import com.archive.repository.ProposalRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -39,6 +47,16 @@ public class MaterialVersionService {
     private final MaterialVersionRepository materialVersionRepository;
     private final StorageService storageService;
     private final TikaService tikaService;
+    private final ProposalRepository proposalRepository;
+
+    @Autowired
+    private ExtractionEngine extractionEngine;
+    @Autowired
+    private TimepointExtractor timepointExtractor;
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+    @Autowired
+    private ProjectService projectService;
 
     /**
      * 上传新版本(自动算 version_no:同 material 已有最大 + 1).
@@ -129,6 +147,13 @@ public class MaterialVersionService {
             v.setParseStatus("success");
             v.setParsedAt(LocalDateTime.now());
             v.setParseError(null);
+
+            // 非阻塞:解析成功后触发引擎处理
+            try {
+                triggerAfterParse(v.getId(), v.getMaterialId());
+            } catch (Exception e) {
+                log.warn("triggerAfterParse failed (non-blocking) for version {}: {}", versionId, e.getMessage());
+            }
         } catch (Exception e) {
             log.error("Parse failed for version {}", versionId, e);
             v.setParseStatus("failed");
@@ -197,6 +222,68 @@ public class MaterialVersionService {
             return HexFormat.of().formatHex(md.digest(bytes));
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("SHA-256 unavailable", e);
+        }
+    }
+
+    /**
+     * 解析成功后触发引擎处理(非阻塞).
+     * <p>调用抽取引擎、时点抽取引擎，发布分类事件，
+     * 若材料类别为收款/付款凭证则更新项目剩余金额。</p>
+     *
+     * @param materialVersionId 材料版本 ID
+     * @param materialId        材料 ID
+     */
+    @Async("taskExecutor")
+    public void triggerAfterParse(Long materialVersionId, Long materialId) {
+        try {
+            MaterialVersion v = materialVersionRepository.findById(materialVersionId).orElse(null);
+            Material material = materialRepository.findById(materialId).orElse(null);
+            if (v == null || material == null) {
+                log.warn("triggerAfterParse skipped: version={} or material={} not found",
+                        materialVersionId, materialId);
+                return;
+            }
+
+            // 1. 字段抽取引擎
+            try {
+                extractionEngine.extract(materialVersionId);
+            } catch (Exception e) {
+                log.warn("Extraction engine call failed for version {}: {}", materialVersionId, e.getMessage());
+            }
+
+            // 2. 时点抽取引擎
+            try {
+                timepointExtractor.extractTimepoints(materialVersionId);
+            } catch (Exception e) {
+                log.warn("Timepoint extraction failed for version {}: {}", materialVersionId, e.getMessage());
+            }
+
+            // 3. 发布材料分类事件(触发规则引擎)
+            try {
+                TriggerEngine.MaterialCategorizedEvent event = new TriggerEngine.MaterialCategorizedEvent(
+                        materialId, material.getTitle(), material.getCategory());
+                eventPublisher.publishEvent(event);
+            } catch (Exception e) {
+                log.warn("Failed to publish MaterialCategorizedEvent for material {}: {}", materialId, e.getMessage());
+            }
+
+            // 4. 若为收款/付款凭证, 更新项目剩余金额
+            String category = material.getCategory();
+            if ("收款凭证".equals(category) || "付款凭证".equals(category)) {
+                try {
+                    Proposal proposal = proposalRepository.findById(material.getProposalId()).orElse(null);
+                    if (proposal != null) {
+                        projectService.updateRemainingAmount(proposal.getProjectId());
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to updateRemainingAmount for proposal {}: {}",
+                            material.getProposalId(), e.getMessage());
+                }
+            }
+
+            log.info("triggerAfterParse completed for version={}, material={}", materialVersionId, materialId);
+        } catch (Exception e) {
+            log.warn("triggerAfterParse failed for version {}: {}", materialVersionId, e.getMessage());
         }
     }
 }
