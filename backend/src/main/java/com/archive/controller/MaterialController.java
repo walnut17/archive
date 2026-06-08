@@ -8,8 +8,11 @@ import com.archive.entity.Material;
 import com.archive.service.MaterialService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 
 /**
@@ -69,5 +72,19 @@ public class MaterialController {
     public ApiResponse<Void> delete(@PathVariable Long id) {
         materialService.delete(id);
         return ApiResponse.ok();
+    }
+
+    @PostMapping("/batch")
+    public ApiResponse<List<MaterialResponse>> batchUpload(
+            @RequestParam Long proposalId,
+            @RequestParam("files") MultipartFile[] files,
+            @RequestParam(required = false) String defaultCategory,
+            @RequestParam(required = false) String defaultTags) {
+        String uploadedBy = SecurityContextHolder.getContext().getAuthentication().getName();
+        List<Material> created = materialService.batchUpload(proposalId, files, defaultCategory, defaultTags, uploadedBy);
+        List<MaterialResponse> responses = created.stream()
+                .map(m -> MaterialResponse.from(m, materialService.countVersions(m.getId())))
+                .toList();
+        return ApiResponse.ok(responses);
     }
 }
