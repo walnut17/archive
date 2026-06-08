@@ -1,6 +1,9 @@
 -- ==========================================================
 -- M2 知识库问答 — MySQL FULLTEXT 索引迁移
 -- 在 material_version 表加 parsed_text 字段 + FULLTEXT 索引
+--
+-- ⚠️ 已废弃:此迁移已集成到 db/init.sql 的 material_version 表定义中。
+--    新部署直接跑 init.sql 即可,已有库可执行此文件追加索引。
 -- ==========================================================
 
 -- 1. 加 parsed_text 字段(已有 parsed_text_path,再加 parsed_text 内容本身,

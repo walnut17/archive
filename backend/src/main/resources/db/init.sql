@@ -151,6 +151,7 @@ CREATE TABLE material_version (
     parse_status VARCHAR(16) NOT NULL DEFAULT 'pending' COMMENT 'pending/running/success/failed',
     parsed_at DATETIME COMMENT '解析完成时间',
     parse_error VARCHAR(2000) COMMENT '解析错误信息',
+    parsed_text LONGTEXT COMMENT '解析后的纯文本内容(M2 知识库问答 FULLTEXT 索引字段)',
     uploaded_by VARCHAR(64) COMMENT '上传人',
     change_note VARCHAR(1000) COMMENT '版本说明',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -161,8 +162,20 @@ CREATE TABLE material_version (
     INDEX idx_sha256 (sha256),
     INDEX idx_parse_status (parse_status),
     INDEX idx_uploaded_by (uploaded_by),
-    UNIQUE KEY uk_material_version (material_id, version_no)
+    UNIQUE KEY uk_material_version (material_id, version_no),
+    FULLTEXT INDEX ft_parsed_text (parsed_text) WITH PARSER ngram
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='材料版本';
+
+-- ==========================================================
+-- 8. 迁移检查:确认 FULLTEXT 索引已创建
+-- ==========================================================
+SELECT 'ft_parsed_text 索引已创建' AS info
+WHERE EXISTS (
+    SELECT 1 FROM information_schema.STATISTICS
+    WHERE table_schema = 'archive_db'
+      AND table_name = 'material_version'
+      AND index_name = 'ft_parsed_text'
+);
 
 -- ==========================================================
 -- 验证
