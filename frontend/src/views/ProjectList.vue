@@ -13,7 +13,7 @@ const loading = ref(false)
 const list = ref<Project[]>([])
 const total = ref(0)
 const query = ref({
-  page: 0,
+  page: 1,
   size: 20,
   status: '',
   keyword: '',
@@ -22,7 +22,7 @@ const query = ref({
 async function fetch() {
   loading.value = true
   try {
-    const page = await listProjects(query.value)
+    const page = await listProjects({ ...query.value, page: query.value.page - 1 })
     list.value = page.content
     total.value = page.totalElements
   } finally {
@@ -31,7 +31,7 @@ async function fetch() {
 }
 
 function reset() {
-  query.value = { page: 0, size: 20, status: '', keyword: '' }
+  query.value = { page: 1, size: 20, status: '', keyword: '' }
   fetch()
 }
 
