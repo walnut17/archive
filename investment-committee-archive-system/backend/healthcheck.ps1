@@ -51,9 +51,13 @@ if ($curlPath) {
 
     # Test 2: login
     Write-Host "[2/2] POST /api/auth/login (admin/admin123)" -ForegroundColor Yellow
+    # Build body via file to avoid PowerShell {}-in-single-quote parsing issue
+    $bodyFile = Join-Path $env:TEMP "archive-login-body.json"
+    Set-Content -Path $bodyFile -Value '{"username":"admin","password":"admin123"}' -Encoding UTF8
     $loginJson = & $curlPath -s -m 10 -X POST -H "Content-Type: application/json" `
-        -d '{"username":"admin","password":"admin123"}' `
+        --data-binary "@$bodyFile" `
         http://localhost:8080/api/auth/login
+    Remove-Item $bodyFile -ErrorAction SilentlyContinue
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrEmpty($loginJson)) {
         Write-Host "FAILED - login request error" -ForegroundColor Red
         Read-Host "Press Enter to exit"
@@ -104,7 +108,8 @@ if ($curlPath) {
 
     Write-Host "[2/2] POST /api/auth/login (admin/admin123)" -ForegroundColor Yellow
     try {
-        $loginJson = Post-Login '{"username":"admin","password":"admin123"}'
+        $loginBody = '{"username":"admin","password":"admin123"}'
+        $loginJson = Post-Login $loginBody
     } catch {
         Write-Host "FAILED - login request error: $_" -ForegroundColor Red
         Read-Host "Press Enter to exit"
