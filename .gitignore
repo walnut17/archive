@@ -13,3 +13,10 @@
 NOTES.md
 scratch/
 *.tmp
+
+# Plan engine runtime state (board.md, outputs/, etc.) — only the curated
+# .plan files (static, hand-written) are part of the project.
+.mavis/plans/plan-*.yaml
+.mavis/plans/requirement-analysis-plan.yaml
+.mavis/plans/*/board.md
+.mavis/plans/*/outputs/
