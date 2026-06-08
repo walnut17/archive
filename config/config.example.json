@@ -12,6 +12,12 @@
     "timeoutSeconds": 60
   },
 
+  "jwt": {
+    "_comment": "JWT 配置 — secret 用 openssl rand -base64 32 生成,至少 32 字节;expirationSeconds 默认 86400(24 小时)",
+    "secret": "在此填 JWT secret,用 openssl rand -base64 32 生成",
+    "expirationSeconds": 86400
+  },
+
   "database": {
     "_comment": "MySQL 8.0.16 配置 — 库名和账号需要先用 DBA 账号创建,本服务用最小权限账号",
     "host": "localhost",
