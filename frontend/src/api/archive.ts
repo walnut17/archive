@@ -198,3 +198,29 @@ export interface Section {
 export async function listSections(materialId: number, versionId: number): Promise<Section[]> {
   return getData<Section[]>(await http.get<any>(`/materials/${materialId}/versions/${versionId}/sections`))
 }
+
+// ========== Batch Upload ==========
+export async function batchUploadMaterials(
+  proposalId: number,
+  files: File[],
+  defaultCategory?: string,
+  defaultTags?: string,
+  onProgress?: (percent: number) => void
+): Promise<Material[]> {
+  const form = new FormData()
+  form.append('proposalId', String(proposalId))
+  files.forEach(f => form.append('files', f))
+  if (defaultCategory) form.append('defaultCategory', defaultCategory)
+  if (defaultTags) form.append('defaultTags', defaultTags)
+  return getData<Material[]>(await http.post<any>('/materials/batch', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: onProgress ? (e: any) => {
+      if (e.total) onProgress(Math.round((e.loaded / e.total) * 100))
+    } : undefined,
+  }))
+}
+
+// ========== Regenerate Summary ==========
+export async function regenerateSummary(proposalId: number): Promise<Proposal> {
+  return getData<Proposal>(await http.post<any>(`/proposals/${proposalId}/regenerate-summary`))
+}

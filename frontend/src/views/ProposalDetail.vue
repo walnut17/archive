@@ -6,6 +6,7 @@ import {
   getProposal, listMaterials, createMaterial, deleteMaterial,
   listVersions, uploadVersion, switchCurrentVersion, deleteVersion,
   downloadVersionUrl, reparseVersion, listSections,
+  batchUploadMaterials, regenerateSummary,
   type Proposal, type Material, type MaterialVersion, type Section,
   materialStatusOptions, materialCategoryOptions,
 } from '../api/archive'
@@ -16,6 +17,9 @@ const proposalId = ref(Number(route.params.id))
 const proposal = ref<Proposal | null>(null)
 const materials = ref<Material[]>([])
 const loading = ref(false)
+const batchUploading = ref(false)
+const batchProgress = ref(0)
+const summaryRegenerating = ref(false)
 
 const showMaterialForm = ref(false)
 const editingMaterial = ref<Material | null>(null)
@@ -149,6 +153,62 @@ function parseStatusType(s: string) {
   }
 }
 
+async function onBatchUpload() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.multiple = true
+  input.onchange = async (e: any) => {
+    const files: File[] = Array.from(e.target.files || [])
+    if (files.length === 0) return
+    if (files.length > 20) {
+      ElMessage.warning('单次最多上传 20 个文件')
+      return
+    }
+    batchUploading.value = true
+    batchProgress.value = 0
+    try {
+      await batchUploadMaterials(proposalId.value, files, undefined, undefined, (pct) => {
+        batchProgress.value = pct
+      })
+      ElMessage.success(`成功上传 ${files.length} 个文件`)
+      fetch()
+    } catch (e: any) {
+      ElMessage.error(e?.response?.data?.message || '批量上传失败')
+    } finally {
+      batchUploading.value = false
+      batchProgress.value = 0
+    }
+  }
+  input.click()
+}
+
+async function onRegenerateSummary() {
+  try {
+    await ElMessageBox.confirm('重新生成会覆盖现有摘要，确定继续？', '确认', { type: 'warning' })
+  } catch { return }
+  summaryRegenerating.value = true
+  try {
+    await regenerateSummary(proposalId.value)
+    ElMessage.success('摘要重新生成成功')
+    fetch()
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.message || '重新生成失败')
+  } finally {
+    summaryRegenerating.value = false
+  }
+}
+
+async function onChangeCategory(row: Material, newCat: string) {
+  try {
+    const { updateMaterial } = await import('../api/archive')
+    await updateMaterial(row.id!, { ...row, category: newCat })
+    ElMessage.success('类别已更新')
+    fetch()
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.message || '更新失败')
+  }
+}
+
 onMounted(fetch)
 </script>
 
@@ -169,18 +229,35 @@ onMounted(fetch)
       </el-descriptions-item>
       <el-descriptions-item label="审议日期">{{ proposal.reviewedAt || '—' }}</el-descriptions-item>
       <el-descriptions-item label="项目ID">{{ proposal.projectId }}</el-descriptions-item>
-      <el-descriptions-item label="摘要" :span="2">{{ proposal.summary || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="摘要" :span="2">
+  <span>{{ proposal.summary || '—' }}</span>
+  <el-tag v-if="proposal.remark?.includes('[摘要由系统自动生成')" type="info" size="small" style="margin-left: 8px">自动生成</el-tag>
+  <el-button v-if="proposal.summary" link type="primary" size="small" style="margin-left: 8px" :loading="summaryRegenerating" @click="onRegenerateSummary">重新提取</el-button>
+</el-descriptions-item>
       <el-descriptions-item v-if="proposal.decision" label="审议结论" :span="2">{{ proposal.decision }}</el-descriptions-item>
     </el-descriptions>
 
     <div style="margin: 24px 0 12px; display: flex; justify-content: space-between; align-items: center">
       <h3 style="margin: 0">材料列表({{ materials.length }})</h3>
-      <el-button type="success" @click="goCreateMaterial">+ 新建材料</el-button>
+      <div>
+        <el-button type="success" :loading="batchUploading" @click="onBatchUpload">
+          {{ batchUploading ? `上传中 ${batchProgress}%` : '+ 批量上传' }}
+        </el-button>
+        <el-button type="success" @click="goCreateMaterial" style="margin-left: 8px">+ 新建材料</el-button>
+      </div>
     </div>
+
+    <el-progress v-if="batchUploading" :percentage="batchProgress" :stroke-width="16" striped style="margin-bottom: 12px" />
 
     <el-table :data="materials" stripe border>
       <el-table-column prop="title" label="材料标题" min-width="200" show-overflow-tooltip />
-      <el-table-column prop="category" label="类别" width="120" />
+      <el-table-column prop="category" label="类别" width="160">
+        <template #default="{ row }">
+          <el-select v-model="row.category" size="small" @change="(val: string) => onChangeCategory(row, val)" style="width: 130px">
+            <el-option v-for="c in materialCategoryOptions" :key="c" :label="c" :value="c" />
+          </el-select>
+        </template>
+      </el-table-column>
       <el-table-column prop="status" label="状态" width="100">
         <template #default="{ row }">
           <el-tag>{{ row.status }}</el-tag>
