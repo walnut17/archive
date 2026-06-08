@@ -34,8 +34,8 @@ async function fetch() {
       getProject(projectId.value),
       listProposals({ projectId: projectId.value, size: 100 }),
     ])
-    project.value = (p as any).data
-    proposals.value = ((pl as any).data.content) || []
+    project.value = p
+    proposals.value = pl.content || []
   } finally {
     loading.value = false
   }

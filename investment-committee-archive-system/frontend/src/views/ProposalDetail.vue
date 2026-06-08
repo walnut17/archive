@@ -41,8 +41,8 @@ async function fetch() {
       getProposal(proposalId.value),
       listMaterials({ proposalId: proposalId.value, size: 100 }),
     ])
-    proposal.value = (p as any).data
-    materials.value = ((ms as any).data.content) || []
+    proposal.value = p
+    materials.value = ms.content || []
   } finally {
     loading.value = false
   }
@@ -90,8 +90,7 @@ async function onDeleteMaterial(row: Material) {
 // ---- 版本管理 ----
 async function openVersions(m: Material) {
   currentMaterial.value = m
-  const resp: any = await listVersions(m.id!)
-  versions.value = resp.data
+  versions.value = await listVersions(m.id!)
   showVersions.value = true
 }
 
@@ -136,8 +135,7 @@ async function onReparse(m: Material, v: MaterialVersion) {
 }
 
 async function onShowSections(m: Material, v: MaterialVersion) {
-  const resp: any = await listSections(m.id!, v.id!)
-  sections.value = resp.data
+  sections.value = await listSections(m.id!, v.id!)
   currentMaterial.value = m
   showSections.value = true
 }

@@ -28,8 +28,7 @@ onMounted(async () => {
     isEdit.value = true
     loading.value = true
     try {
-      const resp: any = await getProject(Number(id))
-      form.value = resp.data
+      form.value = await getProject(Number(id))
     } finally {
       loading.value = false
     }
