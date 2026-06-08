@@ -124,6 +124,8 @@ public class MaterialVersionService {
             String parsedPath = v.getStoragePath() + ".txt";
             storageService.saveParsedText(parsedPath, text);
             v.setParsedTextPath(parsedPath);
+            // M2 知识库问答用 — 把解析文本也存到 DB 字段,FULLTEXT 索引走这个
+            v.setParsedText(text);
             v.setParseStatus("success");
             v.setParsedAt(LocalDateTime.now());
             v.setParseError(null);
