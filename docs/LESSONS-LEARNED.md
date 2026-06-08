@@ -219,7 +219,7 @@ try (ByteArrayInputStream bis = new ByteArrayInputStream(bytes)) {
 
 ---
 
-### 3.2 PowerShell 5.x `curl` 是 `Invoke-WebRequest` 的别名,Windows Server 默认没 curl.exe (M0)
+### 3.2 PowerShell 5.x `curl` / `Invoke-WebRequest` 都不可靠,用 .NET HttpClient (M0)
 
 **Commits**: `22ab893`, `f3932d6`
 
@@ -461,7 +461,7 @@ git@gitee.com: Permission denied (publickey).
 | 2.2 | Tika parseToString(byte[]) API 错 | 165d430 |
 | 2.3 | Tika detect 不抛 IOException | 0cb59ff |
 | 3.1 | PowerShell 5.x 中文 UTF-8 脚本 | ceb2502 |
-| 3.2 | PowerShell curl 别名 / curl.exe 缺失 | 22ab893, f3932d6 |
+| 3.2 | PS 5.x curl/Invoke-WebRequest 都不可靠 | 22ab893, f3932d6, 4d5c368 |
 | 3.3 | PowerShell 5.x RemoteException | a8fc056, 3ae81e4, cd8b59c |
 | 3.4 | PowerShell -D 参数解析 | (M0-3 解决) |
 | 4.1 | UTF-8 BOM | 1af3dc0, 2140440 |
