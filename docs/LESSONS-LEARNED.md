@@ -313,6 +313,26 @@ java "-Dfile.encoding=UTF-8" -jar archive.jar
 ## 4. 数据库类
 
 ### 4.1 UTF-8 BOM 让 Jackson 解析失败 (M0)
+### 4.2 修复 ApiResponse 后,详情/编辑页漏改,导致页面空白 (M1-5)
+
+**Commit**: `3b487ef`
+
+**症状**: 浏览器点项目"详情" → 页面空白
+
+**根因**:
+- M1-5 写 ProjectDetail / ProposalDetail / ProjectForm 时,fetch 模式是:
+  ```js
+  const resp: any = await getProject(...)
+  form.value = resp.data
+  ```
+- 后来 M1-5 修复 api/archive.ts 用 getData<T> 拆 ApiResponse,getProject 直接返回 T
+- **但 ProjectDetail / ProposalDetail / ProjectForm 没改**,还在 `resp.data`
+- 现在 `form.value = resp.data` = undefined → 模板崩 → 空白
+
+**教训**:
+- 任何 **改 fetch 解构** 的提交,必须**全局**扫所有 .vue 文件
+- 改 API 返回类型时,所有调用方都得跟着改
+- 写详情/编辑页的"加载数据"逻辑时,TypeScript 类型变化会标红,**但 as any 让它通过**,bug 漏到运行期
 
 **Commits**: `1af3dc0` `2140440`
 
