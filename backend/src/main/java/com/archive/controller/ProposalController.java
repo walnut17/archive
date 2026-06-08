@@ -55,4 +55,10 @@ public class ProposalController {
         proposalService.delete(id);
         return ApiResponse.ok();
     }
+
+    @PostMapping("/{id}/regenerate-summary")
+    public ApiResponse<ProposalResponse> regenerateSummary(@PathVariable Long id) {
+        Proposal updated = proposalService.regenerateSummary(id);
+        return ApiResponse.ok(ProposalResponse.from(updated));
+    }
 }
