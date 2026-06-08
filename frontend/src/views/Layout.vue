@@ -3,6 +3,7 @@ import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/store/auth'
+import { DataLine, Folder, Document, AlarmClock, SetUp } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -69,10 +70,6 @@ function onLogout() {
           </el-menu-item>
           <!-- 后续模块加在这里 -->
           <!-- M1 启用:项目菜单已可点 -->
-          <el-menu-item index="/knowledge" disabled>
-            <el-icon><Document /></el-icon>
-            <span>知识库(M2 启用)</span>
-          </el-menu-item>
           <el-menu-item index="/timepoints" disabled>
             <el-icon><AlarmClock /></el-icon>
             <span>时点日程(M3 启用)</span>
