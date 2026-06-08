@@ -69,6 +69,7 @@ const exampleQuestions = [
         placeholder="输入你的问题,例如:某项目的尽调报告主要风险点是什么?"
         maxlength="500"
         show-word-limit
+        @keydown.enter.prevent="!$event.shiftKey && onAsk()"
       />
       <div style="margin-top: 12px; display: flex; align-items: center; gap: 16px">
         <el-checkbox v-model="useRerank">使用 LLM 重排(更准,需要智谱 API key)</el-checkbox>
