@@ -138,26 +138,101 @@ public class KnowledgeSearchService {
 
     /**
      * 提取包含关键词的上下文片段.
+     * <p>改进算法:解析问题中的多个关键词,在文本中找到所有出现位置,
+     * 按关键词密度评分,选取密度最高的 200 字符窗口。</p>
      */
     private String extractSnippet(String text, String question, int contextLen) {
         if (text == null || text.isEmpty()) return "";
-        // 找 question 的第一个非空字符在 text 中的位置
+        int windowSize = 200;
+
+        // 解析问题中的关键词
+        List<String> keywords = parseKeywords(question);
+        if (keywords.isEmpty()) {
+            return text.length() > windowSize ? text.substring(0, windowSize) + "..." : text;
+        }
+
+        // 收集所有关键词出现位置(按文本顺序)
+        List<Integer> positions = new ArrayList<>();
+        for (String kw : keywords) {
+            if (kw.isEmpty()) continue;
+            int idx = 0;
+            while (idx < text.length()) {
+                int pos = text.indexOf(kw, idx);
+                if (pos < 0) break;
+                positions.add(pos);
+                idx = pos + 1;
+            }
+        }
+
+        if (positions.isEmpty()) {
+            return text.length() > windowSize ? text.substring(0, windowSize) + "..." : text;
+        }
+
+        // 对每个位置评估其附近窗口的关键词密度,选取最优
+        int bestStart = 0;
+        int bestScore = 0;
+        for (int pos : positions) {
+            int start = Math.max(0, pos - contextLen);
+            if (start + windowSize > text.length()) {
+                start = Math.max(0, text.length() - windowSize);
+            }
+            int end = Math.min(text.length(), start + windowSize);
+            String window = text.substring(start, end);
+
+            int score = 0;
+            for (String kw : keywords) {
+                int count = 0;
+                int ki = 0;
+                while ((ki = window.indexOf(kw, ki)) >= 0) {
+                    count++;
+                    ki += kw.length();
+                }
+                score += count * kw.length();
+            }
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestStart = start;
+            }
+        }
+
+        // 提取最佳窗口
+        int end = Math.min(text.length(), bestStart + windowSize);
+        String snippet = text.substring(bestStart, end);
+        if (bestStart > 0) snippet = "..." + snippet;
+        if (end < text.length()) snippet = snippet + "...";
+        return snippet;
+    }
+
+    /**
+     * 将问题字符串解析为关键词列表.
+     * <p>中文单字独立作为关键词,英文字母/数字连续串作为关键词。</p>
+     */
+    private List<String> parseKeywords(String question) {
+        List<String> keywords = new ArrayList<>();
+        StringBuilder buf = new StringBuilder();
         for (int i = 0; i < question.length(); i++) {
             char c = question.charAt(i);
-            if (Character.isLetterOrDigit(c) || isChinese(c)) {
-                int pos = text.indexOf(c);
-                if (pos >= 0) {
-                    int start = Math.max(0, pos - contextLen);
-                    int end = Math.min(text.length(), pos + contextLen);
-                    String snippet = text.substring(start, end);
-                    if (start > 0) snippet = "..." + snippet;
-                    if (end < text.length()) snippet = snippet + "...";
-                    return snippet;
+            if (isChinese(c)) {
+                // 中文单字作为独立关键词
+                if (buf.length() > 0) {
+                    keywords.add(buf.toString());
+                    buf = new StringBuilder();
+                }
+                keywords.add(String.valueOf(c));
+            } else if (Character.isLetterOrDigit(c)) {
+                buf.append(c);
+            } else {
+                if (buf.length() > 0) {
+                    keywords.add(buf.toString());
+                    buf = new StringBuilder();
                 }
             }
         }
-        // 没找到匹配,返回前 200 字
-        return text.length() > 200 ? text.substring(0, 200) + "..." : text;
+        if (buf.length() > 0) {
+            keywords.add(buf.toString());
+        }
+        return keywords;
     }
 
     private boolean isChinese(char c) {
