@@ -47,7 +47,7 @@ mysql -u root -p archive_db
 或者用 init.sql 里整段执行:
 
 ```powershell
-mysql -u root -p archive_db < D:\projects-online\investment-committee-archive-system\backend\src\main\resources\db\init.sql
+mysql -u root -p archive_db < D:\projects_new\projects-online\backend\src\main\resources\db\init.sql
 ```
 
 ⚠️ **注意**:`init.sql` 头部有 `DROP TABLE IF EXISTS ... + CREATE TABLE` 4 张表(如果数据很重要,**别**整段重跑)。
@@ -66,7 +66,7 @@ SHOW TABLES;
 ## 3. 后端启动 + 健康检查(3 分钟)
 
 ```powershell
-cd D:\projects-online\investment-committee-archive-system\backend
+cd D:\projects_new\projects-online\backend
 .\startup.ps1
 ```
 
@@ -91,7 +91,7 @@ Started ArchiveApplication in X.XXX seconds
 **新开 PowerShell 跑 healthcheck**:
 
 ```powershell
-cd D:\projects-online\investment-committee-archive-system\backend
+cd D:\projects_new\projects-online\backend
 .\healthcheck.ps1
 ```
 
@@ -246,7 +246,7 @@ curl.exe -s -X PUT -Uri "http://localhost:8080/api/projects/1" -ContentType "app
 **前端默认在跑**(你 M0 启动后没关),如果不在跑:
 
 ```powershell
-cd D:\projects-online\investment-committee-archive-system\frontend
+cd D:\projects_new\projects-online\frontend
 npm run dev
 ```
 

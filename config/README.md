@@ -143,8 +143,8 @@ app:
 
 ```gitignore
 # 投委会档案 — 本地配置(不进 Git)
-investment-committee-archive-system/config/config.json
-!investment-committee-archive-system/config/config.example.json
+config/config.json
+!config/config.example.json
 ```
 
 ---

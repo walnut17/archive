@@ -28,7 +28,7 @@
 仓库:    git@gitee.com:frisker/projects-online.git
 组织:    frisker
 项目名:  projects-online
-本仓库路径: investment-committee-archive-system/
+本仓库路径: 
 ```
 
 ### 2.2 分支
@@ -138,16 +138,16 @@ D:\archive\
 
 ```powershell
 # 一次性
-cd D:\projects-online\investment-committee-archive-system\backend
+cd D:\projects_new\projects-online\backend
 mvn clean package -DskipTests
 # 产物在 target\archive.jar,copy 到 D:\archive\apps\backend\
 
 # 后端(开发模式)
-cd D:\projects-online\investment-committee-archive-system\backend
+cd D:\projects_new\projects-online\backend
 .\startup.ps1
 
 # 前端(开发模式)
-cd D:\projects-online\investment-committee-archive-system\frontend
+cd D:\projects_new\projects-online\frontend
 npm run dev
 # 浏览器开 http://localhost:5173
 
@@ -218,7 +218,7 @@ mvn -version
 ### 4.3 沙箱编译命令
 
 ```bash
-cd /workspace/projects-online-clone/investment-committee-archive-system/backend
+cd /workspace/projects-online-clone/backend
 mvn compile -DskipTests -B        # 完整编译
 mvn compile -DskipTests -B -o     # 离线模式(已缓存依赖)
 mvn clean compile -DskipTests -B  # 强制全量
