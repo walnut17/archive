@@ -22,9 +22,9 @@ const query = ref({
 async function fetch() {
   loading.value = true
   try {
-    const resp: any = await listProjects(query.value)
-    list.value = resp.data.content
-    total.value = resp.data.totalElements
+    const page = await listProjects(query.value)
+    list.value = page.content
+    total.value = page.totalElements
   } finally {
     loading.value = false
   }

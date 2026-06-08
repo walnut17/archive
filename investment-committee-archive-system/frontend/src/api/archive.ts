@@ -1,4 +1,4 @@
-import http from './http'
+import http, { getData } from './http'
 
 // ========== 通用类型 ==========
 export interface PageResponse<T> {
@@ -36,23 +36,23 @@ export const projectStatusOptions = [
 export const projectCategoryOptions = ['股权类', '固收类', '混合类', '其他']
 
 export function listProjects(params: { page?: number; size?: number; status?: string; keyword?: string }) {
-  return http.get<PageResponse<Project>>('/projects', { params })
+  return getData<PageResponse<Project>>(await http.get<any>('/projects', { params }))
 }
 
-export function getProject(id: number) {
-  return http.get<Project>(`/projects/${id}`)
+export async function getProject(id: number): Promise<Project> {
+  return getData<Project>(await http.get<any>(`/projects/${id}`))
 }
 
-export function createProject(data: Project) {
-  return http.post<Project>('/projects', data)
+export async function createProject(data: Project): Promise<Project> {
+  return getData<Project>(await http.post<any>('/projects', data))
 }
 
-export function updateProject(id: number, data: Project) {
-  return http.put<Project>(`/projects/${id}`, data)
+export async function updateProject(id: number, data: Project): Promise<Project> {
+  return getData<Project>(await http.put<any>(`/projects/${id}`, data))
 }
 
-export function deleteProject(id: number) {
-  return http.delete(`/projects/${id}`)
+export async function deleteProject(id: number): Promise<void> {
+  await http.delete(`/projects/${id}`)
 }
 
 // ========== Proposal ==========
@@ -77,24 +77,24 @@ export const proposalStatusOptions = [
 
 export const proposalTypeOptions = ['主体', '担保', '联合', '调整', '终止', '其他']
 
-export function listProposals(params: { page?: number; size?: number; projectId?: number; status?: string; keyword?: string }) {
-  return http.get<PageResponse<Proposal>>('/proposals', { params })
+export async function listProposals(params: { page?: number; size?: number; projectId?: number; status?: string; keyword?: string }): Promise<PageResponse<Proposal>> {
+  return getData<PageResponse<Proposal>>(await http.get<any>('/proposals', { params }))
 }
 
-export function getProposal(id: number) {
-  return http.get<Proposal>(`/proposals/${id}`)
+export async function getProposal(id: number): Promise<Proposal> {
+  return getData<Proposal>(await http.get<any>(`/proposals/${id}`))
 }
 
-export function createProposal(data: Proposal) {
-  return http.post<Proposal>('/proposals', data)
+export async function createProposal(data: Proposal): Promise<Proposal> {
+  return getData<Proposal>(await http.post<any>('/proposals', data))
 }
 
-export function updateProposal(id: number, data: Proposal) {
-  return http.put<Proposal>(`/proposals/${id}`, data)
+export async function updateProposal(id: number, data: Proposal): Promise<Proposal> {
+  return getData<Proposal>(await http.put<any>(`/proposals/${id}`, data))
 }
 
-export function deleteProposal(id: number) {
-  return http.delete(`/proposals/${id}`)
+export async function deleteProposal(id: number): Promise<void> {
+  await http.delete(`/proposals/${id}`)
 }
 
 // ========== Material ==========
@@ -120,24 +120,24 @@ export const materialCategoryOptions = [
   '尽调报告', '法律意见', '财务审计', '风险评估', '投委会决议', '其他',
 ]
 
-export function listMaterials(params: { page?: number; size?: number; proposalId?: number; category?: string; status?: string; keyword?: string }) {
-  return http.get<PageResponse<Material>>('/materials', { params })
+export async function listMaterials(params: { page?: number; size?: number; proposalId?: number; category?: string; status?: string; keyword?: string }): Promise<PageResponse<Material>> {
+  return getData<PageResponse<Material>>(await http.get<any>('/materials', { params }))
 }
 
-export function getMaterial(id: number) {
-  return http.get<Material>(`/materials/${id}`)
+export async function getMaterial(id: number): Promise<Material> {
+  return getData<Material>(await http.get<any>(`/materials/${id}`))
 }
 
-export function createMaterial(data: Material) {
-  return http.post<Material>('/materials', data)
+export async function createMaterial(data: Material): Promise<Material> {
+  return getData<Material>(await http.post<any>('/materials', data))
 }
 
-export function updateMaterial(id: number, data: Material) {
-  return http.put<Material>(`/materials/${id}`, data)
+export async function updateMaterial(id: number, data: Material): Promise<Material> {
+  return getData<Material>(await http.put<any>(`/materials/${id}`, data))
 }
 
-export function deleteMaterial(id: number) {
-  return http.delete(`/materials/${id}`)
+export async function deleteMaterial(id: number): Promise<void> {
+  await http.delete(`/materials/${id}`)
 }
 
 // ========== MaterialVersion ==========
@@ -157,33 +157,33 @@ export interface MaterialVersion {
   createdAt?: string
 }
 
-export function listVersions(materialId: number) {
-  return http.get<MaterialVersion[]>(`/materials/${materialId}/versions`)
+export async function listVersions(materialId: number): Promise<MaterialVersion[]> {
+  return getData<MaterialVersion[]>(await http.get<any>(`/materials/${materialId}/versions`))
 }
 
-export function uploadVersion(materialId: number, file: File, changeNote?: string) {
+export async function uploadVersion(materialId: number, file: File, changeNote?: string): Promise<MaterialVersion> {
   const form = new FormData()
   form.append('file', file)
   if (changeNote) form.append('changeNote', changeNote)
-  return http.post<MaterialVersion>(`/materials/${materialId}/versions`, form, {
+  return getData<MaterialVersion>(await http.post<any>(`/materials/${materialId}/versions`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  }))
 }
 
-export function switchCurrentVersion(materialId: number, versionId: number) {
-  return http.put(`/materials/${materialId}/versions/${versionId}/current`)
+export async function switchCurrentVersion(materialId: number, versionId: number): Promise<void> {
+  await http.put(`/materials/${materialId}/versions/${versionId}/current`)
 }
 
-export function deleteVersion(materialId: number, versionId: number) {
-  return http.delete(`/materials/${materialId}/versions/${versionId}`)
+export async function deleteVersion(materialId: number, versionId: number): Promise<void> {
+  await http.delete(`/materials/${materialId}/versions/${versionId}`)
 }
 
 export function downloadVersionUrl(materialId: number, versionId: number) {
   return `/api/materials/${materialId}/versions/${versionId}/download`
 }
 
-export function reparseVersion(materialId: number, versionId: number) {
-  return http.post(`/materials/${materialId}/versions/${versionId}/reparse`)
+export async function reparseVersion(materialId: number, versionId: number): Promise<void> {
+  await http.post(`/materials/${materialId}/versions/${versionId}/reparse`)
 }
 
 export interface Section {
@@ -195,6 +195,6 @@ export interface Section {
   endOffset: number
 }
 
-export function listSections(materialId: number, versionId: number) {
-  return http.get<Section[]>(`/materials/${materialId}/versions/${versionId}/sections`)
+export async function listSections(materialId: number, versionId: number): Promise<Section[]> {
+  return getData<Section[]>(await http.get<any>(`/materials/${materialId}/versions/${versionId}/sections`))
 }
