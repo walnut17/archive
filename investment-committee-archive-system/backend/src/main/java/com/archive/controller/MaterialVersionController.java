@@ -2,6 +2,8 @@ package com.archive.controller;
 
 import com.archive.common.ApiResponse;
 import com.archive.common.StorageService;
+import com.archive.dto.MaterialRequest;
+import com.archive.dto.MaterialResponse;
 import com.archive.dto.MaterialVersionResponse;
 import com.archive.entity.Material;
 import com.archive.entity.MaterialVersion;
