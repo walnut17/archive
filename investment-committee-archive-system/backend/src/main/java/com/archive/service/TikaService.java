@@ -28,8 +28,8 @@ public class TikaService {
      * 从字节数组提取文本.
      */
     public String extractText(byte[] bytes) {
-        try {
-            return tika.parseToString(bytes);
+        try (java.io.ByteArrayInputStream bis = new java.io.ByteArrayInputStream(bytes)) {
+            return tika.parseToString(bis);
         } catch (IOException | TikaException e) {
             throw new RuntimeException("Tika parse failed", e);
         }
