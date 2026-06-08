@@ -55,7 +55,9 @@ public class TikaService {
                 return tika.detect(bytes, filename);
             }
             return tika.detect(bytes);
-        } catch (IOException e) {
+        } catch (Exception e) {
+            // Tika 2.9 的 detect(byte[]/byte[],String) 实际不抛 checked exception,
+            // 但保险起见 catch Exception,失败就当二进制流。
             log.warn("MimeType detect failed for filename={}", filename, e);
             return "application/octet-stream";
         }
