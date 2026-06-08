@@ -1,0 +1,97 @@
+spring:
+  application:
+    name: archive
+  main:
+    banner-mode: console
+  # 占位符从 config.json 注入(由 ConfigJsonLoader 加载,见 META-INF/spring.factories)
+  # 如果 config.json 不存在,用这里的默认值(开发环境)
+  datasource:
+    url: jdbc:mysql://${app.database.host:localhost}:${app.database.port:3306}/${app.database.database:archive_db}?${app.database.params:useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${app.database.username:archive_app}
+    password: ${app.database.password:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: ${app.database.pool-max-size:10}
+      minimum-idle: ${app.database.pool-min-idle:2}
+      pool-name: archive-hikari
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    hibernate:
+      ddl-auto: validate          # 不自动建表,先用 init.sql 手动建
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+    open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+  mail:
+    host: ${app.mail.host:smtp.internal.example.cn}
+    port: ${app.mail.port:25}
+    username: ${app.mail.username:archive@example.com}
+    password: ${app.mail.password:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls.enable: ${app.mail.use-tls:false}
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+server:
+  port: ${app.server.port:8080}
+  servlet:
+    context-path: ${app.server.context-path:/}
+  compression:
+    enabled: true
+  tomcat:
+    uri-encoding: UTF-8
+
+# 应用专属配置(从 config.json 注入,见 ConfigJsonLoader)
+app:
+  glm:
+    api-key: 
+    chat-url: https://open.bigmodel.cn/api/paas/v4/chat/completions
+    vision-url: https://open.bigmodel.cn/api/paas/v4/vision
+    chat-model: glm-4-flash
+    vision-model: glm-4v
+    timeout-seconds: 60
+  storage:
+    file-root: D:/archive/files
+    parsed-root: D:/archive/parsed
+    log-root: D:/archive/logs
+    upload-max-size-mb: 100
+  jwt:
+    # 实际从 config.json 读,这里给开发期默认
+    secret: change-me-please-this-is-a-default-secret-key-32bytes-long
+    expiration-seconds: 28800
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.archive: DEBUG
+    org.springframework.security: INFO
+    org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
+  file:
+    name: D:/archive/logs/backend.log
+    max-size: 100MB
+    max-history: 30

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  WinSW 服务配置:把 archive.jar 包成 Windows 服务
+  安装: backend.exe install
+  启动: backend.exe start
+  卸载: backend.exe uninstall
+-->
+<service>
+  <id>archive-backend</id>
+  <name>投委会档案 - 后端</name>
+  <description>投委会档案管理系统 - Spring Boot 后端服务</description>
+
+  <executable>java</executable>
+  <arguments>
+    -jar
+    -Xms512m
+    -Xmx1536m
+    -Dfile.encoding=UTF-8
+    -Dconsole.encoding=UTF-8
+    "-Dloader.path=D:\archive\config"
+    "D:\archive\apps\backend\archive.jar"
+  </arguments>
+
+  <workingdirectory>D:\archive\apps\backend</workingdirectory>
+
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>10</keepFiles>
+  </log>
+
+  <onfailure action="restart" delay="30 sec"/>
+  <resetfailure>1 hour</resetfailure>
+
+  <delayedAutoStart>true</delayedAutoStart>
+</service>

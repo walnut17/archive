@@ -1,0 +1,135 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import http, { getData } from '../api/http'
+
+interface Source {
+  versionId: number
+  materialId: number
+  materialTitle: string
+  versionNo: number
+  originalFilename: string
+  projectCode: string | null
+  projectName: string | null
+  proposalCode: string
+  proposalTitle: string
+  snippet: string
+  score: number
+}
+
+interface QaResponse {
+  question: string
+  answer: string | null
+  sources: Source[]
+  reranked: boolean
+  elapsedMs: number
+}
+
+const question = ref('')
+const loading = ref(false)
+const useRerank = ref(true)
+const result = ref<QaResponse | null>(null)
+
+async function onAsk() {
+  if (!question.value.trim()) {
+    ElMessage.error('请输入问题')
+    return
+  }
+  loading.value = true
+  try {
+    const body = { question: question.value, topN: 10, rerank: useRerank.value }
+    const resp = await http.post<any>('/qa/ask', body)
+    result.value = getData<QaResponse>(resp)
+  } catch (e: any) {
+    ElMessage.error(e.message || '问答失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const exampleQuestions = [
+  '某项目的尽调报告主要风险点是什么?',
+  '最近一次审议否决的项目有哪些?为什么?',
+  '投委会对固收类项目的审议结论一般是什么?',
+]
+</script>
+
+<template>
+  <div>
+    <h2>知识库问答</h2>
+    <p style="color: #909399; font-size: 13px">
+      基于 MySQL FULLTEXT 全文检索 + 智谱 GLM-4-Flash 智能重排
+    </p>
+
+    <el-card style="margin-bottom: 16px">
+      <el-input
+        v-model="question"
+        type="textarea"
+        :rows="3"
+        placeholder="输入你的问题,例如:某项目的尽调报告主要风险点是什么?"
+        maxlength="500"
+        show-word-limit
+      />
+      <div style="margin-top: 12px; display: flex; align-items: center; gap: 16px">
+        <el-checkbox v-model="useRerank">使用 LLM 重排(更准,需要智谱 API key)</el-checkbox>
+        <el-button type="primary" :loading="loading" @click="onAsk">提问</el-button>
+      </div>
+    </el-card>
+
+    <div style="margin-bottom: 16px">
+      <span style="color: #909399; font-size: 12px; margin-right: 8px">试试问:</span>
+      <el-link
+        v-for="(q, i) in exampleQuestions"
+        :key="i"
+        type="primary"
+        style="margin-right: 12px"
+        @click="question = q"
+      >
+        {{ q }}
+      </el-link>
+    </div>
+
+    <div v-if="result" v-loading="loading">
+      <el-card v-if="result.answer" style="margin-bottom: 16px">
+        <template #header>
+          <div style="display: flex; justify-content: space-between; align-items: center">
+            <span style="font-weight: 500">答案</span>
+            <div>
+              <el-tag v-if="result.reranked" size="small" type="success" style="margin-right: 8px">已 LLM 重排</el-tag>
+              <el-tag size="small">{{ result.elapsedMs }}ms</el-tag>
+            </div>
+          </div>
+        </template>
+        <div style="white-space: pre-wrap">{{ result.answer }}</div>
+      </el-card>
+
+      <el-card>
+        <template #header>
+          <div>
+            <span style="font-weight: 500">参考来源({{ result.sources.length }})</span>
+          </div>
+        </template>
+        <div v-if="result.sources.length === 0" style="color: #909399">未检索到匹配材料</div>
+        <el-collapse>
+          <el-collapse-item v-for="(s, i) in result.sources" :key="s.versionId" :name="i">
+            <template #title>
+              <div style="width: 100%; display: flex; justify-content: space-between; align-items: center">
+                <div>
+                  <el-tag size="small" style="margin-right: 8px">[{{ i + 1 }}]</el-tag>
+                  <span v-if="s.projectCode" style="color: #909399; margin-right: 8px">{{ s.projectCode }}</span>
+                  <span style="font-weight: 500">{{ s.materialTitle }}</span>
+                  <el-tag size="small" type="info" style="margin-left: 8px">v{{ s.versionNo }}</el-tag>
+                </div>
+                <el-tag size="small" type="warning">score: {{ s.score.toFixed(2) }}</el-tag>
+              </div>
+            </template>
+            <div style="color: #909399; font-size: 12px; margin-bottom: 8px">
+              {{ s.projectName }} / {{ s.proposalTitle }} / {{ s.originalFilename }}
+            </div>
+            <pre style="white-space: pre-wrap; background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px">{{ s.snippet }}</pre>
+          </el-collapse-item>
+        </el-collapse>
+      </el-card>
+    </div>
+  </div>
+</template>

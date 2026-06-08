@@ -1,0 +1,32 @@
+# 后端编译产物
+target/
+build/
+*.class
+*.jar
+!archive.jar
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.settings/
+.classpath
+.project
+.factorypath
+
+# 日志和临时
+*.log
+logs/
+nohup.out
+hs_err_pid*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd

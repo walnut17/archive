@@ -1,0 +1,47 @@
+# 投委会档案管理系统 - Caddy 反代配置
+# 安装 Caddy:从 https://caddy.server  下载 caddy_windows_amd64.zip,解压到 D:\archive\apps\caddy\
+# 启动: caddy.exe run --config Caddyfile (开发期)
+# 注册服务: caddy.exe service install --config Caddyfile
+
+# 内网 HTTP(开发期临时用,生产应直接走 HTTPS)
+:80 {
+    encode zstd gzip
+    reverse_proxy localhost:8080 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# 内网 HTTPS(生产)
+https://archive.internal.example.cn {
+    encode zstd gzip
+
+    # 全局限速
+    @bottlenot path /api/*
+    rate_limit @bottlenot 600r/m
+
+    # API 反代
+    reverse_proxy localhost:8080 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # 前端静态(SPA,history 模式需要 try_files)
+    @spa path /*
+    handle @spa {
+        root * D:\archive\apps\frontend\dist
+        try_files {path} /index.html
+        file_server
+    }
+}
+
+# 监控(仅运维网段访问;开发期注释掉)
+# https://grafana.internal.example.cn {
+#     @denied not remote_ip 192.168.30.0/24
+#     respond @denied 403
+#     reverse_proxy monitoring:3000
+# }
