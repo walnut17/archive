@@ -1,15 +1,7 @@
 # healthcheck.ps1 - Archive system backend health check
 # Usage: PowerShell .\healthcheck.ps1
 # Tests: GET /api/health + POST /api/auth/login (admin/admin123)
-# Note: use System.Net.HttpWebRequest directly (most reliable across PS 5.x
-#       and Windows Server 2012 R2, bypasses Invoke-WebRequest bugs)
-#
-# Why not curl/Invoke-WebRequest/Invoke-RestMethod:
-#   - curl.exe: not installed by default on Server 2012
-#   - curl alias: returns objects, not strings
-#   - Invoke-WebRequest: known IndexOutOfRangeException bug on PS 5.1 + Server 2012
-#   - Invoke-RestMethod: same bug
-#   - HttpWebRequest: works reliably, no surprises
+# Requires: curl.exe in PATH (curl.se/windows, choco install curl, or winget)
 
 $ErrorActionPreference = "Continue"
 
@@ -18,39 +10,26 @@ Write-Host " Archive System - Health Check" -ForegroundColor Cyan
 Write-Host "================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Helper: do a simple HTTP request via HttpWebRequest, return body string or $null on error
-function Get-HttpBody {
-    param(
-        [string]$Url,
-        [string]$Method = "GET",
-        [string]$Body = $null,
-        [string]$ContentType = "application/json"
-    )
-    try {
-        Add-Type -AssemblyName System.Net.Http
-        $client = New-Object System.Net.Http.HttpClient
-        $client.Timeout = [TimeSpan]::FromSeconds(10)
-        $reqMsg = New-Object System.Net.Http.HttpRequestMessage(
-            [System.Net.Http.HttpMethod]::new($Method), $Url)
-        if ($null -ne $Body) {
-            $content = New-Object System.Net.Http.StringContent(
-                $Body, [System.Text.Encoding]::UTF8, $ContentType)
-            $reqMsg.Content = $content
-        }
-        $respMsg = $client.SendAsync($reqMsg).GetAwaiter().GetResult()
-        $body = $respMsg.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-        $client.Dispose()
-        return $body
-    } catch {
-        return $null
-    }
+# Verify curl.exe is available
+$curlPath = (Get-Command curl.exe -ErrorAction SilentlyContinue).Source
+if (-not $curlPath) {
+    Write-Host "ERROR: curl.exe not found in PATH" -ForegroundColor Red
+    Write-Host "" -ForegroundColor Red
+    Write-Host "Install one of:" -ForegroundColor Yellow
+    Write-Host "  - choco install curl -y" -ForegroundColor Gray
+    Write-Host "  - winget install cURL.cURL" -ForegroundColor Gray
+    Write-Host "  - manual: download from https://curl.se/windows/" -ForegroundColor Gray
+    Write-Host "" -ForegroundColor Red
+    Read-Host "Press Enter to exit"
+    exit 1
 }
 
 # Test 1: health
 Write-Host "[1/2] GET /api/health" -ForegroundColor Yellow
-$healthJson = Get-HttpBody -Url "http://localhost:8080/api/health"
-if ($null -eq $healthJson) {
-    Write-Host "FAILED - cannot reach backend" -ForegroundColor Red
+$healthJson = & curl.exe -s -m 10 http://localhost:8080/api/health
+$exitCode = $LASTEXITCODE
+if ($exitCode -ne 0 -or [string]::IsNullOrEmpty($healthJson)) {
+    Write-Host "FAILED - cannot reach backend (curl exit=$exitCode)" -ForegroundColor Red
     Write-Host "  Please run .\startup.ps1 first" -ForegroundColor Red
     Read-Host "Press Enter to exit"
     exit 1
@@ -65,12 +44,12 @@ if ($healthJson -notmatch '"status":"UP"') {
 
 # Test 2: login
 Write-Host "[2/2] POST /api/auth/login (admin/admin123)" -ForegroundColor Yellow
-$loginJson = Get-HttpBody -Url "http://localhost:8080/api/auth/login" `
-    -Method POST `
-    -Body '{"username":"admin","password":"admin123"}' `
-    -ContentType "application/json"
-if ($null -eq $loginJson) {
-    Write-Host "FAILED - login request error" -ForegroundColor Red
+$loginJson = & curl.exe -s -m 10 -X POST -H "Content-Type: application/json" `
+    -d '{"username":"admin","password":"admin123"}' `
+    http://localhost:8080/api/auth/login
+$exitCode = $LASTEXITCODE
+if ($exitCode -ne 0 -or [string]::IsNullOrEmpty($loginJson)) {
+    Write-Host "FAILED - login request error (curl exit=$exitCode)" -ForegroundColor Red
     Read-Host "Press Enter to exit"
     exit 1
 }
