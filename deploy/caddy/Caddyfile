@@ -6,6 +6,11 @@
 # 内网 HTTP(开发期临时用,生产应直接走 HTTPS)
 :80 {
     encode zstd gzip
+
+    # 全局限速
+    @bottlenot path /api/*
+    rate_limit @bottlenot 600r/m
+
     reverse_proxy localhost:8080 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
