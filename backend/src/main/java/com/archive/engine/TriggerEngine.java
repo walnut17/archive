@@ -6,6 +6,8 @@ import com.archive.repository.TriggerActionRepository;
 import com.archive.repository.TriggerRuleRepository;
 import com.archive.service.AuditLogService;
 import com.archive.service.TodoService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -178,9 +180,8 @@ public class TriggerEngine {
                     triggerRuleRepository.save(rule);
 
                     // 5. 审计日志
-                    auditLogService.log("rule_fire", "trigger_rule", rule.getId(),
-                            "事件: " + triggerEvent + ", 条件: " + rule.getTriggerCondition(),
-                            null);
+                    auditLogService.logSimple("system", "TRIGGER_RULE_FIRE",
+                            "trigger_rule", rule.getId());
 
                     log.info("Rule [{}] matched for event [{}]", rule.getCode(), triggerEvent);
 
@@ -201,7 +202,26 @@ public class TriggerEngine {
         try {
             switch (action.getActionType()) {
                 case "create_todo":
-                    todoService.createFromTrigger(action.getActionTemplate(), eventContext);
+                    // actionTemplate 是 JSON,形如 {"title":"...","priority":"HIGH","due_days":7}
+                    ObjectMapper mapper = new ObjectMapper();
+                    Map<String, Object> tmpl = mapper.readValue(action.getActionTemplate(),
+                            new TypeReference<Map<String, Object>>() {});
+                    String title = (String) tmpl.getOrDefault("title", "触发待办");
+                    String priority = (String) tmpl.getOrDefault("priority", "MEDIUM");
+                    Integer dueDays = (Integer) tmpl.get("due_days");
+                    LocalDateTime dueAt = dueDays != null
+                            ? LocalDateTime.now().plusDays(dueDays)
+                            : null;
+                    Long projectId = eventContext.get("projectId") != null
+                            ? ((Number) eventContext.get("projectId")).longValue()
+                            : null;
+                    todoService.createFromTrigger(
+                            title, "TRIGGER",
+                            action.getRuleId(),
+                            projectId,
+                            1L,  // ownerId 默认 1(系统) — 实际应取规则配置,见 TODO
+                            priority,
+                            dueAt);
                     break;
                 case "send_notification":
                     log.info("Notification action not yet implemented: ruleId={}", action.getRuleId());

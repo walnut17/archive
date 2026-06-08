@@ -5,7 +5,10 @@ import com.archive.entity.MaterialVersion;
 import com.archive.repository.ComparisonMethodRepository;
 import com.archive.repository.MaterialVersionRepository;
 import com.archive.service.AuditLogService;
-import com.archive.service.LLMProviderFactory;
+import com.archive.provider.LLMProvider;
+import com.archive.provider.LLMProviderFactory;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -93,15 +96,20 @@ public class ComparisonEngine {
                     .replace("${to_content}", toText);
 
             // 5. 调用 LLM
-            String response = llmProviderFactory.chatJson(prompt, method.getOutputSchema());
+            LLMProvider provider = llmProviderFactory.getProvider();
+            String response = provider.chat("你是报告对比助手。按要求输出 JSON 数组。", prompt);
 
             // 6. 解析结果
-            List<Map<String, Object>> result = llmProviderFactory.parseJsonArrayResponse(response);
+            ObjectMapper mapper = new ObjectMapper();
+            String cleaned = response.trim();
+            if (cleaned.startsWith("```")) {
+                cleaned = cleaned.replaceAll("^```(?:json)?\s*", "").replaceAll("\s*```\s*$", "");
+            }
+            List<Map<String, Object>> result = mapper.readValue(cleaned,
+                    new TypeReference<List<Map<String, Object>>>() {});
 
             // 7. 审计日志
-            auditLogService.log("llm_call", "comparison", null,
-                    "对比方法: " + methodCode + ", from=" + fromVersionId + ", to=" + toVersionId,
-                    response);
+            auditLogService.logSimple("system", "LLM_COMPARE", "comparison", projectId);
 
             log.info("Comparison completed for projectId={}, method={}, items={}",
                     projectId, methodCode, result.size());

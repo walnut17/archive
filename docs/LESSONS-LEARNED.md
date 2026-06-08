@@ -488,3 +488,35 @@ git@gitee.com: Permission denied (publickey).
 | 4.2 | ConfigJsonLoader 路径 | cd8b59c |
 | 5.1 | 沙箱 SSH key 丢失 | 7cdd290 |
 | 5.2 | 沙箱没 JDK | (待修复) |
+
+### 5. Agent 写 Java 代码不编译就 push(C-2 三 Engine 错)
+
+**Commit**: 8ca625e / 1e00136(原 28 个 plan commit 都有这毛病)
+
+**症状**:
+```
+mvn compile
+[ERROR] cannot find symbol: class LLMProviderFactory
+  location: package com.archive.service
+[ERROR] cannot find symbol: method chatJson(String, String)
+  location: LLMProviderFactory
+[ERROR] method log in class AuditLogService cannot be applied to given types
+  required: 10 params / found: 5 params
+```
+
+**根因**:
+- Agent 写 Engine 时**调错 LLMProviderFactory 方法**(方法签名是 chatJson(sys, user, Class),Agent 当成 chatJson(prompt, schema))
+- Agent 假设了 `parseJsonResponse` / `parseJsonArrayResponse` 这俩**不存在**的方法
+- Agent 写 auditLogService.log(...) 时**参错位**——当成 5 参调,实际 10 参
+
+**修复**:
+- LLMProviderFactory 改成 provider = factory.getProvider(); provider.chat(sys, user)
+- 解析用 Jackson ObjectMapper + TypeReference,允许 markdown 围栏
+- auditLogService.logSimple(...) 4 参版替代 5 参版
+- createFromTrigger 改成解析 JSON + 组 7 参
+
+**教训**:
+- 任何 commit 含 .java,**必先 mvn compile 验证**,0 错再 push
+- Agent 写代码**没有类型系统提示**(用了 lombok @Data 但 ObjectMapper.readValue 异常在 catch 里被吞)
+- 写"调用 service"的代码前,先看 service 实际签名
+- **验收环节必须有"编译通过"硬门槛**,不只是 commit 写完了

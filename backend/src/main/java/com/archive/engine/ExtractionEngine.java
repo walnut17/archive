@@ -5,7 +5,10 @@ import com.archive.entity.MaterialVersion;
 import com.archive.repository.ExtractionMethodRepository;
 import com.archive.repository.MaterialVersionRepository;
 import com.archive.service.AuditLogService;
-import com.archive.service.LLMProviderFactory;
+import com.archive.provider.LLMProvider;
+import com.archive.provider.LLMProviderFactory;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -77,14 +80,20 @@ public class ExtractionEngine {
                     .replace("${material_content}", materialContent);
 
             // 4. 调用 LLM
-            String response = llmProviderFactory.chatJson(prompt, method.getOutputSchema());
+            LLMProvider provider = llmProviderFactory.getProvider();
+            String response = provider.chat("你是文档字段抽取助手。按要求输出 JSON。", prompt);
 
-            // 5. 解析结果
-            Map<String, Object> result = llmProviderFactory.parseJsonResponse(response);
+            // 5. 解析结果(用 Jackson,允许 LLM 返回带 markdown 围栏)
+            ObjectMapper mapper = new ObjectMapper();
+            String cleaned = response.trim();
+            if (cleaned.startsWith("```")) {
+                cleaned = cleaned.replaceAll("^```(?:json)?\s*", "").replaceAll("\s*```\s*$", "");
+            }
+            Map<String, Object> result = mapper.readValue(cleaned,
+                    new TypeReference<Map<String, Object>>() {});
 
             // 6. 审计日志
-            auditLogService.log("llm_call", "material_version", materialVersionId,
-                    "抽取方法: " + methodCode, response);
+            auditLogService.logSimple("system", "LLM_CALL", "material_version", materialVersionId);
 
             log.info("Extraction completed for materialVersionId={}, method={}, fields={}",
                     materialVersionId, methodCode, result.size());
