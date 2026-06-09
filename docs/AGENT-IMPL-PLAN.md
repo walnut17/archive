@@ -3,7 +3,7 @@
 > **作者**: Mavis(沙箱 PM 角色)
 > **状态**: ✅ 方案定稿,等待执行
 > **生产环境 AI Agent**: 接管本文档 §5 执行 12 子项
-> **基线 commit**: `e5a0208`(M0~M2 + Plan A~G 完工)
+> **基线 commit**: `a34f540`(M0~M2 + Plan A~G 完工)
 > **配套文档**(必读):
 > - `docs/AGENT-REQUIREMENTS.md` (业务)
 > - `docs/AGENT-RESEARCH.md` (调研)

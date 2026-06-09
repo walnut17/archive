@@ -2,7 +2,7 @@
 
 > 投委会专属档案管理与智能分析 Web 应用
 > **当前任务**:实施 **Plan I — 智能问答 Agent**(Spring AI 1.1,基线已就绪,等你开工)
-> **基线 commit**:`1473461`(M0~M2 + Plan A~G 全部完工 + Plan I 方案定稿 + v1.1 评审修)
+> **基线 commit**:`a34f540`(M0~M2 + Plan A~G 全部完工 + Plan I 方案定稿 + v1.1 评审修)
 > **接手 AI 必读**: 本 README + plan-I §0 接手 Agent 必读
 
 ---
@@ -28,10 +28,22 @@
 ## 🤝 0.5 多人/多 agent 物理并行开发规则
 
 > **协调表**: [`TASKS.md`](TASKS.md)(仓库根,**唯一**状态表)
+>
+> **关键 2026-06-09 项目方新口径**: 多人多 agent 并行推 **main 分支**(开发中, 代码未经审核), Mavis 沙箱 审核后 推到 **minimax 分支**(成品, 生产用)。
+
+**分支角色**:
+
+| 分支 | 性质 | 谁能推 | 推什么 |
+|---|---|---|---|
+| `main` | 开发中(代码未经审核) | **项目方 + 沙箱 + 接手 AI** 都可 | 代码 + 配置 + SQL + TASKS.md 状态变更 |
+| `minimax` | 成品(生产用) | **只有 Mavis 沙箱** | Mavis 从 main 拉审过的代码, 推到 minimax |
+| `feat/*` | 个人分支 | 接手 AI | 临时工作(也可以不走 feature, 直接 main 推) |
+
+**所有人从 main 拉最新**。接手 AI 推 main 是 OK 的(项目方授权过)。
 
 **状态机**(只能向前推,禁止回退):
 ```
-未开发  ──占用人 commit+push──>  占用-XXX  ──完成 commit+push──>  已完成(XXX / YYYY-MM-DD)
+未开发  ──占用人 commit+push 到 main──>  占用-XXX  ──完成 commit+push 到 main──>  已完成(XXX / YYYY-MM-DD)
 ```
 
 **抢占 SOP**(3 步,关键!):
@@ -44,25 +56,33 @@
    ```
    - **状态**: 占用-<你的名字>(<当前时间>)
    ```
-3. **10 秒内** `git add TASKS.md && git commit -m "chore(tasks): claim T-I-X by <你的名字>" && git push origin minimax`
+3. **10 秒内** `git add TASKS.md && git commit -m "chore(tasks): claim T-I-X by <你的名字>" && git push origin main`
    - **push 成功 = 占用成功**。别人看到 push 通知,知道你占了,不会重复干。
    - **没 push 之前不算占** —— 别人可能先 push,你只是改了自己本地文件,别人看不到。
 
 **完工 SOP**(3 步,关键!):
 1. 改本表对应节: `占用-<名字>` → `已完成(<名字> / <日期>)`
-2. `git add TASKS.md && git commit -m "chore(tasks): mark T-I-X done by <你的名字>" && git push origin minimax`
+2. `git add TASKS.md && git commit -m "chore(tasks): mark T-I-X done by <你的名字>" && git push origin main`
 3. 写代码的 commit **也立即 push**(别囤)
 
 **严禁**:
 - ❌ 改 `占用-A` 改回 `未开发`(A 会干掉你)
 - ❌ 一个 commit 改多个任务的代码
 - ❌ 占用了但**没 push** 超过 10 分钟(失联,别人接管)
+- ❌ 直推 `minimax` 分支(沙箱专属, 接手 AI 推会 403)
 
 **冲突解决**:
 - 晚 push 的人 `git pull --rebase` 解冲突(本项目拆得很开,冲突概率极低)
 - 同一文件多 commit 冲突 → 1 个人加新方法,另 1 个人加新类,**不冲突**
 
 **任务粒度** = 1 commit = 1-3 小时。**拆得够细,才能并行**。
+
+**Mavis 沙箱 工作流**(新口径, 2026-06-09):
+1. 接手 AI 都在 main 推代码 (Mavis 不审, 代码未经审核)
+2. 接手 AI 完工后, 在 IM/邮件 通知 Mavis
+3. Mavis 拉 main 最新, 审 + 改, 通过
+4. Mavis 从 main 推到 minimax(成品)
+5. 生产服务器从 minimax pull 部署
 
 **完整说明**: [`TASKS.md`](TASKS.md) 的「状态机」「冲突处理 SOP」段。
 
@@ -85,7 +105,7 @@
 | 项 | 值 |
 |---|---|
 | **任务 ID** | Plan I(智能问答 Agent) |
-| **基线** | `1473461` |
+| **基线** | `a34f540` |
 | **目标 commit 数** | **13+**(每子项一个) + 1 聚合 |
 | **工期估算** | **~8.3 天** |
 | **关键路径** | I-3 → I-9 → I-10 → I-11 |
@@ -158,7 +178,7 @@ cat TASKS.md | less
 # 4. 10 秒内 commit + push
 git add TASKS.md
 git commit -m "chore(tasks): claim T-I-X by <你的名字>"
-git push origin minimax
+git push origin main
 # ✅ push 成功 = 占用成功
 
 # 5. 才进 Step 1 开始干活
@@ -172,9 +192,9 @@ git push origin minimax
 git clone -b minimax git@gitee.com:frisker/projects-online.git
 cd projects-online
 
-# 验证基线 = 1473461
+# 验证基线 = a34f540
 git rev-parse HEAD
-# 期望: 14734613180f51c14cf3920b428adc6a9618d879
+# 期望: a34f54043cb08ad28c360d3cc0399dee99a5a85d
 
 # 沙箱编译验证(接手 AI 必跑)
 cd /workspace/projects-online-clone  # 或本机
@@ -191,7 +211,7 @@ cat .mavis/plans/plan-I-agent-implementation.md | head -100
 **§0 必看 3 处**:
 - §0.2 必读文档(7 份)
 - §0.3 关键技术点(ReactAgent 幻觉预警 + 资源链接)
-- §0.4 基线 commit `1473461` 验证方法
+- §0.4 基线 commit `a34f540` 验证方法
 
 ### Step 3: 读决策 doc + 业务 doc(15 分钟)
 
@@ -245,7 +265,7 @@ git add backend/src/main/java/com/archive/agent/tool/SearchFulltextTool.java \
         backend/src/test/java/com/archive/agent/tool/SearchFulltextToolTest.java \
         TASKS.md
 git commit -m "feat(agent,I-4): add SearchFulltextTool (3 test cases pass) + mark TASKS done"
-git push origin minimax
+git push origin main
 
 # 5. 跳到下一个任务 或 退出
 ```
@@ -469,8 +489,8 @@ test(agent,I-11): 10 end-to-end integration tests
 fix(agent,I-12): Knowledge.vue import http error
 docs(agent,Plan I): complete - 13 subitems, all green  # 聚合 commit
 
-# 推 minimax(不直推 main)
-git push origin minimax
+# 推 main(开发中分支, 接手 AI 也能推)
+git push origin main
 
 # 完工后
 git tag plan-I-v1.0
@@ -499,7 +519,7 @@ git push origin plan-I-v1.0
 
 ---
 
-## 📜 12. 文档演进(基线 1473461 之前)
+## 📜 12. 文档演进(基线 a34f540 之前)
 
 | 时间 | 事件 |
 |---|---|

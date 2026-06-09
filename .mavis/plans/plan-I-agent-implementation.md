@@ -5,7 +5,7 @@
 > **配套调研**:`docs/AGENT-RESEARCH.md`
 > **作者**: 架构师(Mavis)
 > **接手 Agent**: **本 plan 由"生产环境 AI Agent"接手执行代码**——接手前**必读** §0「接手 Agent 必读」
-> **基线 commit**: `e5a0208`(M0~M2 + Plan A~G 完工)
+> **基线 commit**: `a34f540`(M0~M2 + Plan A~G 完工)
 > **目标**:把现有 `QaController` 写死管道升级为 **Spring AI 1.1 智能 Agent**(`ChatClient` + `@Tool` + 手写 5 步 ReAct 循环 + `MessageChatMemoryAdvisor` 多轮对话),6 工具 / 白名单 / 5 步上限 / GlmService 兜底,**零回归**。
 
 ---

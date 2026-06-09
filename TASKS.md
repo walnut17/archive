@@ -1,16 +1,18 @@
 # Plan I 任务分块清单(物理并行开发协调表)
 
 > **本文档是"谁占用了哪个任务"的实时真相表**。每个任务独占 1 个 section,**多人同时开发互不覆盖**。
-> **同步规则**: **状态变更立即 commit + push**(10 秒内完成)。**push 成功 = 占用成功**。
+> **同步规则**: **状态变更立即 commit + push 到 main 分支**(10 秒内完成)。**push 成功 = 占用成功**。
 > **冲突解决**: **谁先 push 谁占**。别人看到 push 通知就放弃,找下一个 `未开发` 任务。
 > **任务粒度**: 1 个任务 = 1 个 commit + 1 个 push(典型 1-3 小时工作量,接手 AI 一次完成)
+>
+> **2026-06-09 项目方新口径**: 多人多 agent 推 **main 分支**(开发中, 代码未经审核), Mavis 沙箱 审核后 推到 **minimax 分支**(成品, 生产用)。接手 AI 推 main 是 OK 的(项目方授权过)。
 
 ---
 
 ## 🚦 状态机(只能向前推,禁止回退)
 
 ```
-未开发  ──占用人 commit+push──>  占用-XXX  ──完成 commit+push──>  已完成(XXX / YYYY-MM-DD)
+未开发  ──占用人 commit+push 到 main──>  占用-XXX  ──完成 commit+push 到 main──>  已完成(XXX / YYYY-MM-DD)
    ↑                                                                            │
    └──────────────── 由占用人新增时,本任务标'新任务待审' ─────────────────────────┘
 ```
@@ -19,6 +21,7 @@
 - ❌ 把 `占用-A` 改回 `未开发`(会被 A 干掉)
 - ❌ 改别人 `已完成` 的部分(代码已 commit,改之前先聊)
 - ❌ 一个 commit 改多个任务(每个任务独立 commit)
+- ❌ 直推 `minimax` 分支(沙箱专属, 接手 AI 推会 403)
 
 **允许**:
 - ✅ 占用了但**没干完**: 改 `占用-A` → `占用-A(进行中,预估 X 小时后完成)`,**仍属 A**
@@ -119,11 +122,34 @@
 - **依赖**: 无
 - **可并行**: ✅ 是
 - **开始步骤**:
-  1. 改本节状态为 `占用-<你的名字>`
-  2. `git add backend/pom.xml && git commit -m "feat(agent,I-1): ..." && git push origin minimax`
-  3. 改 `backend/pom.xml`(加 `spring-ai-bom 1.1.0` + 4 个 starter,**不**引 `spring-ai-autoconfigure-agent`)
-  4. 跑 `mvn compile -DskipTests -B`,期望 BUILD SUCCESS
-  5. 改本节状态为 `已完成(<名字> / <日期>)`,push
+  1. 拉最新 main: `git checkout main && git pull origin main`
+  2. **依赖检查** (T-I-1 无依赖, 直接跳):
+     ```bash
+     grep -A2 "^### T-I-0:" TASKS.md  # 依赖项
+     grep "状态:" TASKS.md | head      # 看是不是 已完成
+     ```
+  3. 改本节状态为 `占用-<你的名字>`
+  4. 改 `backend/pom.xml`(加 `spring-ai-bom 1.1.0` + 4 个 starter,**不**引 `spring-ai-autoconfigure-agent`)
+  5. 跑 `mvn compile -DskipTests -B`,期望 BUILD SUCCESS
+  6. 2 个 commit + 1 个 push 到 main:
+     ```bash
+     git add backend/pom.xml
+     git commit -m "feat(agent,I-1): add Spring AI 1.1 BOM + 4 starters"
+     git add TASKS.md
+     git commit -m "chore(tasks): claim T-I-1 by <你的名字>"
+     # 或 1 个 commit 跟 2 个一起:
+     # git add backend/pom.xml TASKS.md
+     # git commit -m "feat(agent,I-1): ... + claim TASKS"
+     git push origin main
+     ```
+  7. **完工** (可跟步骤 6 同一个 push):
+     ```bash
+     # 改 TASKS.md '状态: 占用-X' → '已完成(X / <日期>)'
+     git add TASKS.md
+     git commit --amend --no-edit  # 跟代码 commit 合并
+     # 或另起 1 个 commit
+     git push origin main
+     ```
 - **详细 spec**: `.mavis/plans/plan-I-agent-implementation.md` §2 I-1
 - **验收**: `mvn dependency:tree | grep spring-ai` 看到 5 个 spring-ai-* 工件
 
