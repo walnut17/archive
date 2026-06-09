@@ -127,14 +127,14 @@
 | **I-3** | agent 包骨架 + 5 DTO + Listener | 0.5 天 | I-2 |
 | **I-4** | 工具 1: SearchFulltextTool | 0.5 天 | I-3 |
 | **I-5** | 工具 2: FindProjectTool + project FULLTEXT 索引 | 0.5 天 | I-3 |
-| **I-6** | 工具 3: QueryMysqlTool(白名单,**重点**) | 1 天 | I-3 |
+| **I-6** | 工具 3: QueryMysqlTool(白名单 + **聚合** + 操作符 + 注入防护,**重点**) | 1.5 天 | I-3 |
 | **I-7** | 工具 4 + 5: LlmSummarize + AskClarification | 0.5 天 | I-3 |
 | **I-8** | 工具 6: GetProjectBusinessDataTool | 0.5 天 | I-3 |
 | **I-9** | AgentEngine 核心 + Prompt + Few-shots(**最关键**) | 1.5 天 | I-4~I-8 |
 | **I-10** | QaController 改造 + 降级路径 | 0.5 天 | I-9 |
 | **I-11** | 端到端集成测试(10 用例) | 1 天 | I-10 |
 | **I-12** | 前端 Knowledge.vue 改造 | 0.5 天 | I-10 |
-| **合计** | | **~7.8 天**(原 7.3 + I-13 多轮对话 0.5) | |
+| **合计** | | **~8.3 天**(原 7.3 + I-13 多轮对话 0.5 + I-6 聚合加固 0.5) | |
 
 **关键路径**:I-3 → I-9 → I-10 → I-11,其他可并行(分工给多个 sub-agent)
 

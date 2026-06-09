@@ -119,7 +119,7 @@ ssh:    git@gitee.com:frisker/projects-online.git
 | **I-3** | agent 包骨架 + 5 DTO + AgentTool 接口 + 3 listener | 0.5 天 | I-2 | 无 |
 | **I-4** | 工具 1: SearchFulltextTool(FULLTEXT 检索) | 0.5 天 | I-3 | 无 |
 | **I-5** | 工具 2: FindProjectTool(语义定位项目) | 0.5 天 | I-3 | 与 I-4 并行 |
-| **I-6** | 工具 3: QueryMysqlTool(白名单查业务数据) | 1 天 | I-3 | 与 I-4/I-5 并行 |
+| **I-6** | 工具 3: QueryMysqlTool(白名单 + **聚合** + 操作符 + 注入防护,**重点**) | 1.5 天 | I-3 | 与 I-4/I-5 并行 |
 | **I-7** | 工具 4: LlmSummarizeTool + 工具 5: AskClarificationTool | 0.5 天 | I-3 | 无 |
 | **I-8** | 工具 6: GetProjectBusinessDataTool(项目汇总) | 0.5 天 | I-3 | 无 |
 | **I-9** | AgentEngine 核心(`ChatClient` + `@Tool` + 手写 5 步 ReAct 循环) + Prompt + Few-shots | 1.5 天 | I-4~I-8 | 必须最后 |
@@ -128,7 +128,7 @@ ssh:    git@gitee.com:frisker/projects-online.git
 | **I-12** | 前端 Knowledge.vue 改造 + AgentStepsPanel 组件 | 0.5 天 | I-10 | 与 I-11 并行 |
 | **I-13** | **多轮对话** + `MessageChatMemoryAdvisor` + `JdbcChatMemoryRepository` + `chat_memory` 表(**补业务需求 §4.4 漏实现**) | 0.5 天 | I-9 | 与 I-12 并行 |
 
-**总计**: ~7.8 天(可与现有 M0~M2 跑并行,因为零回归)
+**总计**: ~8.3 天(可与现有 M0~M2 跑并行,因为零回归)
 
 ---
 
@@ -542,9 +542,19 @@ public class QueryMysqlTool implements AgentTool {
 @Data
 public static class QueryArgs {
     @JsonProperty("entity") String entity;
-    @JsonProperty("filters") @Builder.Default Map<String, Object> filters = new HashMap<>();
+    @JsonProperty("filters") @Builder.Default List<FilterCondition> filters = new ArrayList<>();
     @JsonProperty("fields") List<String> fields;
     @JsonProperty("limit") @Builder.Default Integer limit = 20;
+    @JsonProperty("aggregate") String aggregate;  // "count" / "sum" / "avg" / "max" / "min" / "group_by" / null(原样)
+    @JsonProperty("aggregateField") String aggregateField;  // "amountWan" 等
+    @JsonProperty("groupByField") String groupByField;  // aggregate=group_by 时必填
+}
+
+@Data
+public static class FilterCondition {
+    @JsonProperty("field") String field;
+    @JsonProperty("operator") String operator;  // "=" / "!=" / ">" / ">=" / "<" / "<=" / "in" / "like" / "is_null" / "is_not_null"
+    @JsonProperty("value") Object value;  // 标量或 List<Object>
 }
 ```
 
@@ -554,6 +564,220 @@ public static class QueryArgs {
 - **不**用 `createNativeQuery`,**不**字符串拼 SQL
 - 实体名 `project` → `Project`(硬编码 `capitalize` 映射)
 - `audit_log` + `llm_call_log` 双写
+- `aggregate` 白名单: `count` / `sum` / `avg` / `max` / `min` / `group_by` / null
+- `operator` 白名单: `=` / `!=` / `>` / `>=` / `<` / `<=` / `in` / `like` / `is_null` / `is_not_null`
+- **in 操作的 value 必须是 List,长度 ≤ 50**(防 DoS)
+- **不允许 3 张表 JOIN**(决策 §6.2)
+- **DDL/DML 严禁**:只读 `SELECT` + 严格 `EntityManager.createQuery()`(不走 createNativeQuery)
+
+**3 大典型场景**(你举的"还没结清"对得上):
+
+**场景 1:计数 + 列表**(你的原问题)
+```json
+// 问: "现在总共还没结清的项目?涉及多少金额?"
+// LLM 拆 2 次:
+{
+  "entity": "project",
+  "filters": [{"field": "status", "operator": "!=", "value": "结清"}],
+  "fields": ["id"],
+  "aggregate": "count"
+}
+// 返: {"value": 23, "rowCount": 0, "entity": "project", "aggregate": "count"}
+
+{
+  "entity": "project",
+  "filters": [{"field": "status", "operator": "!=", "value": "结清"}],
+  "fields": ["amountWan"],
+  "aggregate": "sum",
+  "aggregateField": "amountWan"
+}
+// 返: {"value": 128000.5, "rowCount": 0, "entity": "project", "aggregate": "sum", "aggregateField": "amountWan"}
+```
+
+**场景 2:时间范围 + 聚合**(§2.2 第 7 条"今年结清")
+```json
+{
+  "entity": "project",
+  "filters": [
+    {"field": "status", "operator": "=", "value": "结清"},
+    {"field": "createdAt", "operator": ">=", "value": "2026-01-01"}
+  ],
+  "aggregate": "count"
+}
+```
+
+**场景 3:group_by 分类统计**(§2.2 第 9 条"哪个分类最多")
+```json
+{
+  "entity": "material",
+  "filters": [{"field": "createdAt", "operator": ">=", "value": "2026-06-01"}],
+  "fields": ["type"],
+  "aggregate": "group_by",
+  "groupByField": "type"
+}
+// 返: {"rows": [{"type": "立项报告", "count": 23}, {"type": "申请报告", "count": 18}, ...], "rowCount": 5}
+```
+
+**实现片段**(execute 关键逻辑):
+```java
+public ToolResult execute(Object argsObj, AgentContext ctx) {
+    QueryArgs args = mapper.convertValue(argsObj, QueryArgs.class);
+
+    // 1. 白名单校验
+    validateWhitelist(args);  // entity + fields + aggregate + operator 都在白名单
+
+    // 2. 构造 JPQL
+    StringBuilder jpql = new StringBuilder();
+
+    // SELECT 段
+    if ("count".equals(args.aggregate)) {
+        jpql.append("SELECT COUNT(t) FROM ").append(capitalize(args.entity)).append(" t");
+    } else if ("sum".equals(args.aggregate) || "avg".equals(args.aggregate)
+            || "max".equals(args.aggregate) || "min".equals(args.aggregate)) {
+        jpql.append("SELECT ").append(args.aggregate.toUpperCase()).append("(t.")
+          .append(args.aggregateField).append(") FROM ").append(capitalize(args.entity)).append(" t");
+    } else if ("group_by".equals(args.aggregate)) {
+        jpql.append("SELECT t.").append(args.groupByField)
+          .append(", COUNT(t) FROM ").append(capitalize(args.entity)).append(" t");
+    } else {
+        jpql.append("SELECT ").append(toJpqlFields(args.fields))
+          .append(" FROM ").append(capitalize(args.entity)).append(" t");
+    }
+
+    // WHERE 段
+    if (!args.filters.isEmpty()) {
+        jpql.append(" WHERE 1=1");
+        int i = 1;
+        for (FilterCondition f : args.filters) {
+            String field = "t." + f.field;
+            switch (f.operator) {
+                case "=": jpql.append(" AND ").append(field).append(" = :p").append(i); break;
+                case "!=": jpql.append(" AND ").append(field).append(" <> :p").append(i); break;
+                case ">": case ">=": case "<": case "<=":
+                    jpql.append(" AND ").append(field).append(" ").append(f.operator).append(" :p").append(i); break;
+                case "in":
+                    if (!(f.value instanceof List)) throw new ToolNotAllowedException("'in' requires List value");
+                    if (((List) f.value).size() > 50) throw new ToolNotAllowedException("'in' list too long");
+                    jpql.append(" AND ").append(field).append(" IN :p").append(i); break;
+                case "like":
+                    jpql.append(" AND ").append(field).append(" LIKE :p").append(i); break;
+                case "is_null": jpql.append(" AND ").append(field).append(" IS NULL"); i--; break;  // 不占位
+                case "is_not_null": jpql.append(" AND ").append(field).append(" IS NOT NULL"); i--; break;
+                default: throw new ToolNotAllowedException("operator not allowed: " + f.operator);
+            }
+            i++;
+        }
+    }
+
+    // GROUP BY 段
+    if ("group_by".equals(args.aggregate)) {
+        jpql.append(" GROUP BY t.").append(args.groupByField);
+    }
+
+    // ORDER BY 段(只非聚合 + 非 group_by 才生效)
+    if (args.aggregate == null) {
+        jpql.append(" ORDER BY t.id DESC");
+    }
+
+    // 3. 强制参数化
+    var query = em.createQuery(jpql.toString());
+    int i = 1;
+    for (FilterCondition f : args.filters) {
+        if (f.operator.equals("is_null") || f.operator.equals("is_not_null")) continue;
+        query.setParameter("p" + i, f.value);
+        i++;
+    }
+    if (args.aggregate == null && args.limit != null) {
+        query.setMaxResults(Math.min(args.limit, 100));
+    }
+
+    // 4. 执行 + 审计
+    Object result;
+    if (args.aggregate == null) {
+        List<Object[]> rows = query.getResultList();
+        result = rows.stream().map(row -> /* 同原代码 */).toList();
+    } else if ("group_by".equals(args.aggregate)) {
+        List<Object[]> rows = query.getResultList();
+        result = rows.stream().map(row -> Map.of("value", row[0], "count", row[1])).toList();
+    } else {
+        // count / sum / avg / max / min: 单值
+        result = Map.of("value", query.getSingleResult());
+    }
+
+    // 5. 审计(同原代码)
+    auditLogService.logSimple(
+        authFacade.currentUsername(), "AGENT_QUERY",
+        args.entity, null, "aggregate=" + args.aggregate + " value=" + result
+    );
+    saveLog(ctx, "AGENT_TOOL", "query_mysql", 1);
+
+    return ToolResult.ok(Map.of(
+        "entity", args.entity,
+        args.aggregate == null ? "rows" : "value", result,
+        args.aggregate == null ? "rowCount" : "aggregate", result instanceof List ? ((List) result).size() : args.aggregate,
+        "aggregate", args.aggregate == null ? "none" : args.aggregate
+    ));
+}
+
+private void validateWhitelist(QueryArgs args) {
+    if (!ALLOWED_ENTITIES.contains(args.entity))
+        throw new ToolNotAllowedException("entity not allowed: " + args.entity);
+    Set<String> allowedFields = ALLOWED_FIELDS.get(args.entity);
+    if (args.fields != null) {
+        for (String f : args.fields) {
+            if (!allowedFields.contains(f))
+                throw new ToolNotAllowedException("field not allowed: " + f);
+        }
+    }
+    for (FilterCondition f : args.filters) {
+        if (!allowedFields.contains(f.field))
+            throw new ToolNotAllowedException("filter field not allowed: " + f.field);
+    }
+    if (args.aggregate != null) {
+        if (!Set.of("count", "sum", "avg", "max", "min", "group_by").contains(args.aggregate))
+            throw new ToolNotAllowedException("aggregate not allowed: " + args.aggregate);
+        if (args.aggregateField != null && !allowedFields.contains(args.aggregateField))
+            throw new ToolNotAllowedException("aggregateField not allowed: " + args.aggregateField);
+        if (args.groupByField != null && !allowedFields.contains(args.groupByField))
+            throw new ToolNotAllowedException("groupByField not allowed: " + args.groupByField);
+    }
+}
+```
+
+**关键安全加固**(项目方 v1.0 触发,你这个问题暴露的):
+1. `operator` 白名单(10 个值,防止 `OR 1=1` / `; DROP TABLE` 等)
+2. `aggregate` 白名单
+3. `IN` value List 长度 ≤ 50(防 DoS)
+4. `IS NULL` / `IS NOT NULL` 不占位
+5. LIKE 不能含 `_` / `%` 通配符(防贪婪匹配全表)—— LLM 调用时**转义**: `value.replace("%", "\\%").replace("_", "\\_")`
+6. 3 张表 JOIN **直接禁**(决策 §6.2)
+7. DDL/DML **createQuery 只支持 SELECT**(底层拒绝)
+
+**LLM 提示词更新**(AgentSystemPrompt 第 3 段):
+```
+query_mysql(entity, filters, fields, aggregate?, aggregateField?, groupByField?):
+  - 查业务数据,**支持**: = / != / > / >= / < / <= / in(<= 50 个) / like / is_null / is_not_null
+  - **支持聚合**: count / sum / avg / max / min / group_by(field)
+  - **必须用 SQL 算聚合**,**不要**自己 rows[].size() / sum()(精度 / 截断问题)
+  - **返回示例**:
+    - count 返 {value: 23, aggregate: "count"}
+    - sum(amountWan) 返 {value: 128000.5, aggregate: "sum"}
+    - group_by(type) 返 {value: [{value: "立项报告", count: 23}, ...], aggregate: "group_by"}
+```
+
+**测试用例**(`QueryMysqlToolTest`):
+1. **你的问题**:"还没结清的项目" → `[{field: "status", operator: "!=", value: "结清"}]` + `aggregate: "count"` → 23
+2. **场景 2**:"今年结清的" → `[=, >=]` + `count` → 5
+3. **场景 3**:"金额求和" → `sum(amountWan)` → 128000.5
+4. **场景 4**:"分类 group_by" → `group_by(type)` + `count` → [{value: "立项", count: 23}, ...]
+5. **越权 entity**:`entity="user"` → 抛 `ToolNotAllowedException`
+6. **越权 operator**:`operator="OR 1=1"` → 抛异常
+7. **in 长度 51** → 抛异常
+8. **like 贪婪**:LLM 传 `value="%admin%"` → 自动转义 `value="\%admin\%"`
+
+**commit**:
+- `feat(agent,I-6): add aggregate + operator support to QueryMysqlTool` (改 I-6)
+- `test(agent,I-6): 8 测试用例含聚合 + 越权 + 注入 + 边界`
 
 **数据库账号**(可选,本期可省):
 - DBA 加 `archive_agent_app` 用户,只 `GRANT SELECT ON archive_db.*`
@@ -1098,13 +1322,13 @@ git push origin minimax
 | I-1 + I-2 (依赖) | 0.3 天 |
 | I-3 (骨架) | 0.5 天 |
 | I-4 / I-5 / I-7 / I-8 (简单工具) | 0.5 天 × 4 = 2 天 |
-| I-6 (白名单工具) | 1 天 |
+| I-6 (白名单 + 聚合 + 注入防护) | 1.5 天(原 1, +0.5 加聚合) |
 | I-9 (AgentEngine) | 1.5 天 |
 | I-10 (QaController) | 0.5 天 |
 | I-11 (集成测试) | 1 天 |
 | I-12 (前端) | 0.5 天 |
 | I-13 (多轮对话,补漏) | 0.5 天 |
-| **合计** | **~7.8 天** |
+| **合计** | **~8.3 天** |
 
 **关键路径**:I-3 → I-9 → I-10 → I-11(顺序),其他可并行(分工给多个 sub-agent)。
 

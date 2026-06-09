@@ -30,7 +30,7 @@
 | **任务 ID** | Plan I(智能问答 Agent) |
 | **基线** | `1473461` |
 | **目标 commit 数** | **13+**(每子项一个) + 1 聚合 |
-| **工期估算** | **~7.8 天** |
+| **工期估算** | **~8.3 天** |
 | **关键路径** | I-3 → I-9 → I-10 → I-11 |
 | **可并行** | I-4 / I-5 / I-6 / I-7 / I-8 / I-12 / I-13(7 个) |
 | **零回归** | 现有 M0~M2 + Plan A~G 全部功能不能挂 |
@@ -45,7 +45,7 @@
 | I-3 | agent 包骨架 + 5 DTO + Listener | 0.5 天 | `@Tool` 接口 + ChatClient config |
 | I-4 | SearchFulltextTool | 0.5 天 | 复用现有 KnowledgeSearchService |
 | I-5 | FindProjectTool + project FULLTEXT 索引 | 0.5 天 | **语义锁项目**关键工具 |
-| I-6 | QueryMysqlTool(白名单) | 1 天 | **安全重点** |
+| I-6 | QueryMysqlTool(白名单 + **聚合** + 操作符) | 1.5 天 | **安全重点** |
 | I-7 | LlmSummarizeTool + AskClarificationTool | 0.5 天 | 复用 LLMProvider |
 | I-8 | GetProjectBusinessDataTool | 0.5 天 | 复用 Plan C-5 |
 | I-9 | **AgentEngine + ChatClient + 手写 5 步 ReAct 循环** | **1.5 天** | **最关键** |
@@ -188,7 +188,7 @@ I-1 → I-2 → I-3 → [I-4 ~ I-8 并行] → I-9 → I-10 → I-11
 | **I-3** | `backend/src/main/java/com/archive/agent/` 7 个文件(AgentConfig + 3 DTO + AgentStep + AgentTool + 2 listener) | `mvn compile` 0 错 |
 | **I-4** | `agent/tool/SearchFulltextTool.java` | `SearchFulltextToolTest` 3 测例 |
 | **I-5** | `agent/tool/FindProjectTool.java` + `ProjectRepository.searchByNameOrCustomerFulltext` + `db/migration/I-find-project-fulltext.sql` | `FindProjectToolTest` 3 测例 + 浏览器端到端 |
-| **I-6** | `agent/tool/QueryMysqlTool.java`(白名单 + 参数化 + 审计,**重点子项**) | 4 测例(含越权 + 注入) |
+| **I-6** | `agent/tool/QueryMysqlTool.java`(白名单 + **聚合** + 操作符 + 注入防护,**重点子项**) | 8 测例(含聚合 + 越权 + 注入 + 边界) |
 | **I-7** | `agent/tool/LlmSummarizeTool.java` + `AskClarificationTool.java` | 单元测试 |
 | **I-8** | `agent/tool/GetProjectBusinessDataTool.java`(+ `TodoRepository.countByProjectIdAndStatus` 1 个方法) | 端到端 |
 | **I-9** | `agent/AgentEngine.java` + `agent/prompt/AgentSystemPrompt.java` + `AgentFewShots.java`(**最关键**) | `AgentEngineTest`(mock ChatClient) |
@@ -207,9 +207,9 @@ I-1 → I-2 → I-3 → [I-4 ~ I-8 并行] → I-9 → I-10 → I-11
 
 1. **"新能源那个项目今年盈利怎么样?"** → 看到 4-5 步 agent 思考 → 锁定 PRJ-2026-001 → 答案
 2. **"PRJ-2026-001 剩余金额?"** → 调 get_project_business_data → 数字准确
-3. **"今年否决了哪些项目?"** → 调 query_mysql + search_fulltext 综合
-4. **"那个项目"**(I-13 多轮对话) → 弹 dialog 让用户选
-5. **多轮对话**:第 1 轮"PRJ-2026-001 怎么样" → 第 2 轮"它的剩余金额" → 第 3 轮"谁负责" → 都自动锁定 PRJ-2026-001
+3. **"现在总共还没结清的项目有几个?涉及总金额?"** → 调 query_mysql(`aggregate=count` + `operator!=`) + `aggregate=sum` 2 次 → **SQL 层算聚合,LLM 不数行**
+4. **"今年否决了哪些项目?"** → 调 query_mysql + search_fulltext 综合
+5. **多轮对话**(I-13):第 1 轮"PRJ-2026-001 怎么样" → 第 2 轮"它的剩余金额" → 第 3 轮"谁负责" → 都自动锁定 PRJ-2026-001
 
 **降级测试**:`application.yml` 设 `spring.ai.agent.enabled=false` → 重启 → 问问题 → `agentMode=false`(老路径)
 
@@ -218,6 +218,12 @@ I-1 → I-2 → I-3 → [I-4 ~ I-8 并行] → I-9 → I-10 → I-11
 SELECT scenario, COUNT(*) FROM llm_call_log GROUP BY scenario;
 -- 期望: 出现 AGENT_STEP / AGENT_FINAL / AGENT_TOOL / AGENT_FALLBACK
 ```
+
+**关键修复记录**(2026-06-09): 你原问的"还没结清的项目有几个"暴露 QueryMysqlTool **只返 rows 不做聚合**的 bug。
+- 修复: I-6 加 `aggregate` (count/sum/avg/max/min/group_by) + `operator` (= / != / > / >= / in / like / is_null)
+- LLM **必须**用 SQL 算聚合,**禁止**自己 rows[].size() / sum()(精度 / 截断问题)
+- I-6 估时 1 → 1.5 天, 总工期 7.8 → 8.3 天
+- 详见 plan-I §2 I-6 修订段
 
 ---
 
