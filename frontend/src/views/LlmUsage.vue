@@ -8,7 +8,7 @@
  * - admin 可切换"看全员/看自己"
  */
 import { ref, onMounted, computed } from 'vue'
-import { http } from '@/api/http'
+import http, { getData } from '@/api/http'
 
 interface PeriodStats {
   count: number

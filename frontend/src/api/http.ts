@@ -61,3 +61,6 @@ export default http
 export function request<T = any>(config: AxiosRequestConfig): Promise<T> {
   return http.request<ApiResponse<T>>(config).then((r) => r.data.data)
 }
+
+// 命名导出,跟 default 一致,方便 named import 写法
+export { http }

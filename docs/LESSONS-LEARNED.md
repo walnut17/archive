@@ -520,3 +520,26 @@ mvn compile
 - Agent 写代码**没有类型系统提示**(用了 lombok @Data 但 ObjectMapper.readValue 异常在 catch 里被吞)
 - 写"调用 service"的代码前,先看 service 实际签名
 - **验收环节必须有"编译通过"硬门槛**,不只是 commit 写完了
+
+### 6. Vue import 风格不一致 — default vs named(G-5 LlmUsage 白屏)
+
+**Commit**: 242560f(无效果) → 66379b3(本修复)
+
+**症状**:
+- 跳 /llm-usage 空白
+- Console: `Uncaught SyntaxError: The requested module '/src/api/http.ts' does not provide an export named 'http' (at LlmUsage.vue? [sm]:11:10)`
+
+**根因**:
+- 旧代码统一用 `import http from '@/api/http'`(default import)
+- 我写 LlmUsage.vue 时随手用 `import { http } from '@/api/http'`(named import)
+- 但 http.ts 只有 `export default http` + `export function getData`,**没有 named `export { http }`**
+- 整个文件 import 失败 → LlmUsage.vue 整个挂 → router-view 空 → 白屏
+
+**修复**:
+- LlmUsage.vue 改用 `import http, { getData } from '@/api/http'`
+- http.ts 末尾加 `export { http }` 命名导出,两种写法都支持
+
+**教训**:
+- 写新 .vue 前**先看现有模块怎么 import**(`grep "import.*http" frontend/src/api/`)
+- named vs default 不一致是 JS 模块系统最大坑之一
+- TypeScript 在 Vue SFC `<script setup>` 里**不会**警告 import 错(运行时才崩)
