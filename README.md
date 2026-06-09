@@ -11,15 +11,60 @@
 
 **你的唯一任务**:**实施 Plan I 智能问答 Agent**,把现有 `QaController` 写死的"search → rerank → generate"三步管道,**升级为 Spring AI 1.1 智能 Agent**,支持自适应选工具、语义定位项目、追问用户、多轮对话。
 
+**多人 / 多 agent 物理并行开发** —— 11 个子项可拆并行,每个人都看 [`TASKS.md`](TASKS.md) 抢任务,**谁先 push 谁占**。**不要手快先点 commit,先看 [§0.5 并行开发规则](#-05-多人多-agent-物理并行开发规则) 再动手**。
+
 **3 步开工**:
 1. **`cat .mavis/plans/plan-I-agent-implementation.md` §0「接手 Agent 必读」**(~10 分钟)
-2. 按 §1 执行顺序表, 从 I-1 开始, **每子项一个 commit**
-3. 完工写 `deliverable.md`, 通知 Mavis 沙箱审
+2. **看 [`TASKS.md`](TASKS.md) 找一个 `可并行: ✅` + `未开发` 的任务,立即 commit + push 占用**(以防别人抢)
+3. 按 plan-I §2 详读那个子项的 spec,写代码,完工更新 TASKS.md + commit + push
 
 **特别预警** —— 反复看 3 遍:
 - ⚠️ **Spring AI 1.1 公开 API 没有 `ReactAgent` class**(那是 1.2 路线 / 阿里云 Spring AI Alibaba 概念)。本项目用 `ChatClient` + `@Tool` 注解 + `Advisor` + **手写 5 步 ReAct 循环**。详见决策 doc §1.2.1.1 第 6 点 + plan-I §0.3。
 - ⚠️ **`spring.ai.agent.max-iterations` 不存在** —— 5 步上限**硬编码在 `AgentEngine` 的 for 循环里**(`MAX_ITERATIONS = 5`)。
 - ⚠️ **业务需求 §4.4「多轮对话」必须实现**(plan-I I-13 子项)—— 不要跳过。
+
+---
+
+## 🤝 0.5 多人/多 agent 物理并行开发规则
+
+> **协调表**: [`TASKS.md`](TASKS.md)(仓库根,**唯一**状态表)
+
+**状态机**(只能向前推,禁止回退):
+```
+未开发  ──占用人 commit+push──>  占用-XXX  ──完成 commit+push──>  已完成(XXX / YYYY-MM-DD)
+```
+
+**抢占 SOP**(3 步,关键!):
+1. **看 [`TASKS.md`](TASKS.md)**,找一个 `可并行: ✅` + `未开发` + 你能做的任务
+2. **立即** 改本表对应节:
+   ```
+   - **状态**: 未开发
+   ```
+   改为
+   ```
+   - **状态**: 占用-<你的名字>(<当前时间>)
+   ```
+3. **10 秒内** `git add TASKS.md && git commit -m "chore(tasks): claim T-I-X by <你的名字>" && git push origin minimax`
+   - **push 成功 = 占用成功**。别人看到 push 通知,知道你占了,不会重复干。
+   - **没 push 之前不算占** —— 别人可能先 push,你只是改了自己本地文件,别人看不到。
+
+**完工 SOP**(3 步,关键!):
+1. 改本表对应节: `占用-<名字>` → `已完成(<名字> / <日期>)`
+2. `git add TASKS.md && git commit -m "chore(tasks): mark T-I-X done by <你的名字>" && git push origin minimax`
+3. 写代码的 commit **也立即 push**(别囤)
+
+**严禁**:
+- ❌ 改 `占用-A` 改回 `未开发`(A 会干掉你)
+- ❌ 一个 commit 改多个任务的代码
+- ❌ 占用了但**没 push** 超过 10 分钟(失联,别人接管)
+
+**冲突解决**: 
+- 晚 push 的人 `git pull --rebase` 解冲突(本项目拆得很开,冲突概率极低)
+- 同一文件多 commit 冲突 → 1 个人加新方法,另 1 个人加新类,**不冲突**
+
+**任务粒度** = 1 commit = 1-3 小时。**拆得够细,才能并行**。
+
+**完整说明**: [`TASKS.md`](TASKS.md) 的「状态机」「冲突处理 SOP」段。
 
 ---
 
@@ -35,6 +80,14 @@
 | **可并行** | I-4 / I-5 / I-6 / I-7 / I-8 / I-12 / I-13(7 个) |
 | **零回归** | 现有 M0~M2 + Plan A~G 全部功能不能挂 |
 | **降级路径** | Spring AI 挂时 QaController 走老 GlmService |
+
+**📋 任务分块清单 + 抢占规则**: 仓库根 [`TASKS.md`](TASKS.md)(13 个任务,可并行标记,谁先 push 谁占)
+**📅 依赖图**:
+```
+I-1(pom) → I-2(yml) → I-3(包骨架) → [I-4 I-5 I-6 I-7 I-8 并行] → I-9(AgentEngine) → I-10(QaController) → [I-11 I-12 并行]
+                                                          I-13(多轮对话,跟 I-9 之后并行)
+```
+**⏱️ 并行机会**: 物理上可以 5 个人同时干(T-I-4 / T-I-5 / T-I-6 / T-I-7 / T-I-8 互相不冲突)
 
 **13 子项工时表**(详细看 plan-I §1):
 
@@ -61,6 +114,7 @@
 | 序 | 文件 | 行数 | 必读理由 |
 |---|---|---|---|
 | ① | `.mavis/plans/plan-I-agent-implementation.md` | 1192 | **你的主 spec**——12 子项详细 + 验收 + commit 规范 + 完工 checklist |
+| ② | **`TASKS.md`** | ~300 | **任务分块清单**(本仓库根)—— 13 个子项 + 可并行标记 + 抢占/完工 SOP |
 | ② | `docs/AGENT-IMPL-PLAN.md` | 252 | 总览:6 工具 + 工期 + 风险 + 集成点 + 完工验收 |
 | ③ | `docs/AGENT-FRAMEWORK-DECISION.md` | 885 | 决策:Spring AI 1.1 + **不引** spring-ai-alibaba,**踩坑预警 §1.2.1.1 第 6 点** |
 | ④ | `docs/AGENT-REQUIREMENTS.md` | 257 | 业务:15 真实问题 + 7 场景 + 验收标准(§6 验收场景) |
@@ -78,6 +132,27 @@
 ---
 
 ## 🎯 3. 第一天:5 步开工
+
+**多人/多 agent 并行: 先看 [`TASKS.md`](TASKS.md) 占任务!**
+
+### Step 0: 看 [`TASKS.md`](TASKS.md) 抢一个 `可并行: ✅` + `未开发` 的任务(2 分钟)
+
+```bash
+# 1. 看任务表
+cat TASKS.md | less
+
+# 2. 找一个 可并行: ✅ 且 状态: 未开发 的任务(典型: T-I-4 / T-I-5 / T-I-6 / T-I-7 / T-I-8)
+# 3. 改那一节的状态为 占用-<你的名字>
+# 4. 10 秒内 commit + push
+git add TASKS.md
+git commit -m "chore(tasks): claim T-I-X by <你的名字>"
+git push origin minimax
+# ✅ push 成功 = 占用成功
+
+# 5. 才进 Step 1 开始干活
+```
+
+**如果你和另一个人同时改同一个任务** —— 晚 push 的人会看到 push 失败或冲突,**放弃这个任务,找下一个 `未开发`**。
 
 ### Step 1: Clone 仓库 + 验证基线(2 分钟)
 
@@ -285,6 +360,7 @@ SELECT scenario, COUNT(*) FROM llm_call_log GROUP BY scenario;
 ```
 projects-online/
 ├── README.md                                # 本文件(接手 AI 入口)
+├── TASKS.md                                 # 🆕 任务分块清单(13 任务 + 抢占 SOP)
 ├── .gitignore
 │
 ├── backend/                                 # Spring Boot 3.3 + JPA
