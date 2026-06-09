@@ -190,8 +190,8 @@
 
 ### T-I-4: SearchFulltextTool(工具 1)
 
-- **状态**: 未开发
-- **占用者**: -
+- **状态**: 占用-Sisyphus
+- **占用者**: Sisyphus
 - **影响文件**: `backend/src/main/java/com/archive/agent/tool/SearchFulltextTool.java`(新,**独占**)
 - **工作量**: 0.5 天(2-4 小时)
 - **依赖**: T-I-3
@@ -204,8 +204,8 @@
 
 ### T-I-5: FindProjectTool(工具 2) + ProjectRepository 加方法 + SQL
 
-- **状态**: 未开发
-- **占用者**: -
+- **状态**: 占用-Sisyphus
+- **占用者**: Sisyphus
 - **影响文件**:
   - `backend/src/main/java/com/archive/agent/tool/FindProjectTool.java`(新)
   - `backend/src/main/java/com/archive/repository/ProjectRepository.java`(改 1 个方法,**独占**)
@@ -222,8 +222,8 @@
 
 ### T-I-6: QueryMysqlTool(工具 3,**白名单 + 聚合 + 注入防护**)
 
-- **状态**: 未开发
-- **占用者**: -
+- **状态**: 占用-Sisyphus
+- **占用者**: Sisyphus
 - **影响文件**: `backend/src/main/java/com/archive/agent/tool/QueryMysqlTool.java`(新,**独占,大文件 ~300 行**)
 - **工作量**: 1.5 天(6-10 小时,**最复杂**)
 - **依赖**: T-I-3
@@ -238,8 +238,8 @@
 
 ### T-I-7: LlmSummarizeTool + AskClarificationTool(工具 4 + 5)
 
-- **状态**: 未开发
-- **占用者**: -
+- **状态**: 占用-Sisyphus
+- **占用者**: Sisyphus
 - **影响文件**:
   - `backend/src/main/java/com/archive/agent/tool/LlmSummarizeTool.java`(新)
   - `backend/src/main/java/com/archive/agent/tool/AskClarificationTool.java`(新)
@@ -254,8 +254,8 @@
 
 ### T-I-8: GetProjectBusinessDataTool(工具 6) + TodoRepository 加方法
 
-- **状态**: 未开发
-- **占用者**: -
+- **状态**: 占用-Sisyphus
+- **占用者**: Sisyphus
 - **影响文件**:
   - `backend/src/main/java/com/archive/agent/tool/GetProjectBusinessDataTool.java`(新)
   - `backend/src/main/java/com/archive/repository/TodoRepository.java`(改 1 个方法,**独占**)
