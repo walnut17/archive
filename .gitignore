@@ -20,3 +20,10 @@ scratch/
 .mavis/plans/requirement-analysis-plan.yaml
 .mavis/plans/*/board.md
 .mavis/plans/*/outputs/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Backup files
+*.bak
+*.v2-selfdev.bak
