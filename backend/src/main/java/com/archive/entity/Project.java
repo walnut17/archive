@@ -65,6 +65,10 @@ public class Project extends BaseEntity {
     @Column(name = "scheduled_meeting_at")
     private java.time.LocalDate scheduledMeetingAt;
 
+    /** 客户名称. */
+    @Column(name = "customer_name", length = 256)
+    private String customerName;
+
     /** 备注(自由文本). */
     @Column(name = "remark", length = 2000)
     private String remark;

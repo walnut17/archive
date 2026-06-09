@@ -27,4 +27,6 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     List<Todo> findBySourceAndSourceRefId(String source, Long sourceRefId);
 
     long countByStatus(String status);
+
+    long countByProjectIdAndStatus(Long projectId, String status);
 }

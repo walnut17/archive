@@ -36,4 +36,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     @Query("SELECT p.status, COUNT(p) FROM Project p GROUP BY p.status")
     List<Object[]> countByStatus();
+
+    @Query(value = "SELECT code, name, customer_name, MATCH(name, customer_name) AGAINST(:q IN BOOLEAN MODE) AS score FROM project WHERE MATCH(name, customer_name) AGAINST(:q IN BOOLEAN MODE) ORDER BY score DESC LIMIT :topN", nativeQuery = true)
+    List<Object[]> searchByNameOrCustomerFulltext(@Param("q") String q, @Param("topN") int topN);
 }

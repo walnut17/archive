@@ -60,15 +60,15 @@
 | T-I-12(前端) | 需等 T-I-10 | 代码可先写,验收等 T-I-10 |
 | T-I-13(多轮对话) | 需等 T-I-1 + T-I-9 | pom 冲突 T-I-1 |
 
-**当前能抢的**(2026-06-09 16:17,Sisyphus 已完工 T-I-1~T-I-3):
-- 🟢 T-I-4(SearchFulltextTool) — 可并行
-- 🟢 T-I-5(FindProjectTool) — 可并行
-- 🟢 T-I-6(QueryMysqlTool) — 可并行
-- 🟢 T-I-7(LlmSummarize+AskClarification) — 可并行
-- 🟢 T-I-8(GetProjectBusinessData) — 可并行
+**当前能抢的**(2026-06-09 16:50,Sisyphus 已完工 T-I-1~T-I-8):
+- 🟢 T-I-9(AgentEngine) — 关键路径,并行
+- 🟢 T-I-13(多轮对话) — 可跟 T-I-9 并行
 
-**5 工具全完能抢**:
-- T-I-9(AgentEngine) + T-I-13(多轮对话)— 2 个并行
+**T-I-9 完后能抢**:
+- T-I-10(QaController)
+
+**T-I-10 完后能抢**:
+- T-I-11(集成测试) + T-I-12(前端)
 
 **5 工具全完能抢**:
 - T-I-9(AgentEngine) + T-I-13(多轮对话)— 2 个并行
@@ -190,7 +190,7 @@
 
 ### T-I-4: SearchFulltextTool(工具 1)
 
-- **状态**: 占用-Sisyphus
+- **状态**: 已完成(Sisyphus / 2026-06-09)
 - **占用者**: Sisyphus
 - **影响文件**: `backend/src/main/java/com/archive/agent/tool/SearchFulltextTool.java`(新,**独占**)
 - **工作量**: 0.5 天(2-4 小时)
@@ -204,7 +204,7 @@
 
 ### T-I-5: FindProjectTool(工具 2) + ProjectRepository 加方法 + SQL
 
-- **状态**: 占用-Sisyphus
+- **状态**: 已完成(Sisyphus / 2026-06-09)
 - **占用者**: Sisyphus
 - **影响文件**:
   - `backend/src/main/java/com/archive/agent/tool/FindProjectTool.java`(新)
@@ -222,7 +222,7 @@
 
 ### T-I-6: QueryMysqlTool(工具 3,**白名单 + 聚合 + 注入防护**)
 
-- **状态**: 占用-Sisyphus
+- **状态**: 已完成(Sisyphus / 2026-06-09)
 - **占用者**: Sisyphus
 - **影响文件**: `backend/src/main/java/com/archive/agent/tool/QueryMysqlTool.java`(新,**独占,大文件 ~300 行**)
 - **工作量**: 1.5 天(6-10 小时,**最复杂**)
@@ -238,7 +238,7 @@
 
 ### T-I-7: LlmSummarizeTool + AskClarificationTool(工具 4 + 5)
 
-- **状态**: 占用-Sisyphus
+- **状态**: 已完成(Sisyphus / 2026-06-09)
 - **占用者**: Sisyphus
 - **影响文件**:
   - `backend/src/main/java/com/archive/agent/tool/LlmSummarizeTool.java`(新)
@@ -254,7 +254,7 @@
 
 ### T-I-8: GetProjectBusinessDataTool(工具 6) + TodoRepository 加方法
 
-- **状态**: 占用-Sisyphus
+- **状态**: 已完成(Sisyphus / 2026-06-09)
 - **占用者**: Sisyphus
 - **影响文件**:
   - `backend/src/main/java/com/archive/agent/tool/GetProjectBusinessDataTool.java`(新)
