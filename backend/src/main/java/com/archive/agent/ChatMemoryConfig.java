@@ -1,5 +1,6 @@
 package com.archive.agent;
 
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.memory.repository.jdbc.JdbcChatMemoryRepository;
@@ -36,5 +37,14 @@ public class ChatMemoryConfig {
                 .chatMemoryRepository(chatMemoryRepository)
                 .maxMessages(20)
                 .build();
+    }
+
+    /**
+     * MessageChatMemoryAdvisor: 在 ChatClient 调用时自动加载/保存多轮上下文.
+     * Spring AI 1.1 builder API: MessageChatMemoryAdvisor.builder(chatMemory).build()
+     */
+    @Bean
+    public MessageChatMemoryAdvisor messageChatMemoryAdvisor(ChatMemory chatMemory) {
+        return MessageChatMemoryAdvisor.builder(chatMemory).build();
     }
 }

@@ -52,12 +52,12 @@ class QueryMysqlToolTest {
         row.put("id", 1L);
         row.put("name", "测试项目");
         row.put("status", "草稿");
-        var mockRows = List.of(row);
+        List<Map<String, Object>> mockRows = List.of(row);
 
         when(jdbcTemplate.queryForList(anyString(), any(Object[].class))).thenReturn(mockRows);
 
         var tr = tool.execute(args, ctx);
-        assertTrue(tr.isOk());
+        assertTrue(tr.isOk(), "Tool returned error: '" + tr.getError() + "' DATA: " + tr.getData());
 
         @SuppressWarnings("unchecked")
         var data = (Map<String, Object>) tr.getData();
@@ -86,7 +86,7 @@ class QueryMysqlToolTest {
 
         var row = new HashMap<String, Object>();
         row.put("aggregate_value", 5L);
-        var mockRows = List.of(row);
+        List<Map<String, Object>> mockRows = List.of(row);
 
         when(jdbcTemplate.queryForList(anyString(), any(Object[].class))).thenReturn(mockRows);
 
@@ -115,7 +115,7 @@ class QueryMysqlToolTest {
 
         var row = new HashMap<String, Object>();
         row.put("aggregate_value", 10000L);
-        var mockRows = List.of(row);
+        List<Map<String, Object>> mockRows = List.of(row);
 
         when(jdbcTemplate.queryForList(anyString(), any(Object[].class))).thenReturn(mockRows);
 
@@ -149,7 +149,7 @@ class QueryMysqlToolTest {
         var row2 = new HashMap<String, Object>();
         row2.put("aggregate_value", 2L);
         row2.put("status", "通过");
-        var mockRows = List.of(row1, row2);
+        List<Map<String, Object>> mockRows = List.of(row1, row2);
 
         when(jdbcTemplate.queryForList(anyString(), any(Object[].class))).thenReturn(mockRows);
 

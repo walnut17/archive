@@ -48,27 +48,14 @@ public class AgentConfig {
      * JdbcChatMemoryRepository bean.
      * Spring AI 1.1 公开 API 不提供 tableName() 方法 - 使用默认表名 spring_ai_chat_memory
      * (对应 I-13 迁移脚本 I-chat-memory.sql 中建立的表)
+     *
+     * 注意: ChatMemory / MessageChatMemoryAdvisor Bean 在 ChatMemoryConfig 里定义
+     * 避免重复 Bean 冲突 (Mavis 修 P0-13)
      */
     @Bean
     public JdbcChatMemoryRepository jdbcChatMemoryRepository(DataSource dataSource) {
         return JdbcChatMemoryRepository.builder()
                 .dataSource(dataSource)
                 .build();
-    }
-
-    /**
-     * ChatMemory 默认实现: MessageWindowChatMemory (滑动窗口保留最近 N 条)
-     */
-    @Bean
-    public ChatMemory chatMemory(JdbcChatMemoryRepository repository) {
-        return MessageWindowChatMemory.builder()
-                .chatMemoryRepository(repository)
-                .maxMessages(20)
-                .build();
-    }
-
-    @Bean
-    public MessageChatMemoryAdvisor messageChatMemoryAdvisor(ChatMemory chatMemory) {
-        return MessageChatMemoryAdvisor.builder(chatMemory).build();
     }
 }

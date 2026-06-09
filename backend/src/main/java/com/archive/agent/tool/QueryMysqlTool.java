@@ -116,7 +116,8 @@ public class QueryMysqlTool implements AgentTool {
                 queryArgs.setGroupBy(groupByCol);
             } else {
                 var aggCol = queryArgs.getAggregateColumn();
-                if (aggCol != null && !aggCol.isBlank()) {
+                if (aggCol != null && !aggCol.isBlank() && !"*".equals(aggCol)) {
+                    // "*" 是 SQL COUNT(*) 通配符, 跳过白名单检查 (但仍校验字符)
                     if (!isValidColumnName(aggCol)) {
                         return ToolResult.error("Aggregate column name '" + aggCol + "' contains invalid characters");
                     }
