@@ -1,241 +1,411 @@
 # 投委会档案管理系统
 
 > 投委会专属档案管理与智能分析 Web 应用
-> **当前阶段**:v2.0 开工准备(M0/M1/M2 已落,v2.0 业务核心待开发)
-> **维护**:Mavis(主开发 agent)+ 用户(业务方)
-> **最后更新**:2026-06-08
+> **当前任务**:实施 **Plan I — 智能问答 Agent**(Spring AI 1.1,基线已就绪,等你开工)
+> **基线 commit**:`1473461`(M0~M2 + Plan A~G 全部完工 + Plan I 方案定稿 + v1.1 评审修)
+> **接手 AI 必读**: 本 README + plan-I §0 接手 Agent 必读
 
 ---
 
-## ⚡ 接手必读(给新来的人 / Agent)
+## 🚨 0. 你是谁?你要做什么?(接手 AI 看这里就够)
 
-**按顺序读 3 份**(20 分钟掌握全貌):
+**你的唯一任务**:**实施 Plan I 智能问答 Agent**,把现有 `QaController` 写死的"search → rerank → generate"三步管道,**升级为 Spring AI 1.1 智能 Agent**,支持自适应选工具、语义定位项目、追问用户、多轮对话。
 
-1. 📋 **[`docs/REQUIREMENTS-v1.md`](docs/REQUIREMENTS-v1.md)** — 业务需求(12 章节,872 行,1 万多字)。先看这个,知道系统做什么/不做什么。
-2. 🏗️ **[`docs/ARCHITECTURE-v2.md`](docs/ARCHITECTURE-v2.md)** — 架构方案(685 行,33KB)。看 M0~M2 沿用 + v2.0 增补。
-3. 🛠️ **[`docs/TEAM-ARCHIVE.md`](docs/TEAM-ARCHIVE.md)** — 团队档案(458 行)。环境/部署/沙箱/数据库/账户/紧急情况。
+**3 步开工**:
+1. **`cat .mavis/plans/plan-I-agent-implementation.md` §0「接手 Agent 必读」**(~10 分钟)
+2. 按 §1 执行顺序表, 从 I-1 开始, **每子项一个 commit**
+3. 完工写 `deliverable.md`, 通知 Mavis 沙箱审
 
-**再读 2 份**(开发规范,1 小时掌握工程标准):
-
-4. 📏 **[`docs/DEV-STANDARDS.md`](docs/DEV-STANDARDS.md)** — 开发标准 + 交付规范(466 行)。命名/注释/安全/Git/测试/完工自查。
-5. 🩹 **[`docs/LESSONS-LEARNED.md`](docs/LESSONS-LEARNED.md)** — 踩坑记录。13+ 条真实坑,避免重蹈覆辙。
-
-**想开工?读 1 份**:
-
-6. 🚀 **[`.mavis/plans/plan-A-phase0-fixes.md`](.mavis/plans/plan-A-phase0-fixes.md)** — 第一个施工 plan(P0 阻塞修复,30-45 分钟)。
+**特别预警** —— 反复看 3 遍:
+- ⚠️ **Spring AI 1.1 公开 API 没有 `ReactAgent` class**(那是 1.2 路线 / 阿里云 Spring AI Alibaba 概念)。本项目用 `ChatClient` + `@Tool` 注解 + `Advisor` + **手写 5 步 ReAct 循环**。详见决策 doc §1.2.1.1 第 6 点 + plan-I §0.3。
+- ⚠️ **`spring.ai.agent.max-iterations` 不存在** —— 5 步上限**硬编码在 `AgentEngine` 的 for 循环里**(`MAX_ITERATIONS = 5`)。
+- ⚠️ **业务需求 §4.4「多轮对话」必须实现**(plan-I I-13 子项)—— 不要跳过。
 
 ---
 
-## 📂 仓库结构(2026-06-08 扁平化)
+## 📊 1. 任务概览(Plan I)
+
+| 项 | 值 |
+|---|---|
+| **任务 ID** | Plan I(智能问答 Agent) |
+| **基线** | `1473461` |
+| **目标 commit 数** | **13+**(每子项一个) + 1 聚合 |
+| **工期估算** | **~7.8 天** |
+| **关键路径** | I-3 → I-9 → I-10 → I-11 |
+| **可并行** | I-4 / I-5 / I-6 / I-7 / I-8 / I-12 / I-13(7 个) |
+| **零回归** | 现有 M0~M2 + Plan A~G 全部功能不能挂 |
+| **降级路径** | Spring AI 挂时 QaController 走老 GlmService |
+
+**13 子项工时表**(详细看 plan-I §1):
+
+| # | 范围 | 估时 | 关键 |
+|---|---|---|---|
+| I-1 | pom.xml 加 Spring AI BOM + 4 starter | 0.2 天 | 不引 autoconfigure-agent |
+| I-2 | application.yml 加 Spring AI + agent 开关 | 0.1 天 | `spring.ai.agent.enabled=false` 即降级 |
+| I-3 | agent 包骨架 + 5 DTO + Listener | 0.5 天 | `@Tool` 接口 + ChatClient config |
+| I-4 | SearchFulltextTool | 0.5 天 | 复用现有 KnowledgeSearchService |
+| I-5 | FindProjectTool + project FULLTEXT 索引 | 0.5 天 | **语义锁项目**关键工具 |
+| I-6 | QueryMysqlTool(白名单) | 1 天 | **安全重点** |
+| I-7 | LlmSummarizeTool + AskClarificationTool | 0.5 天 | 复用 LLMProvider |
+| I-8 | GetProjectBusinessDataTool | 0.5 天 | 复用 Plan C-5 |
+| I-9 | **AgentEngine + ChatClient + 手写 5 步 ReAct 循环** | **1.5 天** | **最关键** |
+| I-10 | QaController 改造 + 降级 | 0.5 天 | `@ConditionalOnProperty` 开关 |
+| I-11 | 端到端集成测试(10 用例) | 1 天 | mvn test + 浏览器 |
+| I-12 | 前端 Knowledge.vue + AgentStepsPanel | 0.5 天 | Vue 3 + Element Plus |
+| I-13 | **多轮对话** + MessageChatMemoryAdvisor + chat_memory 表 | 0.5 天 | **补业务需求 §4.4 漏实现** |
+
+---
+
+## 📚 2. 必读文档(5 份,按顺序)
+
+| 序 | 文件 | 行数 | 必读理由 |
+|---|---|---|---|
+| ① | `.mavis/plans/plan-I-agent-implementation.md` | 1192 | **你的主 spec**——12 子项详细 + 验收 + commit 规范 + 完工 checklist |
+| ② | `docs/AGENT-IMPL-PLAN.md` | 252 | 总览:6 工具 + 工期 + 风险 + 集成点 + 完工验收 |
+| ③ | `docs/AGENT-FRAMEWORK-DECISION.md` | 885 | 决策:Spring AI 1.1 + **不引** spring-ai-alibaba,**踩坑预警 §1.2.1.1 第 6 点** |
+| ④ | `docs/AGENT-REQUIREMENTS.md` | 257 | 业务:15 真实问题 + 7 场景 + 验收标准(§6 验收场景) |
+| ⑤ | `docs/AGENT-RESEARCH.md` | 194 | 调研:7 框架评分 + Top 3 + 资源链接(必看 §5 资源链接) |
+
+**参考文档(按需查)**:
+- `docs/ENVIRONMENT-DEPENDENCIES.md` (330) — 硬件/网络/凭证,部署细节
+- `docs/DEV-STANDARDS.md` (466) — 开发标准,**§7.2 完工交回清单必读**
+- `docs/LESSONS-LEARNED.md` (19KB) — 15+ 踩坑,**避免重蹈覆辙**
+- `docs/TEAM-ARCHIVE.md` (12KB) — 沙箱 SSH 重建 + 环境
+- `docs/ARCHITECTURE-v2.md` (685) — 现有架构基线
+- `docs/DB-SCHEMA-v2.md` (1060) — 现有 schema(你要给 project 表加 FULLTEXT 索引)
+- `docs/REQUIREMENTS-v1.md` (872) — 业务全貌
+
+---
+
+## 🎯 3. 第一天:5 步开工
+
+### Step 1: Clone 仓库 + 验证基线(2 分钟)
+
+```bash
+git clone -b minimax git@gitee.com:frisker/projects-online.git
+cd projects-online
+
+# 验证基线 = 1473461
+git rev-parse HEAD
+# 期望: 14734613180f51c14cf3920b428adc6a9618d879
+
+# 沙箱编译验证(接手 AI 必跑)
+cd /workspace/projects-online-clone  # 或本机
+mvn compile -DskipTests -B -o
+# 期望: BUILD SUCCESS(零回归,现有代码全过)
+```
+
+### Step 2: 读 plan-I §0 接手 Agent 必读(10 分钟)
+
+```bash
+cat .mavis/plans/plan-I-agent-implementation.md | head -100
+```
+
+**§0 必看 3 处**:
+- §0.2 必读文档(7 份)
+- §0.3 关键技术点(ReactAgent 幻觉预警 + 资源链接)
+- §0.4 基线 commit `1473461` 验证方法
+
+### Step 3: 读决策 doc + 业务 doc(15 分钟)
+
+```bash
+# 决策(踩坑预警 3 处)
+sed -n '40,90p' docs/AGENT-FRAMEWORK-DECISION.md
+sed -n '1,15p' docs/AGENT-FRAMEWORK-DECISION.md   # §1.2.1.1 第 6 点
+
+# 业务 15 真实问题
+cat docs/AGENT-REQUIREMENTS.md
+```
+
+### Step 4: 沙箱编译验证(1 分钟,关键)
+
+```bash
+# 沙箱内
+cd /workspace/projects-online-clone
+mvn compile -DskipTests -B -o
+# 期望: BUILD SUCCESS,无 WARNING(本项目 Spring Boot 3.3 + JDK 17)
+```
+
+**编译过不了,先看 `docs/LESSONS-LEARNED.md`**(15+ 条历史坑,可能命中)
+
+### Step 5: 开始 I-1(2 小时)
+
+```bash
+# 看 plan-I §2 I-1 详细规范
+sed -n '95,200p' .mavis/plans/plan-I-agent-implementation.md
+
+# 编辑 pom.xml
+vim backend/pom.xml
+# 加 spring-ai-bom 1.1.0 + 4 个 starter
+# 详见 plan-I §2 I-1 关键代码段
+
+# 跑编译验证
+mvn compile -DskipTests -B
+# 期望: BUILD SUCCESS,依赖下载成功
+
+# commit + push
+git add backend/pom.xml
+git commit -m "chore(deps,I-1): add Spring AI 1.1 BOM + 4 starters"
+git push origin minimax
+```
+
+---
+
+## 📝 4. 13 子项执行规范(总览)
+
+**每个子项**:
+1. 读 `plan-I §2 <I-N>` 详细规范
+2. 按规范写代码(配套代码 + SQL + yml 改)
+3. 跑验收(`mvn compile` / `mvn test` / `npm run build` / 浏览器)
+4. **一个 commit + push**(不囤)
+5. 标记 plan-I §3 完工 checklist
+
+**关键路径**(必须按序):
+```
+I-1 → I-2 → I-3 → [I-4 ~ I-8 并行] → I-9 → I-10 → I-11
+                       ↓
+            I-12 / I-13(与 I-11 并行)
+```
+
+**完工验收清单**(必跑,plan-I §3):
+- [ ] `mvn compile -DskipTests -B -o` 0 错
+- [ ] `mvn test` 10 个 AgentIntegrationTest 全过
+- [ ] `npm run build` 0 错
+- [ ] 浏览器 5 个端到端问题都能答(看 plan-I §3)
+- [ ] 关 `spring.ai.agent.enabled=false` 重启 → 问问题 → 走老路径(零回归)
+- [ ] `llm_call_log` 新增 ≥ 3 条(`scenario=AGENT_*`)
+
+---
+
+## 🛠 5. 完整 13 子项速查(给接手 AI 当 checklist)
+
+> **速查表**。每项**详细 spec 在 plan-I §2 详读**。这里只是"确认你有没有漏"。
+
+| # | 文件 / 改动 | 验收命令 |
+|---|---|---|
+| **I-1** | `backend/pom.xml` 加 BOM + 4 starter | `mvn dependency:tree \| grep spring-ai` |
+| **I-2** | `backend/src/main/resources/application.yml` 加 `spring.ai.*` | 启动日志看到 `OpenAiChatModel configured` |
+| **I-3** | `backend/src/main/java/com/archive/agent/` 7 个文件(AgentConfig + 3 DTO + AgentStep + AgentTool + 2 listener) | `mvn compile` 0 错 |
+| **I-4** | `agent/tool/SearchFulltextTool.java` | `SearchFulltextToolTest` 3 测例 |
+| **I-5** | `agent/tool/FindProjectTool.java` + `ProjectRepository.searchByNameOrCustomerFulltext` + `db/migration/I-find-project-fulltext.sql` | `FindProjectToolTest` 3 测例 + 浏览器端到端 |
+| **I-6** | `agent/tool/QueryMysqlTool.java`(白名单 + 参数化 + 审计,**重点子项**) | 4 测例(含越权 + 注入) |
+| **I-7** | `agent/tool/LlmSummarizeTool.java` + `AskClarificationTool.java` | 单元测试 |
+| **I-8** | `agent/tool/GetProjectBusinessDataTool.java`(+ `TodoRepository.countByProjectIdAndStatus` 1 个方法) | 端到端 |
+| **I-9** | `agent/AgentEngine.java` + `agent/prompt/AgentSystemPrompt.java` + `AgentFewShots.java`(**最关键**) | `AgentEngineTest`(mock ChatClient) |
+| **I-10** | `controller/QaController.java` 改造 + `QaResponse` 加 3 字段 | `QaControllerTest` 3 测例 |
+| **I-11** | `backend/src/test/java/com/archive/agent/AgentIntegrationTest.java`(10 测例) | `mvn test` 全过 |
+| **I-12** | `frontend/src/components/AgentStepsPanel.vue` + `frontend/src/views/Knowledge.vue` 改造 | `npm run build` 0 错 + 浏览器 |
+| **I-13** | `db/migration/I-chat-memory.sql` + `agent/ChatMemoryConfig.java` + `agent/MultiTurnController.java` + `agent/MultiTurnService.java` | 浏览器连问 3 轮 + 重启不丢 |
+
+---
+
+## 🧪 6. 端到端测试 5 个问题(完工必跑)
+
+**前提**:Spring Boot 启动,MySQL 跑 v2 schema + G-llm-call-log.sql + I-find-project-fulltext.sql + I-chat-memory.sql
+
+**测试场景**(plan-I §I-11 + IMPL-PLAN §6):
+
+1. **"新能源那个项目今年盈利怎么样?"** → 看到 4-5 步 agent 思考 → 锁定 PRJ-2026-001 → 答案
+2. **"PRJ-2026-001 剩余金额?"** → 调 get_project_business_data → 数字准确
+3. **"今年否决了哪些项目?"** → 调 query_mysql + search_fulltext 综合
+4. **"那个项目"**(I-13 多轮对话) → 弹 dialog 让用户选
+5. **多轮对话**:第 1 轮"PRJ-2026-001 怎么样" → 第 2 轮"它的剩余金额" → 第 3 轮"谁负责" → 都自动锁定 PRJ-2026-001
+
+**降级测试**:`application.yml` 设 `spring.ai.agent.enabled=false` → 重启 → 问问题 → `agentMode=false`(老路径)
+
+**埋点测试**:
+```sql
+SELECT scenario, COUNT(*) FROM llm_call_log GROUP BY scenario;
+-- 期望: 出现 AGENT_STEP / AGENT_FINAL / AGENT_TOOL / AGENT_FALLBACK
+```
+
+---
+
+## 🆘 7. 卡住怎么办?
+
+| 问题 | 怎么办 |
+|---|---|
+| Spring AI 1.1 API 找不到 `ReactAgent` | 看 plan-I §0.3 踩坑预警 + 决策 §1.2.1.1 第 6 点 + AGENT-RESEARCH §3.1 |
+| Spring AI BOM 找不到 / 版本对不上 | 改用 `spring-ai-bom` 1.0.6(降级方案) |
+| 智谱 GLM 4xx 错 | `application.yml` 加 `spring.ai.openai.chat.options.model=glm-4-flash` 显式指定 |
+| `@Tool` 注解不生效 | 用 `MethodToolCallbackProvider.builder().toolObjects(tools).build()` 暴露 |
+| 多轮对话 LLM 不带上下文 | 确认 `MessageChatMemoryAdvisor` bean 注入 ChatClient,`conversationId` 从 Controller 传 |
+| 编译错 | `mvn clean compile -DskipTests -B`,看 `LESSONS-LEARNED.md` |
+| **LLM 框架装不上** | **不要死磕**,在 `deliverable.md` 报告"卡住:XXX",Mavis 会接管 |
+| **接手 AI 没遇到但 PM 漏写的** | **不要猜**,在 `deliverable.md` 报告"问题:XXX,需要 PM 决策" |
+
+---
+
+## ✅ 8. 完工产出(`deliverable.md`)
+
+完工后**写** `deliverable.md` 提交给 Mavis 沙箱审。**必含**:
+
+```markdown
+# Plan I 完工报告
+
+## 1. 13 commit 链接
+- I-1 commit: <hash>
+- I-2 commit: <hash>
+- ...
+- I-13 commit: <hash>
+- 聚合 commit: <hash>
+
+## 2. 编译 / 测试 / 构建 截图
+- mvn compile: [截图或日志]
+- mvn test: [截图或日志,10 个 AgentIntegrationTest 全过]
+- npm run build: [截图或日志]
+
+## 3. 端到端浏览器测试结果
+- 问题 1 (新能源那个项目): [答案 + steps 截图]
+- 问题 2 (剩余金额): [数字 + steps 截图]
+- ...
+- 多轮对话 3 轮: [截图]
+- 降级测试: [截图]
+
+## 4. 已知问题 / 留 TODO
+- (列 5-10 个 I-11 测出来的 Prompt 调优点)
+- (列任何没做完的)
+
+## 5. owner 审请关注
+- 决策对齐: plan-I §0.3 三个踩坑预警都没踩? ✓/✗
+- 零回归: 关开关走老路径? ✓/✗
+- 多轮对话: 3 轮上下文保留? ✓/✗
+```
+
+---
+
+## 📂 9. 仓库结构(扁平化,2026-06-08)
 
 ```
 projects-online/
-├── README.md                                # 本文件
-├── .gitignore                               # 含 .ssh/ + .mavis/plans/yaml 屏蔽
-├── .gitignore.example                       # 子项目 .gitignore 模板
+├── README.md                                # 本文件(接手 AI 入口)
+├── .gitignore
 │
 ├── backend/                                 # Spring Boot 3.3 + JPA
 │   ├── pom.xml
 │   ├── startup.ps1
-│   ├── healthcheck.ps1
-│   ├── src/main/java/com/archive/...        # 实体/服务/控制器
-│   ├── src/main/resources/                  # application.yml + SQL
-│   └── README.md
+│   └── src/main/java/com/archive/
+│       ├── agent/                           # 🆕 Plan I 新增(~14 个文件)
+│       │   ├── AgentConfig.java
+│       │   ├── AgentEngine.java
+│       │   ├── AgentRequest.java
+│       │   ├── AgentResponse.java
+│       │   ├── AgentStep.java
+│       │   ├── ChatMemoryConfig.java        # I-13
+│       │   ├── MultiTurnController.java     # I-13
+│       │   ├── MultiTurnService.java        # I-13
+│       │   ├── prompt/
+│       │   │   ├── AgentSystemPrompt.java
+│       │   │   └── AgentFewShots.java
+│       │   ├── tool/
+│       │   │   ├── SearchFulltextTool.java  # I-4
+│       │   │   ├── FindProjectTool.java     # I-5
+│       │   │   ├── QueryMysqlTool.java      # I-6 重点
+│       │   │   ├── LlmSummarizeTool.java    # I-7
+│       │   │   ├── AskClarificationTool.java# I-7
+│       │   │   └── GetProjectBusinessDataTool.java  # I-8
+│       │   └── listener/
+│       │       ├── LlmCallListener.java
+│       │       └── ToolCallListener.java
+│       ├── controller/QaController.java     # 🆕 I-10 改造
+│       ├── service/GlmService.java          # 降级路径用
+│       ├── provider/LLMProvider.java        # 抽象层
+│       ├── repository/ProjectRepository.java # 🆕 I-5 加 searchByNameOrCustomerFulltext
+│       ├── common/LlmScenario.java          # 🆕 I-9 加 AGENT_STEP/FINAL/TOOL/FALLBACK
+│       └── ...(现有 M0~M2 代码,零回归)
 │
-├── frontend/                                # Vue 3 + TypeScript + Element Plus
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── tsconfig.json
-│   ├── src/                                 # views / api / router / store
-│   └── README.md
+├── frontend/
+│   ├── src/views/Knowledge.vue              # 🆕 I-12 改造
+│   └── src/components/
+│       └── AgentStepsPanel.vue              # 🆕 I-12 新增
 │
-├── deploy/                                  # 部署配置
-│   ├── caddy/                               # Caddyfile
-│   ├── winsw/                               # WinSW 服务配置
-│   ├── sql/                                 # 数据库迁移 SQL
-│   └── scripts/                             # 启动/重启脚本
+├── docs/                                    # ⭐ 11 份核心文档
+│   ├── REQUIREMENTS-v1.md                   # 业务全貌
+│   ├── ARCHITECTURE-v2.md                   # 现有架构
+│   ├── DB-SCHEMA-v2.md                      # 现有 schema
+│   ├── SIMILAR-PRODUCTS.md
+│   ├── ARCH-REUSE-AUDIT.md
+│   ├── DEV-STANDARDS.md                     # §7.2 完工交回清单
+│   ├── TEAM-ARCHIVE.md                      # 沙箱 SSH + 环境
+│   ├── LESSONS-LEARNED.md                   # 15+ 踩坑
+│   ├── DEPLOYMENT-LOG.md
+│   ├── ENVIRONMENT-DEPENDENCIES.md         # 🆕 硬件/网络/凭证
+│   ├── AGENT-IMPL-PLAN.md                   # 🆕 Plan I 总览
+│   ├── AGENT-REQUIREMENTS.md                # 🆕 业务需求
+│   ├── AGENT-RESEARCH.md                    # 🆕 调研
+│   └── AGENT-FRAMEWORK-DECISION.md          # 🆕 决策(踩坑预警)
 │
-├── config/                                  # 配置模板
-│   ├── config.example.json                  # ⭐ 用户复制这个填真实值
-│   └── README.md
+├── .mavis/plans/
+│   ├── plan-A~G/                            # 已完工
+│   ├── plan-H-smart-qa-agent.md             # Plan H 任务
+│   └── plan-I-agent-implementation.md       # 🆕 Plan I 主 spec(接手 AI 主读)
 │
-├── docs/                                    # ⭐ 8 份核心文档
-│   ├── REQUIREMENTS-v1.md                   # 业务需求
-│   ├── ARCHITECTURE-v2.md                   # 架构方案
-│   ├── DB-SCHEMA-v2.md                      # 数据库 v2(可执行 SQL)
-│   ├── SIMILAR-PRODUCTS.md                  # 6 类 22 个产品调研
-│   ├── ARCH-REUSE-AUDIT.md                  # M0~M2 沿用评估
-│   ├── DEV-STANDARDS.md                     # 开发标准
-│   ├── TEAM-ARCHIVE.md                      # 团队档案
-│   ├── LESSONS-LEARNED.md                   # 踩坑记录
-│   ├── DEPLOYMENT-LOG.md                    # 部署日志
-│   ├── M1-README.md                         # M1 完工报告
-│   └── M1-TEST-TASKS.md                     # M1 测试任务
-│
-├── architecture-v1-full.md                  # 已废止的 v1 方案(保留历史)
-├── architecture-v2-lite.md                  # 过渡版(保留历史)
-├── architecture-v3-final.md                 # v3 终稿(M0/M1/M2 基线)
-├── SUPPLEMENTARY-REQUIREMENTS.md            # 597 行 P0~P4 缺陷清单
-│
-├── scripts/                                 # 仓库级脚本
-│   └── sync.sh                              # minimax 从 main 拉新并 push
-│
-└── .mavis/plans/                            # ⭐ 施工 plan(6 个,见下)
-    ├── plan-A-phase0-fixes.md               # P0 阻塞修复
-    ├── plan-B-phase1-arch-fixes.md          # P1 架构修复
-    ├── plan-C-phase2-business-core.md       # P2 业务核心
-    ├── plan-D-phase2-5-ux.md                # P2.5 UX 增强
-    ├── plan-E-phase3-rbac-dict-ui.md        # P3 权限/字典/UI
-    └── plan-F-phase4-test-polish.md         # P4 测试/收尾
+├── config/                                  # 模板(用户复制填真实值)
+├── deploy/                                  # Caddy / WinSW / SQL
+└── scripts/sync.sh                          # minimax 跟 main 同步
 ```
 
-> **2026-06-08 扁平化重构**(`39b18ed`):之前所有源码在 `investment-committee-archive-system/` 下,现在 `backend/` / `frontend/` / `docs/` 都在仓库根,部署路径更直。`scripts/sync.sh` 帮 minimax 保持跟 main 同步。
+---
+
+## 🌿 10. Git 工作流(接手 AI 必守)
+
+```bash
+# 每子项一个 commit
+git add <改动文件>
+git commit -m "<type>(<scope>,I-N): <description>"
+
+# commit 模板
+feat(agent,I-1): add Spring AI 1.1 BOM + 4 starters
+feat(agent,I-9): add AgentEngine with ChatClient + @Tool + 5-step ReAct loop
+test(agent,I-11): 10 end-to-end integration tests
+fix(agent,I-12): Knowledge.vue import http error
+docs(agent,Plan I): complete - 13 subitems, all green  # 聚合 commit
+
+# 推 minimax(不直推 main)
+git push origin minimax
+
+# 完工后
+git tag plan-I-v1.0
+git push origin plan-I-v1.0
+```
+
+**不囤 commit** —— 13 子项 = 13+ commit + 1 聚合。
 
 ---
 
-## 📚 核心文档(11 份,都已在 `docs/`)
+## 📞 11. 找谁 / 紧急情况
 
-| 类别 | 文档 | 行数 | 用途 |
-|---|---|---|---|
-| **业务** | `REQUIREMENTS-v1.md` | 872 | 12 章节,基于 4 轮业务访谈 |
-| **架构** | `ARCHITECTURE-v2.md` | 685 | v3 基础 + 增补,Provider/Engine 层 |
-| **架构** | `DB-SCHEMA-v2.md` | 1060 | 10 新表 + ALTER 沿用表,含完整 SQL |
-| **调研** | `SIMILAR-PRODUCTS.md` | 256 | 6 类 22 个同类产品对比 |
-| **调研** | `ARCH-REUSE-AUDIT.md` | 219 | M0~M2 逐项 ✅/✏️/❌ |
-| **治理** | `DEV-STANDARDS.md` | 466 | 开发标准 + 完工交回清单 |
-| **治理** | `TEAM-ARCHIVE.md` | 458 | 环境/部署/沙箱/账户/紧急 |
-| **治理** | `LESSONS-LEARNED.md` | 持续 | 13+ 真实踩坑 |
-| **沿用** | `M1-README.md` | 80 | M1 完工报告 |
-| **沿用** | `M1-TEST-TASKS.md` | 270 | M1 测试任务清单 |
-| **沿用** | `DEPLOYMENT-LOG.md` | 320 | 部署日志 |
-
----
-
-## 🚀 施工 plan(6 个,按序执行)
-
-| Plan | 内容 | 工作量 | 依赖 | 互斥 |
-|---|---|---|---|---|
-| **A** | P0 阻塞修复(6 项) | 30-45 分钟 | 无 | 必须先做 |
-| **B** | P1 架构修复(4 项) | 1-2 小时 | A | 跟 C/D/E 可分模块并行 |
-| **C** | P2 业务核心(LLM + 4 Engine + 8 实体 + 6 Controller) | 1-2 周 | B | 跟 D 不可并行 |
-| **D** | P2.5 UX(批量上传 + 智能摘要) | 半天-1 天 | C | 跟 C 不可并行 |
-| **E** | P3 权限 + 字典 UI + 抽取/对比/触发规则 UI | 1-2 天 | C/D | 跟 F 不可并行 |
-| **F** | P4 集成测试 + 类型安全 + 性能基线 + 文档收尾 | 1-2 天 | 全部 | 收尾 |
-
-**每个 plan 都自包含**:必读清单 + 范围 + 验收 + 提交规范 + 交回物。打开看即可独立开工。
-
----
-
-## 📋 项目当前状态(2026-06-08)
-
-| 阶段 | 内容 | 状态 | 证据 |
-|---|---|---|---|
-| **架构** | v1 → v2 → v3 演进 | ✅ 落定 | `architecture-v3-final.md` |
-| **调研** | 同类产品 + 沿用评估 | ✅ 完成 | `SIMILAR-PRODUCTS.md` / `ARCH-REUSE-AUDIT.md` |
-| **需求** | 业务需求 v1 | ✅ 完成 | `REQUIREMENTS-v1.md` |
-| **治理** | 开发标准 + 团队档案 | ✅ 完成 | `DEV-STANDARDS.md` / `TEAM-ARCHIVE.md` |
-| **M0** | 脚手架 + 登录 + 部署 | ✅ 跑通 | 浏览器端到端验证 |
-| **M1** | 项目-议案-材料 CRUD | ✅ 跑通 | M1-README.md |
-| **M2** | 知识库问答(MySQL FULLTEXT + GLM) | ✅ 跑通 | d5ae194 修复 + M2 框架 |
-| **Phase 0** | P0 阻塞修复 | ⏳ 准备 | plan-A |
-| **Phase 1-4** | v2.0 业务核心 | ⚪ 未启动 | plan-B~F |
-
-**已落代码**(commits `5bb2439` → `1528ed1` → `39b18ed` 扁平化),**全部在 `minimax` 分支**。
-
----
-
-## 🌿 Git 分支约定
-
-| 分支 | 用途 | 谁能推 |
-|---|---|---|
-| `main` | 生产分支(只读) | **只走 PR** |
-| `minimax` | 集成/开发(活跃) | dev 直接 push |
-| `feature/*` | 单功能分支 | dev |
-
-**任何 push 都到 `minimax`,main 走 PR。**
-
-**单向同步**:`minimax` 始终从 `origin/main` 拉新(fast-forward merge),push **只**走 `origin/minimax`,**不**直推 main。
-
-**推荐**:`./scripts/sync.sh "commit message"`(自动 fetch → 切 minimax → merge main → add → commit → push)
-
----
-
-## 🔑 账户 / 凭证(本地自备,不在仓库)
-
-| 项 | 来源 |
+| 项 | 联系人 |
 |---|---|
-| Gitee 账号 `frisker` 的 user account key | 已有,在 `~/.ssh/` |
-| 智谱 GLM-4-Flash API key | 免费,https://open.bigmodel.cn/ 申请 |
-| MySQL root 密码 | 本机已有,填到 `config/config.json` |
-| JWT secret(>= 32 byte) | `openssl rand -base64 32` 生成 |
+| **业务方 / 项目方** | frisker(投委会秘书)— 业务决策 + 过目 PR |
+| **Mavis 沙箱 PM** | 主 agent —— 写方案 + 审完工,不写代码 |
+| **接手 AI** | 你(生产环境 AI)—— 写代码 + 提 PR |
+| **运维** | 无人(单机,自己维护) |
 
-详细见 `docs/TEAM-ARCHIVE.md` § 3.3 + `docs/DEV-STANDARDS.md` § 3.3。
-
----
-
-## 🛠 快速开始(本机 5 步)
-
-```powershell
-# 1. 拉仓库(假设 Gitee 账号 key 已配)
-git clone git@gitee.com:frisker/projects-online.git
-cd projects-online
-git checkout minimax
-
-# 2. 后端
-cd backend
-mvn clean package -DskipTests
-# 复制 target\archive.jar 到 D:\archive\apps\backend\
-cd ..
-cd deploy\scripts
-.\start-backend.ps1   # 或 .\startup.ps1
-
-# 3. 前端(dev 模式)
-cd ..\..\frontend
-npm install
-npm run dev
-# 浏览器开 http://localhost:5173
-
-# 4. 数据库(已有 archive_db,跑 v2 迁移)
-mysql -u root -p archive_db < backend\src\main\resources\db\migration\v2-schema.sql
-
-# 5. 配置
-# 复制 config\config.example.json 到 D:\archive\config\config.json
-# 填 glm.apiKey + jwt.secret + database.password
-```
+**紧急情况**:
+- 后端崩了 → `docs/TEAM-ARCHIVE.md` §11
+- 数据库连不上 → §11.3
+- LLM 限速 → 切 `spring.ai.openai.chat.options.model=glm-4-flash` 或换 GLM-4-Plus
+- 推不上去 → `docs/TEAM-ARCHIVE.md` §11.5(SSH key 检查)
+- **Spring AI 装不上** → 报 `deliverable.md` 给 Mavis,**不要死磕**
 
 ---
 
-## 📞 找谁
-
-- **业务方**:frisker(投委会秘书 / 项目经理)—— 业务决策 + 过目 PR
-- **开发主**:Mavis(主 agent)—— 编码 + 写文档 + 审 PR
-- **部署**:Mavis 代(沙箱编译,你本机部署)
-- **运维**:无人(单机,自己维护)
-
----
-
-## 🆘 紧急情况
-
-- 后端崩了 → `docs/TEAM-ARCHIVE.md` § 11
-- 数据库连不上 → § 11.3
-- LLM 限速 → 切 `llm.provider=mock`
-- 推不上去 → § 11.5(SSH key 检查)
-
----
-
-## 📜 文档演进历史
+## 📜 12. 文档演进(基线 1473461 之前)
 
 | 时间 | 事件 |
 |---|---|
 | 2026-06-05 | v1 架构(双机主备,RAG 纠结) |
 | 2026-06-06 | v2 架构(定位单机轻量) |
-| 2026-06-07 | v3 架构定稿(智谱 + 不向量化) |
-| 2026-06-07 | M0 端到端跑通(浏览器 UP) |
+| 2026-06-07 | v3 架构定稿(智谱 + 不向量化) + M0 端到端 |
 | 2026-06-08 上午 | M1 档案 CRUD 完工 |
 | 2026-06-08 下午 | M2 知识库问答框架 + 修复 |
 | 2026-06-08 傍晚 | 业务需求 v1 + 8 份核心文档 + 6 个 plan |
-| 2026-06-08 晚 | **仓库扁平化重构**(`39b18ed`)+ 本 README 重写 |
+| 2026-06-08 晚 | 仓库扁平化 + README 重写 |
+| 2026-06-09 上午 | Plan A~G 完工 + Plan H/I 方案定稿 |
+| 2026-06-09 中午 | **Plan I v1.1 评审修**(3 P0 + 12 P1) — 接手 AI 现在用的基线 |
 
 ---
 
-*任何新发现的踩坑、配置、流程,加到对应的 `docs/` 文档,标日期。*
+*接手 AI 看完 README,直接 `cat .mavis/plans/plan-I-agent-implementation.md` §0,然后 §1 执行顺序表开工。*
+*Mavis(沙箱 PM)在此待命审完工。*
