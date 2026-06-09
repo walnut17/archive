@@ -51,6 +51,12 @@ const router = createRouter({
           name: 'knowledge',
           component: () => import('@/views/Knowledge.vue'),
         },
+        // G-1 LLM 用量统计(任何角色可用,admin 可看全员)
+        {
+          path: 'llm-usage',
+          name: 'llm-usage',
+          component: () => import('@/views/LlmUsage.vue'),
+        },
         // E-2 Admin pages (requires admin role)
         {
           path: 'admin/dict',
