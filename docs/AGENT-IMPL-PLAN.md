@@ -28,7 +28,7 @@
 - ✅ **Spring AI 1.1**(官方 BOM,4 starter,jar 增量 < 15MB,运行时 < 100MB)
 - ✅ **6 个工具**:search_fulltext / find_project / query_mysql / get_project_business_data / llm_summarize / ask_clarification
 - ✅ **白名单 + 参数化 SQL** + **审计** + **埋点**(接现有 llm_call_log + audit_log)
-- ✅ **5 步 max_iterations** + **降级路径**(Spring AI 挂时 QaController 走老 GlmService)
+- ✅ **5 步 max_iterations**(硬编码 AgentEngine for 循环,不走 yml) + **降级路径**(Spring AI 挂时 QaController 走老 GlmService)
 - ✅ **零回归**(M0~M2 + Plan A-G 全部代码 + 数据库 schema 不动)
 
 **工期**:~7.3 天(可与现有 M0~M2 跑并行)
@@ -43,7 +43,7 @@
 | **不引阿里云 starter** | 用 OpenAI 兼容路径调智谱 GLM,不走 DashScope | L1 已定智谱 GLM,再引 DashScope 得多 1 套阿里云密钥 + 1 组传递依赖,价值约等于 0(详见 `AGENT-FRAMEWORK-DECISION.md` §1.2.1.1) |
 | **6 工具 / 单 Agent** | 不是多 Agent 协作 | 2 角色内网单实例,过度设计,5 步上限够用 |
 | **不向量化** | MySQL FULLTEXT ngram 主力检索 | 沿用 M2 决策,已验证 |
-| **5 步 max_iterations** | 不是 10 / 20 | 项目方 v1.0 决策 |
+| **5 步 max_iterations** | 不是 10 / 20 | 项目方 v1.0 决策;**硬编码**在 `AgentEngine` for 循环(`MAX_ITERATIONS = 5`),不走 yml(Spring AI 1.1 无 `spring.ai.agent.max-iterations` 配置) |
 | **降级路径必须有** | Spring AI 挂时 QaController 走老 GlmService | 零回归,关 `agent.enabled=false` 立即降级 |
 | **不扩硬件 / 不开新数据库账号** | 沿用当前 32GB 单机 + 主应用账号 | 项目方 v1.0 决策 |
 
@@ -104,6 +104,11 @@
 
 **改造**:`controller/QaController.java` — 加 1 个 `@Autowired(required = false) AgentEngine`,`ask()` 方法先看开关;响应 DTO 加 3 个可空字段(`agentMode` / `steps` / `toolCalls`)
 
+**I-13 新增文件**(多轮对话,补业务需求 §4.4):
+- `db/migration/I-chat-memory.sql` — `chat_memory` 表(会话 ID + 消息列表, MySQL JDBC ChatMemoryRepository)
+- `agent/MultiTurnController.java` — `/api/qa/turn/{sessionId}` 端点(支持前端传 sessionId,后端拉历史)
+- `agent/ChatMemoryConfig.java` — `JdbcChatMemoryRepository` bean + `MessageChatMemoryAdvisor` bean
+
 **降级路径**:`spring.ai.agent.enabled=false` 立即降级到 GlmService,**前端无感**
 
 **前端**:`Knowledge.vue` 加 `<AgentStepsPanel>` 折叠组件 + `<el-switch>` 启用 Agent 模式开关
@@ -129,7 +134,7 @@
 | **I-10** | QaController 改造 + 降级路径 | 0.5 天 | I-9 |
 | **I-11** | 端到端集成测试(10 用例) | 1 天 | I-10 |
 | **I-12** | 前端 Knowledge.vue 改造 | 0.5 天 | I-10 |
-| **合计** | | **~7.3 天** | |
+| **合计** | | **~7.8 天**(原 7.3 + I-13 多轮对话 0.5) | |
 
 **关键路径**:I-3 → I-9 → I-10 → I-11,其他可并行(分工给多个 sub-agent)
 
@@ -160,7 +165,9 @@ npm run build
 4. "那个项目" → 调 ask_clarification,前端弹 dialog
 5. "工程进度如何?"(无关项目) → 调 search_fulltext 无果 + FINAL_ANSWER "未找到"
 
-**降级测试**:`application.yml` 设 `agent.enabled=false` → 重启后端 → 问问题 → 走老路径(`agentMode=false`)
+**降级测试**:`application.yml` 设 `spring.ai.agent.enabled=false` → 重启后端 → 问问题 → 走老路径(`agentMode=false`)
+
+**多轮对话测试**(I-13):浏览器连问 3 轮(第 1 轮说 PRJ-2026-001, 第 2 轮说 "它的剩余金额", 第 3 轮说 "谁负责")→ 第 2/3 轮 LLM 自动带上文(自动锁定 PRJ-2026-001 不丢)
 
 **埋点测试**:`mysql -e "SELECT scenario, COUNT(*) FROM llm_call_log GROUP BY scenario"` 应有 `AGENT_STEP` / `AGENT_FINAL` / `AGENT_TOOL`
 
@@ -172,7 +179,7 @@ npm run build
 |---|---|
 | Spring AI 1.1 与 Spring Boot 3.3 不兼容 | 降到 1.0.x(API 略不同) |
 | 智谱 OpenAI 兼容协议 400 错 | `application.yml` 显式 `model: glm-4-flash` |
-| ReactAgent 跑不起来 | 用 ChatClient + 手写 ReAct 循环(plan B) |
+| Spring AI 1.1 实际 API 不熟 | 看 `AGENT-RESEARCH.md` §3.1 实战代码 + `plan-I-agent-implementation.md` §0.3 资源链接 |
 | LLM 限流 60 req/min | Spring AI 内置限流 + 5 步上限 |
 | SQL 注入 | 严格白名单 + 参数化 + audit_log |
 | 跨项目偷窥敏感材料 | search_fulltext 加 projectCode filter |

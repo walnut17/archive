@@ -40,7 +40,7 @@
 
 **§1.2.1 为什么 Spring AI**(项目方 v1.0 决策):
 
-1. **生产特性现成**:`ReactAgent` 10 行起步,**内置** HITL / 上下文压缩 / 工具重试 / 调用限流,这些"易错模块"中文 LLM 自己写要 ~300 行且容易出 bug。
+1. **生产特性现成**:`ChatClient` 10 行起步 + `@Tool` 注解 + `Advisor` 拦截链 (`MessageChatMemoryAdvisor` / `QuestionAnswerAdvisor` / `SafeGuardAdvisor` 等) + `MethodToolCallbackProvider` 自动暴露 Java method。HITL / 上下文压缩 / 工具重试 / 调用限流都是 advisor 模式,这些"易错模块"中文 LLM 自己写要 ~300 行且容易出 bug。
 2. **中文 LLM 走 OpenAI 兼容协议**:`spring-ai-starter-model-openai` 配置智谱 base-url 直接调 GLM-4-Flash。智谱官方声明 OpenAI 兼容,实测可用(待 Plan I-11 验证)。**Spring AI Alibaba 1.1** 是另一条路(走 DashScope 阿里云百炼),Qwen/DeepSeek/GLM 都能跑,本项目**不**走这条路,见 §1.2.1.1。
 3. **Spring Boot 3.3 集成 0 摩擦**:`spring-ai-starter-*` 全是 spring-boot-starter 风格,自动配置、`@ConditionalOn*` 一致。
 4. **MCP 协议支持**:未来要接外部工具/数据源(企业微信 / 邮件 / 钉钉 / 飞书),MCP 是事实标准,Spring AI 1.1 原生客户端。
@@ -56,6 +56,7 @@
 3. **spring-ai-alibaba 的真价值是"Qwen/DeepSeek 多模型路由"**,但本项目 LLM 单一(智谱),价值约等于 0。
 4. **避免再引一组传递依赖**(`spring-ai-alibaba-core` / `spring-ai-alibaba-autoconfigure-dashscope` / `aliyun-java-sdk-core` 等),jar 增量能省 8-10MB。
 5. **不锁定单一云厂商**:以后想换 Qwen / DeepSeek,把 `base-url` 改一下就行,starter 还是同一个,跨厂商 0 摩擦。
+6. **(踩坑)Spring AI 1.1 公开 API 现状**:Spring AI 1.1 GA(2025-11)没有 `ReactAgent` 公开 class,只有 `ChatClient` + `@Tool` + `Advisor` + 5 个 Workflow 模式(Chain/Parallelization/Routing/Orchestrator-Workers/Evaluator-Optimizer)。**`ReactAgent` 是 1.2 路线 / 阿里云 Spring AI Alibaba 概念**,本项目 plan-I-9 改用 `ChatClient` + `@Tool` + `MessageChatMemoryAdvisor` + 手写 ReAct 循环(5 步上限)。
 
 **保留的退路**:未来真要接 Qwen(比如 GLM 限流),加 1 个 `spring-ai-alibaba-starter-dashscope` 即可(2 个 starter 共存,Spring AI 支持),不破坏当前架构。
 
@@ -66,9 +67,9 @@
 - 初版架构师担忧 Spring AI 0.8.x GA 时间短,但项目方决定"这是单台 Win Server 32GB 内存单机,本机 Java 进程已跑 M0~M2 占 1GB 不到,内存 30GB 富余,多 15MB jar 0 压力"。
 - 初版架构师担心 GLM 适配非官方,但 Spring AI 1.1 的 `spring-ai-starter-model-openai` 走 OpenAI 兼容协议(智谱 GLM 已声明兼容),**实测可用**(待 Plan I-11 集成测试验证)。Spring AI Alibaba 走 DashScope 是另一条路,但项目方 v1.0 决策走 OpenAI 兼容,理由见 §1.2.1.1。
 - 项目方核心诉求:**"自己写的 agent 框架生产风险 = 自己背,Spring AI 背书 = 社区背书"**。这个判断是对的。
-- 自研保留为**回退方案**:`ReactAgent` 跑不起来时,AgentEngine 自研版(~300 行)作为 plan B 顶上。
+- 自研保留为**回退方案**:Spring AI 跑不起来时,AgentEngine 自研版(~300 行手写 ReAct 循环)作为 plan B 顶上。
 
-**评分矩阵与对比表**已在 `docs/AGENT-RESEARCH.md` §3 / §7 / §8 中给出,Top 3 推荐:**Spring AI > LangChain4j > 自研**(回填完成)。
+**评分矩阵与对比表**已在 `docs/AGENT-RESEARCH.md` §2 / §3 / §4 中给出(§2 评分矩阵 / §3 Top 3 详细对比 / §4 关键决策),Top 3 推荐:**Spring AI > LangChain4j > 自研**(回填完成)。
 
 **项目方 v1.0 关键约束**(必须满足):
 - **不采购硬件或云服务**:单机 Windows Server 2012 R2 + 32GB 内存,本机 Java 进程已用 < 1GB,内存富余 30GB
@@ -86,7 +87,7 @@
 
 ### 1.4 一句话总结
 
-> **Spring AI 1.1 + spring-ai-starter-model-openai**(走 OpenAI 兼容协议调智谱 GLM-4-Flash,**不**引 spring-ai-alibaba),`ReactAgent` 单 Agent 起步,**5 步上限**,**6 个工具**(search_fulltext / find_project / query_mysql / get_project_business_data / llm_summarize / ask_clarification),白名单 + JSON DSL,GlmService 兜底降级。对外仍走 `QaController` 但行为升级为 agent 调度。
+> **Spring AI 1.1 + spring-ai-starter-model-openai**(走 OpenAI 兼容协议调智谱 GLM-4-Flash,**不**引 spring-ai-alibaba),`ChatClient` + `@Tool` + `Advisor` + 手写 ReAct 循环(5 步上限),**6 个工具**(search_fulltext / find_project / query_mysql / get_project_business_data / llm_summarize / ask_clarification),白名单 + JSON DSL,GlmService 兜底降级。对外仍走 `QaController` 但行为升级为 agent 调度。
 
 ---
 
@@ -96,7 +97,7 @@
 
 ```
 backend/src/main/java/com/archive/agent/
-├── AgentConfig.java              # Spring AI 配置(LLM client + ReactAgent bean)
+├── AgentConfig.java              # Spring AI 配置(ChatClient + @Tool + Advisor)
 ├── AgentController.java          # 新端点 /api/qa/agent/ask(可选用,默认仍走 QaController)
 ├── AgentRequest.java             # 输入 DTO
 ├── AgentResponse.java            # 输出 DTO(steps[] + sources[] + answer)
@@ -173,7 +174,7 @@ backend/src/main/resources/
   - 折叠后默认不展开,用户点"查看 agent 思考"再展开。
 - **新增**:`<el-switch>` "启用 Agent 模式" — 默认开,用户可关(回退老管道)。
 - **降级 UI**:当 `result.agentMode=false` 时显示 "已降级为简单检索模式" 提示。
-- **响应字段**:`result.steps[]` 来自 Spring AI 的 `AdvisedResponse` / `AgentResponse` 内部 call log,需要 Spring AI 1.1 的 `Advisor` 接口暴露。
+- **响应字段**:`result.steps[]` 来自我们手写 ReAct 循环里每步的 `AgentStep` 记录(thought / tool / toolArgs / observation),**不**依赖 Spring AI 1.1 的 `AdvisedResponse`(那是 advisor 链的内部对象,本项目直接用我们自己的 `AgentStep` DTO 即可)。
 
 ### 2.4 改 0 处的明确清单
 
@@ -869,10 +870,10 @@ FLUSH PRIVILEGES;
 |---|---|---|
 | 业务需求 10-15 个真实问题 | `docs/AGENT-REQUIREMENTS.md` §2 | 高 |
 | 业务验收 10 条 | `docs/AGENT-REQUIREMENTS.md` §6 | 高 |
-| 框架评分矩阵(替换 §1.2 简表) | `docs/AGENT-RESEARCH.md` §3 | 中 |
-| 框架 Top 3 推荐(补 §1.2) | `docs/AGENT-RESEARCH.md` §7 | 中 |
-| ReAct vs Plan-Execute 实测数据 | `docs/AGENT-RESEARCH.md` §4 + 实测 | 低 |
-| 中文 LLM tool-call 准确率实测 | `docs/AGENT-RESEARCH.md` §6 | 中 |
+| ~~框架评分矩阵(替换 §1.2 简表)~~ | ~~`docs/AGENT-RESEARCH.md` §3~~ | ✅ 已回填到 §2 |
+| ~~框架 Top 3 推荐(补 §1.2)~~ | ~~`docs/AGENT-RESEARCH.md` §7~~ | ✅ 已回填到 §3 |
+| ~~ReAct vs Plan-Execute 实测数据~~ | ~~`docs/AGENT-RESEARCH.md` §4 + 实测~~ | ❌ 放弃(本期不实测) |
+| ~~中文 LLM tool-call 准确率实测~~ | ~~`docs/AGENT-RESEARCH.md` §6~~ | ❌ 放弃(走 I-11 端到端测试间接验证) |
 
 ---
 

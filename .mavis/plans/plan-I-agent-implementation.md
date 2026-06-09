@@ -1,12 +1,12 @@
 # Plan I: Agent 智能问答实施(Spring AI 方案)
 
-> **配套决策**:`docs/AGENT-FRAMEWORK-DECISION.md` v1.0(Spring AI 1.1 + Spring AI Alibaba 1.1)
+> **配套决策**:`docs/AGENT-FRAMEWORK-DECISION.md` v1.0(Spring AI 1.1 + `spring-ai-starter-model-openai`,**不**引 spring-ai-alibaba,理由见决策 §1.2.1.1)
 > **配套业务**:`docs/AGENT-REQUIREMENTS.md`
 > **配套调研**:`docs/AGENT-RESEARCH.md`
 > **作者**: 架构师(Mavis)
 > **接手 Agent**: **本 plan 由"生产环境 AI Agent"接手执行代码**——接手前**必读** §0「接手 Agent 必读」
 > **基线 commit**: `e5a0208`(M0~M2 + Plan A~G 完工)
-> **目标**:把现有 `QaController` 写死管道升级为 **Spring AI 1.1 ReAct Agent**,6 工具 / 白名单 / 5 步上限 / GlmService 兜底,**零回归**。
+> **目标**:把现有 `QaController` 写死管道升级为 **Spring AI 1.1 智能 Agent**(`ChatClient` + `@Tool` + 手写 5 步 ReAct 循环 + `MessageChatMemoryAdvisor` 多轮对话),6 工具 / 白名单 / 5 步上限 / GlmService 兜底,**零回归**。
 
 ---
 
@@ -19,6 +19,8 @@
 ### 0.2 你必须遵守的纪律
 
 1. **必读文档** — 开工前 `cat` 这些文件(沙箱里的我已经写好):
+   - `docs/AGENT-RESEARCH.md` (194 行,7 框架调研,§2 评分 + §3 Top 3 + §4 决策)
+   - `docs/AGENT-REQUIREMENTS.md` (257 行,业务需求,15 真实问题)
    - `docs/REQUIREMENTS-v1.md` (872 行,业务全貌)
    - `docs/ARCHITECTURE-v2.md` (架构基线)
    - `docs/DEV-STANDARDS.md` (开发标准 + 完工交回清单) ← **必读** §7 完工交回清单
@@ -38,10 +40,11 @@
 
 ### 0.3 关键技术点(必看)
 
-- **Spring AI 1.1 GA 已发布**(2025 年底),用 `spring-ai-starter-model-openai` 兼容智谱 GLM(智谱声明 OpenAI 兼容)
+- **Spring AI 1.1 GA 已发布**(2025-11),用 `spring-ai-starter-model-openai` 兼容智谱 GLM(智谱声明 OpenAI 兼容)
 - **本项目选 OpenAI 兼容路径**(走 `spring-ai-starter-model-openai` + 智谱 base-url)
 - **不引 `spring-ai-alibaba-starter-dashscope`**: L1 已定智谱 GLM,再引 DashScope 得多 1 套阿里云密钥 + 1 组传递依赖,价值约等于 0。详见 `AGENT-FRAMEWORK-DECISION.md` §1.2.1.1
 - **实际 jar 增量 < 15MB,运行时 < 100MB,完全适合 32GB 单机**
+- **(踩坑预警!)Spring AI 1.1 公开 API**: **没有** `ReactAgent` 公开 class(那是 1.2 路线 / 阿里云 Spring AI Alibaba 概念)。本项目实际 API 是 `ChatClient` + `@Tool` 注解 + `MethodToolCallbackProvider` + `Advisor` 拦截链 + `MessageChatMemoryAdvisor`(多轮对话)。**5 步 ReAct 循环在 `AgentEngine` 里手写**,Spring AI 1.1 不内置。
 
 **资源链接**:
 - Spring AI 官方文档: <https://docs.spring.io/spring-ai/reference/> (1.1 GA 2025 年底发布)
@@ -105,13 +108,13 @@ ssh:    git@gitee.com:frisker/projects-online.git
 
 ---
 
-## §1. 子项清单(共 12 个,推 12+ commit)
+## §1. 子项清单(共 13 个,推 13+ commit)
 
 ### 执行顺序(强烈建议按此顺序)
 
 | # | 范围 | 估时 | 依赖 | 互斥 |
 |---|---|---|---|---|
-| **I-1** | pom.xml 加 Spring AI 依赖 | 0.2 天 | 无 | 无 |
+| **I-1** | pom.xml 加 Spring AI 依赖(BOM 1.1.0 + 4 个 starter) | 0.2 天 | 无 | 无 |
 | **I-2** | application.yml 加 Spring AI + agent 开关 | 0.1 天 | I-1 | 无 |
 | **I-3** | agent 包骨架 + 5 DTO + AgentTool 接口 + 3 listener | 0.5 天 | I-2 | 无 |
 | **I-4** | 工具 1: SearchFulltextTool(FULLTEXT 检索) | 0.5 天 | I-3 | 无 |
@@ -119,12 +122,13 @@ ssh:    git@gitee.com:frisker/projects-online.git
 | **I-6** | 工具 3: QueryMysqlTool(白名单查业务数据) | 1 天 | I-3 | 与 I-4/I-5 并行 |
 | **I-7** | 工具 4: LlmSummarizeTool + 工具 5: AskClarificationTool | 0.5 天 | I-3 | 无 |
 | **I-8** | 工具 6: GetProjectBusinessDataTool(项目汇总) | 0.5 天 | I-3 | 无 |
-| **I-9** | AgentEngine 核心 + ReactAgent 配置 + Prompt + Few-shots | 1.5 天 | I-4~I-8 | 必须最后 |
+| **I-9** | AgentEngine 核心(`ChatClient` + `@Tool` + 手写 5 步 ReAct 循环) + Prompt + Few-shots | 1.5 天 | I-4~I-8 | 必须最后 |
 | **I-10** | QaController 改造 + 降级路径保留 | 0.5 天 | I-9 | 无 |
 | **I-11** | 端到端集成测试(mvn test + 浏览器) | 1 天 | I-10 | 无 |
 | **I-12** | 前端 Knowledge.vue 改造 + AgentStepsPanel 组件 | 0.5 天 | I-10 | 与 I-11 并行 |
+| **I-13** | **多轮对话** + `MessageChatMemoryAdvisor` + `JdbcChatMemoryRepository` + `chat_memory` 表(**补业务需求 §4.4 漏实现**) | 0.5 天 | I-9 | 与 I-12 并行 |
 
-**总计**: ~7 天(可与现有 M0~M2 跑并行,因为零回归)
+**总计**: ~7.8 天(可与现有 M0~M2 跑并行,因为零回归)
 
 ---
 
@@ -157,13 +161,8 @@ ssh:    git@gitee.com:frisker/projects-online.git
 </dependency>
 <dependency>
     <groupId>org.springframework.ai</groupId>
-    <artifactId>spring-ai-starter-model-chat-memory</artifactId>
-    <!-- 多轮对话记忆(可选) -->
-</dependency>
-<dependency>
-    <groupId>org.springframework.ai</groupId>
-    <artifactId>spring-ai-autoconfigure-agent</artifactId>
-    <!-- ReactAgent 自动配置 -->
+    <artifactId>spring-ai-starter-model-chat-memory-repository-jdbc</artifactId>
+    <!-- 多轮对话记忆持久化到 MySQL(I-13 用),`repository.` 是 Spring AI 1.1 包名新规范 -->
 </dependency>
 <!-- 测试用 -->
 <dependency>
@@ -175,8 +174,8 @@ ssh:    git@gitee.com:frisker/projects-online.git
 
 **关键**:
 - `spring-ai-bom` 1.1.0(BOM 管所有 Spring AI 子模块版本,**不**手动指定子模块版本)
-- `spring-ai-autoconfigure-agent` 提供 `ReactAgent` bean
-- **不**引 spring-ai-alibaba(项目方决策走 OpenAI 兼容,不再多引依赖)
+- **不**引 `spring-ai-autoconfigure-agent`(该 artifact 是 1.2 路线,1.1 公开 API 里没有 `ReactAgent` bean,要用 `ChatClient` + `@Tool` + `Advisor` 自己组合)
+- **不**引 spring-ai-alibaba(项目方决策走 OpenAI 兼容,不再多引依赖,理由 `AGENT-FRAMEWORK-DECISION.md` §1.2.1.1)
 
 **验收**:
 - `mvn dependency:tree | grep spring-ai` 应看到 5 个 spring-ai-* 工件
@@ -205,8 +204,9 @@ spring:
           max-tokens: 2048
     agent:
       enabled: ${AGENT_ENABLED:true}   # 开关,关时 QaController 走老路径
-      max-iterations: 5                 # 5 步上限
-      observation-truncate-chars: 2000  # 防 token 超限
+      observation-truncate-chars: 2000  # 防 token 超限(Spring AI advisor 截断配置)
+# 注意: 5 步上限**硬编码**在 AgentEngine.java 的 for 循环(`MAX_ITERATIONS = 5`),不走 yml
+# Spring AI 1.1 没有 `spring.ai.agent.max-iterations` 这种自动配置
 ```
 
 **关键**:
@@ -215,7 +215,7 @@ spring:
 
 **验收**:
 - 启动日志看到 `OpenAiChatModel configured with model=glm-4-flash`
-- `AGENT_ENABLED=false` 时 QaController 不初始化 `ReactAgent` bean
+- `spring.ai.agent.enabled=false` 时 QaController 不初始化 `ChatClient`(整个 AgentEngine 走 @ConditionalOnProperty,不进 bean 池)
 
 **commit**:`chore(config): add Spring AI OpenAI + agent config`
 
@@ -226,7 +226,7 @@ spring:
 **新增文件**(7 个):
 ```
 backend/src/main/java/com/archive/agent/
-├── AgentConfig.java                # @Configuration 配 ChatClient + ReactAgent
+├── AgentConfig.java                # @Configuration 配 ChatClient + @Tool + Advisor
 ├── AgentRequest.java               # 输入 DTO(question + history + sessionId)
 ├── AgentResponse.java              # 输出 DTO(answer + steps[] + sources[] + agentMode)
 ├── AgentStep.java                  # 单步(iteration + thought + tool + toolArgs + observation)
@@ -264,7 +264,7 @@ public class AgentConfig {
             .build();
     }
 
-    // Spring AI 1.1 用 ReactAgent builder(若 1.0 则自己手写 ReAct 循环)
+    // Spring AI 1.1: 没用 ReactAgent builder(那是 1.2 路线)。1.1 用 ChatClient.prompt().user().tools().call()
     // 参考 spring-ai-docs/react-agent
 }
 ```
@@ -693,6 +693,8 @@ public class GetProjectBusinessDataTool implements AgentTool {
 - `backend/src/main/java/com/archive/agent/prompt/AgentSystemPrompt.java`
 - `backend/src/main/java/com/archive/agent/prompt/AgentFewShots.java`
 
+**重要事实(踩坑)**:Spring AI 1.1 **没有** `ReactAgent` 公开 class。要用 `ChatClient` + `@Tool` + `MethodToolCallbackProvider` + `MessageChatMemoryAdvisor` + 自己手写 5 步 ReAct 循环。
+
 **AgentSystemPrompt 关键**:
 ```java
 @Component
@@ -755,69 +757,96 @@ Q: "新能源那个项目今年盈利怎么样?"
 
 **AgentEngine**(ReAct 循环,~150 行):
 
-**关键**:**Spring AI 1.1 有内建 `ReactAgent` builder**(推荐用它),**不**手写循环。
+**关键**:Spring AI 1.1 **没有 `ReactAgent` class**。用 `ChatClient` + `@Tool` 注解 + `MessageChatMemoryAdvisor` + **自己手写 5 步 ReAct 循环**。
 
 ```java
 @Component
 @ConditionalOnProperty(name = "spring.ai.agent.enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class AgentEngine {
-    private final ChatClient chatClient;
-    private final List<AgentTool> tools;
+    private static final int MAX_ITERATIONS = 5;  // 5 步上限,硬编码
+
+    private final ChatClient chatClient;          // 已注入 6 个 @Tool
+    private final List<AgentTool> tools;          // 6 工具
     private final KnowledgeSearchService searchService;  // 降级用
     private final LlmCallLogRepository llmLogRepo;
 
     public AgentResponse run(AgentRequest req) {
         AgentContext ctx = new AgentContext();
         ctx.setUsername(SecurityContextHolder.getContext().getAuthentication().getName());
+        long start = System.currentTimeMillis();
         try {
-            // 1. 调 Spring AI ReactAgent(它内部循环)
-            ChatResponse response = chatClient.prompt()
-                .user(req.getQuestion())
-                .call();
+            // 手写 ReAct 循环
+            List<AgentStep> steps = new ArrayList<>();
+            for (int i = 0; i < MAX_ITERATIONS; i++) {
+                ctx.setIteration(i);
+                // 1. Thought + Action: 让 LLM 选工具
+                ChatResponse response = chatClient.prompt()
+                    .system(AgentSystemPrompt.render(ctx))    // 包含工具描述 + 上文
+                    .user(req.getQuestion())
+                    .tools(tools.toArray(new AgentTool[0]))   // 6 个 @Tool method
+                    .call();
 
-            // 2. 解析 response(steps 来源于 ChatClient 的 advisor chain)
-            String answer = response.getResult().getOutput().getContent();
-            List<AgentStep> steps = extractSteps(response);  // 从 ChatResponse.metadata 抽
+                // 2. 解析 LLM 输出:FINAL_ANSWER 退出 / 否则调工具
+                String content = response.getResult().getOutput().getContent();
+                AgentStep step = parseAgentStep(content);
+                steps.add(step);
 
-            return AgentResponse.builder()
-                .answer(answer)
-                .steps(steps)
-                .sources(extractSources(response))
-                .toolCalls(steps.size())
-                .agentMode(true)
-                .elapsedMs(System.currentTimeMillis() - start)
-                .build();
+                if ("FINAL_ANSWER".equals(step.getTool())) {
+                    return buildResponse(step, steps, start, true);
+                }
+                if (ctx.isInterrupt()) {  // ask_clarification 触发
+                    return buildResponse(step, steps, start, true);
+                }
+                // 3. Observation: 调工具, 把结果累加到 ctx
+                ToolResult obs = dispatchTool(step.getTool(), step.getArgs(), ctx);
+                ctx.addObservation(obs);
+            }
+            // 4. 超 5 步: 强制 FINAL_ANSWER(拿前 N 步 observation 拼 prompt)
+            return forceFinalAnswer(ctx, steps, start);
         } catch (Exception e) {
-            // 降级:走老 FULLTEXT 路径
             log.warn("Agent run failed, fallback to search-only", e);
             saveLog(ctx, "AGENT_FALLBACK", e.getMessage());
-            return fallbackSearch(req);
+            return fallbackSearch(req, start);
         }
-    }
-
-    private AgentResponse fallbackSearch(AgentRequest req) {
-        List<SearchResult> results = searchService.search(req.getQuestion(), 10);
-        return AgentResponse.builder()
-            .answer(null)  // 老路径没 LLM 答案
-            .sources(convertToSources(results))
-            .agentMode(false)
-            .elapsedMs(...)
-            .build();
     }
 }
 ```
 
-**若 Spring AI 1.1 的 `ReactAgent` API 不熟悉**:
-- 备选方案:用 `ChatClient.prompt().user().tools(...).call()`(Spring AI 1.0 风格),**自己手写 ReAct 循环**(tools 反复调 + observation 累积 + FINAL_ANSWER 检测)
-- 优先级:`ReactAgent` 内建 > 手写循环
+**6 个工具都是 `@Component` 实现的 `@Tool` 注解 method**:
+```java
+@Component
+public class FindProjectTool {
+    private final ProjectRepository projectRepo;
+
+    @Tool(description = "用语义从 project.name + customer_name 中找匹配的项目")
+    public List<Map<String, Object>> findProject(
+        @ToolParam(description = "用户口语化描述的项目标识") String query,
+        @ToolParam(description = "返回 top N,默认 3") Integer topN) {
+        // 业务代码
+    }
+}
+```
+
+**ChatClient 配置**(在 `AgentConfig.java`):
+```java
+@Bean
+public ChatClient chatClient(ChatModel chatModel, List<AgentTool> tools) {
+    return ChatClient.builder(chatModel)
+        .defaultSystem(AgentSystemPrompt.render(null))
+        .defaultTools(tools.toArray())  // 6 个 @Tool 自动暴露
+        .build();
+}
+```
+
+**为什么不用 `ReactAgent`**:Spring AI 1.1 GA(2025-11) 实际没有 `ReactAgent` 公开 class(`spring-ai-autoconfigure-agent` 是 1.2 路线),只有 `ChatClient` + `@Tool` + `Advisor`。`ReactAgent` 是 阿里云 Spring AI Alibaba 概念 或 Spring AI 1.2 计划。
 
 **验收**:
 - `mvn compile` 通过
 - `AgentEngineTest`(用 mock ChatClient):返 answer + steps
 - 降级测试:mock ChatClient 抛异常 → fallback 走老路径
 
-**commit**:`feat(agent): add AgentEngine with Spring AI ReactAgent + fallback`
+**commit**:`feat(agent): add AgentEngine with ChatClient + @Tool + 5-step ReAct loop + fallback`
 
 ---
 
@@ -1009,16 +1038,17 @@ defineProps<{ steps: AgentStep[] }>()
 ## §4. 风险与注意
 
 1. **Spring AI 1.1 与现有 Spring Boot 3.3 兼容性**:
-   - 1.1 GA 已发布,应该兼容
-   - **若编译报错**:把 Spring AI 降到 1.0.x(API 略不同,但 ReactAgent 也有)
+   - 1.1 GA 已发布(2025-11),应该兼容
+   - **若编译报错**:把 Spring AI 降到 1.0.x(API 略不同,但 `ChatClient` + `@Tool` API 兼容)
 
 2. **智谱 GLM 走 OpenAI 兼容协议**:
    - 智谱声明兼容,但实际可能有 `model` 字段差异
    - **若 400 错**:在 `application.yml` 加 `spring.ai.openai.chat.options.model=glm-4-flash`(显式指定)
 
-3. **ReactAgent 内置限流**:
-   - 5 步 max_iterations **不需要自己写** — Spring AI 1.1 内置
-   - 死循环检测也内置
+3. **5 步 ReAct 循环硬编码在 AgentEngine**:
+   - 5 步 max_iterations **要自己写** — Spring AI 1.1 **没有** `spring.ai.agent.max-iterations` 配置
+   - `AgentEngine.MAX_ITERATIONS = 5` 常量 + `for (int i = 0; i < 5; i++)`
+   - 死循环检测**也要自己写**(同工具同 args 连续 2 次就强 FINAL_ANSWER)
 
 4. **性能**:
    - 单次 Agent 调用 LLM 次数:典型 2-4 次,最高 6 次(含 FINAL_ANSWER)
@@ -1073,10 +1103,90 @@ git push origin minimax
 | I-10 (QaController) | 0.5 天 |
 | I-11 (集成测试) | 1 天 |
 | I-12 (前端) | 0.5 天 |
-| **合计** | **~7.3 天** |
+| I-13 (多轮对话,补漏) | 0.5 天 |
+| **合计** | **~7.8 天** |
 
 **关键路径**:I-3 → I-9 → I-10 → I-11(顺序),其他可并行(分工给多个 sub-agent)。
 
 ---
 
 *本 plan 由 Mavis 在沙箱出方案,生产环境 AI Agent 接手执行。任何冲突以 `AGENT-FRAMEWORK-DECISION.md` v1.0 为准。*
+
+
+### I-13: 多轮对话(补业务需求 §4.4 漏实现)
+
+**必读**:`docs/AGENT-REQUIREMENTS.md` §4.4 — "后续问题自动带上文实体" / "第一轮说 PRJ-001,第二轮'它多少钱'自动补全主语" / "历史 chip 恢复上文"。这是**业务明确要求**,原 plan-I 12 子项**漏了**。
+
+**新增文件**(4 个):
+- `db/migration/I-chat-memory.sql` — `chat_memory` 表
+- `agent/ChatMemoryConfig.java` — `JdbcChatMemoryRepository` bean
+- `agent/MultiTurnController.java` — `/api/qa/turn/{sessionId}` 端点
+- `agent/MultiTurnService.java` — 多轮上下文装配
+
+**chat_memory 表 SQL**:
+```sql
+CREATE TABLE chat_memory (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  session_id VARCHAR(64) NOT NULL,
+  message_type VARCHAR(16) NOT NULL,  -- 'user' / 'assistant' / 'system' / 'tool'
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_session_created (session_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+**ChatMemoryConfig 关键代码**:
+```java
+@Configuration
+public class ChatMemoryConfig {
+    @Bean
+    public JdbcChatMemoryRepository chatMemoryRepository(DataSource ds) {
+        return JdbcChatMemoryRepository.builder()
+            .dataSource(ds)
+            .tableName("chat_memory")
+            .build();
+    }
+
+    @Bean
+    public ChatMemory chatMemory(JdbcChatMemoryRepository repo) {
+        return new JdbcChatMemory(repo);  // 走 MySQL 持久化,重启不丢
+    }
+
+    @Bean
+    public Advisor memoryAdvisor(ChatMemory chatMemory) {
+        return MessageChatMemoryAdvisor.builder(chatMemory)
+            .conversationId("default")  // sessionId 后续从 MultiTurnController 注入
+            .build();
+    }
+}
+```
+
+**MultiTurnController 关键代码**:
+```java
+@RestController
+@RequestMapping("/api/qa/turn")
+@RequiredArgsConstructor
+public class MultiTurnController {
+    private final ChatClient chatClient;  // 已经注入 @Tool + memoryAdvisor
+
+    @PostMapping("/{sessionId}")
+    public ApiResponse<QaResponse> turn(
+        @PathVariable String sessionId,
+        @RequestBody QaRequest req) {
+        // 用 sessionId 拉历史 + 拼上下文
+        ChatResponse response = chatClient.prompt()
+            .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, sessionId))
+            .user(req.getQuestion())
+            .call();
+        return ApiResponse.ok(...);
+    }
+}
+```
+
+**验收**:
+- `mvn compile` 通过
+- 浏览器:问"新能源那个项目"+ 重问"它的剩余金额" → 第 2 轮 LLM 自动锁定 PRJ-2026-001
+- 查 chat_memory 表:每轮 question + answer 都落库
+- 重启后端:再问第 1 个 session,历史能恢复(走 MySQL 持久化)
+
+**commit**:`feat(agent,I-13): add multi-turn chat with MessageChatMemoryAdvisor + JdbcChatMemoryRepository`
