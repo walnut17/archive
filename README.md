@@ -4,6 +4,13 @@
 > **当前任务**:实施 **Plan I — 智能问答 Agent**(Spring AI 1.1,基线已就绪,等你开工)
 > **基线 commit**:`a34f540`(M0~M2 + Plan A~G 全部完工 + Plan I 方案定稿 + v1.1 评审修)
 > **接手 AI 必读**: 本 README + plan-I §0 接手 Agent 必读
+>
+> 🚨 **接手 AI / 新接手 agent 必读 (开工 3 步)**:
+> 1. **拉 [docs/reviews/README.md](docs/reviews/README.md) + [docs/LESSONS-LEARNED.md](docs/LESSONS-LEARNED.md)** —— 看上一个接手 AI 漏的 P0 / P1, 避免重复
+> 2. **看本 README + plan-I §0** —— 了解项目架构
+> 3. **看 [TASKS.md](TASKS.md) 抢任务** —— 拉最新, 抢 `未开发` 的
+>
+> **上个接手 AI 踩了 5 P0 + 1 P1**: [docs/reviews/2026-06-09-plan-i-p0-review.md](docs/reviews/2026-06-09-plan-i-p0-review.md)
 
 ---
 

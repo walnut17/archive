@@ -453,6 +453,107 @@ git@gitee.com: Permission denied (publickey).
 
 ---
 
+## 6.5 智能问答 Agent 类 (Plan I)
+
+### 6.5.1 Spring AI 1.1 公开 API 没 `JdbcChatMemory` class
+
+**Commit**: `52cbbb7` (Sisyphus 犯) + `ab57ef3` (Mavis 修)
+
+**症状**:
+- `mvn compile` 直接挂: `cannot find symbol: class JdbcChatMemory`
+- 错误位置: `AgentConfig.java` + `ChatMemoryConfig.java` (同一个 bug 出现 2 次)
+
+**根因**:
+- Sisyphus 看 spec 写 "JdbcChatMemory" 就信了
+- 实际 Spring AI 1.1 **公开 API 完全没有 `JdbcChatMemory` class**
+- 真实 class 是 `JdbcChatMemoryRepository` (在 `org.springframework.ai.chat.memory.repository.jdbc` 包)
+- 配套: `MessageWindowChatMemory` (滑动窗口) 代替 `JdbcChatMemory` 本身
+
+**修复**:
+```java
+// 错 (Sisyphus 原版)
+import org.springframework.ai.chat.memory.jdbc.JdbcChatMemory;
+@Bean public JdbcChatMemory jdbcChatMemory(DataSource ds) { return new JdbcChatMemory(ds); }
+
+// 对 (Mavis 修后)
+import org.springframework.ai.chat.memory.repository.jdbc.JdbcChatMemoryRepository;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+@Bean public JdbcChatMemoryRepository repo(DataSource ds) {
+    return JdbcChatMemoryRepository.builder().dataSource(ds).tableName("chat_memory").build();
+}
+@Bean public ChatMemory memory(JdbcChatMemoryRepository repo) {
+    return MessageWindowChatMemory.builder().chatMemoryRepository(repo).maxMessages(20).build();
+}
+```
+
+**教训**:
+- **接 spec 时, API class 名必查** (Maven Central / Spring AI 官方文档)
+- **不要 "spec 写了就 OK"** —— 1.1 vs 1.2 vs 阿里云 Spring AI Alibaba 概念很容易搞混
+- **接手 AI 完工前必须 `mvn compile` 验证**, 0 错再 push
+
+### 6.5.2 QueryMysqlTool 漏 4 重安全加固 (P0-1 ~ P0-4)
+
+**Commit**: `ab57ef3` (Mavis 修)
+
+**症状**:
+- spec 明确写 "6 个 aggregate / 10 个 operator / 3 重安全加固"
+- Sisyphus 实现: 5 个 aggregate / 9 个 operator / 1 重加固
+- 漏 5 个, 4 个 P0 + 1 个 P1
+
+**漏什么**:
+| 项 | spec 要求 | Sisyphus 实现 | 业务影响 |
+|---|---|---|---|
+| aggregate | `count/sum/avg/max/min/group_by` (6 个) | 5 个, 漏 `group_by` | "还没结清有几个" 需 `group_by(status)` 才有意义 |
+| operator | 10 个 | 9 个, 漏 `is_not_null` | 查"未结清" / "已结清" 都要 `is_not_null` |
+| IN 长度上限 | ≤ 50 | 0 | LLM 可能生成 `IN (a, b, c, ..., 1000 个值)` 拖死 DB |
+| LIKE 转义 | 转义 `%` `_` | 0 | LLM 输出 `100%` 走 LIKE 会变通配符 (SQL 注入风险) |
+
+**修复**:
+- `QueryMysqlTool.ALLOWED_AGGREGATES` 加 `group_by`
+- `QueryMysqlTool.ALLOWED_OPERATORS` 加 `is_not_null`
+- 加 `MAX_IN_VALUES = 50` 常量 + IN 长度校验
+- 加 `escapeLikePattern()` 方法, 转义 `\ % _` (顺序避免双重转义)
+
+**教训**:
+- **接任务前先看 spec 验收清单的"数"** (10 个 operator / 6 个 aggregate / 3 重加固)
+- 完工**逐项自检** "我真都做了吗", 没做就别 commit
+- "快" 不等于 "好" —— 业务逻辑对, 安全细节漏, 等于没做
+
+### 6.5.3 `@SpringBootTest` 启动要 GLM key, 缺 `application-test.yml` (P1-1)
+
+**Commit**: `ab57ef3` (Mavis 修)
+
+**症状**:
+- Sisyphus 写了 10 测例 `AgentIntegrationTest`
+- 但**没配套 `application-test.yml`**
+- 跑 `mvn test` 会要真 `GLM_API_KEY` 环境变量
+- 沙箱里没 key, 测例 100% 启动挂
+
+**根因**:
+- spec 写 "10 测例", 但没写 "测试要 application-test.yml"
+- 接手 AI 想: "spec 没说要, 就不加"
+- 结果: **测试跑挂**
+
+**修复**:
+加 `application-test.yml`:
+```yaml
+spring:
+  ai:
+    openai:
+      api-key: test-mock-key-not-used  # 让 OpenAiChatModel Bean 实例化
+      base-url: http://localhost:0
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL  # H2 代替 MySQL
+```
+
+**教训**:
+- 写测试时, 先想"测试要哪些 Bean" → 反推需要哪些配置
+- `@SpringBootTest` 必须有 `application-test.yml` (或 `application-test.properties`)
+- 接手 AI 写完测试, **应该 `mvn test` 真的跑一次** (没 GLM key 也要想办法 mock)
+- "spec 没写" ≠ "不用做" —— 推理该做啥
+
+---
+
 ## 7. 经验教训总结(接手 agent 第一眼看)
 
 **优先级:致命 → 烦人**
@@ -467,6 +568,9 @@ git@gitee.com: Permission denied (publickey).
 8. **路径里的 BOM 自行处理**——不要依赖"用户用无 BOM 编辑器"
 9. **ConfigJsonLoader 这类查找器要支持生产路径**——不只开发路径
 10. **Curl 写脚本要分清 PowerShell 5.x 别名 vs curl.exe**——用 & curl.exe 强制
+11. **Spring AI 1.1 API class 名必查** —— spec 写 `JdbcChatMemory` 是错的, 真实是 `JdbcChatMemoryRepository`
+12. **接手 AI 完工前必 `mvn compile`** —— 5 P0 漏都是因为没真编译过
+13. **验收清单要逐项自检"数"** —— 10 个 operator / 6 个 aggregate / 3 重加固, 不能"差不多"
 
 ---
 
@@ -488,6 +592,9 @@ git@gitee.com: Permission denied (publickey).
 | 4.2 | ConfigJsonLoader 路径 | cd8b59c |
 | 5.1 | 沙箱 SSH key 丢失 | 7cdd290 |
 | 5.2 | 沙箱没 JDK | (待修复) |
+| 6.5.1 | Spring AI 1.1 `JdbcChatMemory` 不存在 | `52cbbb7` (Sisyphus 犯) + `ab57ef3` (Mavis 修) |
+| 6.5.2 | QueryMysqlTool 漏 5 P0 (aggregate / operator / IN / LIKE) | `ab57ef3` |
+| 6.5.3 | `@SpringBootTest` 缺 `application-test.yml` | `ab57ef3` |
 
 ### 5. Agent 写 Java 代码不编译就 push(C-2 三 Engine 错)
 
