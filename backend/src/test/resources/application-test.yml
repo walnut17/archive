@@ -1,0 +1,36 @@
+# ==========================================================
+# 测试环境配置 (I-11 Agent 集成测试用)
+#
+# 目的: 让 @SpringBootTest 启动不依赖真实 GLM_API_KEY
+# - 用 mock api-key 让 Spring AI 启动 OK
+# - ChatClient 不会真被调 (test 不走 LLM 调用)
+# - AgentTools 用真实 DB (test container 或 H2, 见 AgentIntegrationTest)
+# ==========================================================
+
+spring:
+  ai:
+    openai:
+      # 测试用占位 key, 让 OpenAiChatModel Bean 实例化
+      api-key: test-mock-key-not-used
+      base-url: http://localhost:0
+      chat:
+        options:
+          model: glm-4-flash
+    agent:
+      enabled: true
+  datasource:
+    # 测试用 H2 内存数据库 (Spring AI 1.1 跟 Hibernate 都支持 H2)
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+logging:
+  level:
+    com.archive.agent: DEBUG

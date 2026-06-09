@@ -1,49 +1,41 @@
 package com.archive.agent;
 
 import com.archive.common.ApiResponse;
-import com.archive.dto.QaRequest;
-import com.archive.dto.QaResponse;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.memory.ChatMemory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 多轮对话 API(I-13).
- * 使用 sessionId 拉历史 + 拼上下文,实现连续对话.
+ * I-13: 多轮对话端点.
+ *
+ * GET /api/qa/turn/{sessionId}?question=...
+ * 客户端传 sessionId (来自前端的 chat panel), 后端自动从 chat_memory 加载历史
+ *
+ * 跟 /api/qa/ask 区别:
+ * - /api/qa/ask 走单次 Q&A, 不带 session
+ * - /api/qa/turn/{sessionId} 走多轮, 自动带历史
+ *
+ * @author Mavis
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/qa/turn")
+@RequiredArgsConstructor
+@ConditionalOnProperty(name = "spring.ai.agent.enabled", havingValue = "true", matchIfMissing = true)
 public class MultiTurnController {
 
-    private final ChatClient chatClient;
-    private final MultiTurnService multiTurnService;
+    private final AgentEngine agentEngine;
 
-    public MultiTurnController(ChatClient.Builder builder, MultiTurnService multiTurnService) {
-        this.chatClient = builder.build();
-        this.multiTurnService = multiTurnService;
-    }
-
-    /**
-     * 多轮对话端点.
-     * 前端传 sessionId(首次可为 UUID),服务端自动拉历史.
-     */
-    @PostMapping("/{sessionId}")
-    public ApiResponse<QaResponse> turn(
+    @GetMapping("/{sessionId}")
+    public ApiResponse<AgentResponse> ask(
             @PathVariable String sessionId,
-            @RequestBody QaRequest req) {
-
-        // 用 sessionId 作为 conversationId 拉历史
-        String answer = chatClient.prompt()
-                .user(req.getQuestion())
-                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, sessionId))
-                .call()
-                .content();
-
-        QaResponse qr = QaResponse.builder()
-                .question(req.getQuestion())
-                .answer(answer)
-                .build();
-
-        return ApiResponse.ok(qr);
+            @RequestParam String question) {
+        log.info("[MultiTurn] sessionId={}, question={}", sessionId, question);
+        AgentRequest req = new AgentRequest();
+        req.setSessionId(sessionId);
+        req.setQuestion(question);
+        AgentResponse resp = agentEngine.run(req);
+        return ApiResponse.ok(resp);
     }
 }

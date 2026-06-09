@@ -60,26 +60,30 @@
 | T-I-12(前端) | 需等 T-I-10 | 代码可先写,验收等 T-I-10 |
 | T-I-13(多轮对话) | 需等 T-I-1 + T-I-9 | pom 冲突 T-I-1 |
 
-**当前能抢的**(2026-06-09 16:50,Sisyphus 已完工 T-I-1~T-I-8):
-- 🟢 T-I-9(AgentEngine) — 关键路径,并行
-- 🟢 T-I-13(多轮对话) — 可跟 T-I-9 并行
+**当前能抢的**(2026-06-09 20:35,Plan I 100% 完工,所有任务已完成):
+- ✅ **无未开发任务** — Plan I 13 任务 100% 完工
+- 项目方可以验收了: `git clone -b main` + 跳 README 验收清单
+- 或沙箱 Mavis 推 minimax 部署生产
 
-**T-I-9 完后能抢**:
-- T-I-10(QaController)
+**完工清单**:
+- ✅ T-I-1 (Sisyphus)
+- ✅ T-I-2 (Sisyphus)
+- ✅ T-I-3 (Sisyphus)
+- ✅ T-I-4~T-I-8 5 工具 (Sisyphus, `0f76737`)
+- ✅ T-I-9 AgentEngine 5 步 ReAct (Sisyphus, `4596140`)
+- ✅ T-I-10 QaController 改造 + 降级 (Sisyphus, `ce052c1`)
+- ✅ T-I-11 集成测试 10 测例 (Sisyphus, `abe6a8a`)
+- ✅ T-I-12 前端 Knowledge.vue + AgentStepsPanel (Sisyphus, `3956db4`)
+- ✅ T-I-13 多轮对话 (Sisyphus `52cbbb7` + Mavis 修 5 P0 `cf1be99`)
 
-**T-I-10 完后能抢**:
-- T-I-11(集成测试) + T-I-12(前端)
+**进度**: 13/13 = 100% 🎉
 
-**5 工具全完能抢**:
-- T-I-9(AgentEngine) + T-I-13(多轮对话)— 2 个并行
-
-**T-I-9 完能抢**:
-- T-I-10(QaController) — 串行
-
-**T-I-10 完能抢**:
-- T-I-11(测试) + T-I-12(前端) — 2 个并行(但 I-11 等 I-13)
-
-**全部完**: 13+ commits, ~8.3 天总工期
+**项 Mavis 修的 5 P0 (cf1be99)**:
+1. QueryMysqlTool 加 `group_by` 聚合函数 (spec 6 个, Sisyphus 只有 5)
+2. QueryMysqlTool 加 `is_not_null` operator (spec 10 个, Sisyphus 只有 9)
+3. QueryMysqlTool 加 IN 长度上限 ≤ 50 (3 重安全加固 缺 1)
+4. QueryMysqlTool 加 LIKE 自动转义 % _ (3 重安全加固 缺 1)
+5. 修 Spring AI 1.1 不存在的 JdbcChatMemory class → JdbcChatMemoryRepository + MessageWindowChatMemory (Sisyphus 两处都中招, AgentConfig + ChatMemoryConfig)
 
 ---
 
@@ -341,8 +345,8 @@
 
 ### T-I-13: 多轮对话(MessageChatMemoryAdvisor + JdbcChatMemoryRepository + chat_memory 表)
 
-- **状态**: 已完成(Sisyphus / 2026-06-09)
-- **占用者**: Sisyphus
+- **状态**: 已完成(Sisyphus + Mavis 修 5 P0 / 2026-06-09)
+- **占用者**: Sisyphus → Mavis 修 5 P0 (JdbcChatMemory 不存在 bug)
 - **影响文件**:
   - `backend/src/main/resources/db/migration/I-chat-memory.sql`(新)
   - `backend/src/main/java/com/archive/agent/ChatMemoryConfig.java`(新)
@@ -386,6 +390,13 @@
 | 日期 | 任务 | 状态变更 | 占用人 |
 |---|---|---|---|
 | 2026-06-09 | T-I-1~T-I-13 | 全部 `未开发` | Mavis(初始发布) |
+| 2026-06-09 | T-I-1~T-I-11 | 11 个 → `已完成` (Agent 主体完工) | Sisyphus |
+| 2026-06-09 | T-I-12 | 仍 `未开发` (前端 Knowledge.vue + AgentStepsPanel) | - |
+| 2026-06-09 | T-I-13 | 仍 `未开发` (多轮对话 + chat_memory) | - |
+| 2026-06-09 | T-I-13 + Sisyphus 5 P0 bugfix | T-I-13 `已完成` + 修 5 P0 (group_by/is_not_null/IN 长度/LIKE 转义/JdbcChatMemory) | Mavis |
+| 2026-06-09 | T-I-12 | 仍 `未开发` (前端等接手 AI) | - |
+| 2026-06-09 | T-I-12 + T-I-13 | Sisyphus 1 小时 补完工 (前端 + 多轮对话), Plan I 13 任务 100% 完工 | Sisyphus |
+| 2026-06-09 | rebase 修 5 P0 + 修 Sisyphus JdbcChatMemory bug (AgentConfig + ChatMemoryConfig 都中招) | 集成 P0 fix | Mavis |
 
 ---
 

@@ -21,14 +21,15 @@ public class QueryMysqlTool implements AgentTool {
     private static final Map<String, Set<String>> ALLOWED_COLUMNS = buildAllowedColumns();
 
     private static final Set<String> ALLOWED_AGGREGATES = Set.of(
-            "count", "sum", "avg", "max", "min"
+            "count", "sum", "avg", "max", "min", "group_by"
     );
 
     private static final Set<String> ALLOWED_OPERATORS = Set.of(
-            "=", "!=", ">", ">=", "<", "<=", "in", "like", "is_null"
+            "=", "!=", ">", ">=", "<", "<=", "in", "like", "is_null", "is_not_null"
     );
 
     private static final int MAX_ROWS = 500;
+    private static final int MAX_IN_VALUES = 50;  // IN 长度上限,防注入/防 DoS
 
     private static Map<String, Set<String>> buildAllowedColumns() {
         Map<String, Set<String>> map = new HashMap<>();
@@ -99,13 +100,29 @@ public class QueryMysqlTool implements AgentTool {
             if (!ALLOWED_AGGREGATES.contains(aggregate)) {
                 return ToolResult.error("Unsupported aggregate function: " + aggregate);
             }
-            var aggCol = queryArgs.getAggregateColumn();
-            if (aggCol != null && !aggCol.isBlank()) {
-                if (!isValidColumnName(aggCol)) {
-                    return ToolResult.error("Aggregate column name '" + aggCol + "' contains invalid characters");
+            // group_by 是非聚合函数, 独立处理: 需要 aggregateColumn 列表 (== GROUP BY 列)
+            if ("group_by".equals(aggregate)) {
+                var groupByCol = queryArgs.getAggregateColumn();
+                if (groupByCol == null || groupByCol.isBlank()) {
+                    return ToolResult.error("group_by requires aggregateColumn field");
                 }
-                if (!allowedCols.contains(aggCol)) {
-                    return ToolResult.error("Column '" + aggCol + "' not allowed in table " + table);
+                if (!isValidColumnName(groupByCol)) {
+                    return ToolResult.error("group_by column name '" + groupByCol + "' contains invalid characters");
+                }
+                if (!allowedCols.contains(groupByCol)) {
+                    return ToolResult.error("Column '" + groupByCol + "' not allowed in table " + table);
+                }
+                // 设置 groupBy 让 SELECT 阶段使用
+                queryArgs.setGroupBy(groupByCol);
+            } else {
+                var aggCol = queryArgs.getAggregateColumn();
+                if (aggCol != null && !aggCol.isBlank()) {
+                    if (!isValidColumnName(aggCol)) {
+                        return ToolResult.error("Aggregate column name '" + aggCol + "' contains invalid characters");
+                    }
+                    if (!allowedCols.contains(aggCol)) {
+                        return ToolResult.error("Column '" + aggCol + "' not allowed in table " + table);
+                    }
                 }
             }
         }
@@ -122,7 +139,11 @@ public class QueryMysqlTool implements AgentTool {
 
         // 4. Build SELECT columns
         var selectColumns = new ArrayList<String>();
-        if (aggregate != null && !aggregate.isBlank()) {
+        if ("group_by".equals(aggregate)) {
+            // group_by 模式: SELECT groupByCol, COUNT(*) AS aggregate_value GROUP BY groupByCol
+            selectColumns.add(queryArgs.getGroupBy());
+            selectColumns.add("COUNT(*) AS aggregate_value");
+        } else if (aggregate != null && !aggregate.isBlank()) {
             var aggCol = (queryArgs.getAggregateColumn() != null && !queryArgs.getAggregateColumn().isBlank())
                     ? queryArgs.getAggregateColumn() : "*";
             selectColumns.add(aggregate.toUpperCase() + "(" + aggCol + ") AS aggregate_value");
@@ -166,16 +187,25 @@ public class QueryMysqlTool implements AgentTool {
 
                 if ("is_null".equals(op)) {
                     whereClauses.add(col + " IS NULL");
+                    // IS NULL 不占位 (LLM 也不会传 value)
+                } else if ("is_not_null".equals(op)) {
+                    whereClauses.add(col + " IS NOT NULL");
                 } else if ("in".equals(op)) {
                     if (wc.getValue() instanceof List) {
                         var values = (List<?>) wc.getValue();
                         if (values.isEmpty()) {
                             return ToolResult.error("IN operator requires at least one value");
                         }
+                        // 安全加固 1: IN 长度上限
+                        if (values.size() > MAX_IN_VALUES) {
+                            return ToolResult.error("IN operator values length " + values.size()
+                                + " exceeds max " + MAX_IN_VALUES);
+                        }
                         var placeholders = values.stream().map(v -> "?").collect(Collectors.joining(", "));
                         whereClauses.add(col + " IN (" + placeholders + ")");
                         params.addAll(values);
                     } else if (wc.getValue() != null) {
+                        // 单值也走 IN, 安全起见按 IN 处理 (1 个值)
                         whereClauses.add(col + " IN (?)");
                         params.add(wc.getValue());
                     } else {
@@ -185,8 +215,10 @@ public class QueryMysqlTool implements AgentTool {
                     if (wc.getValue() == null) {
                         return ToolResult.error("LIKE operator requires a value");
                     }
+                    // 安全加固 2: LIKE 自动转义 % 和 _ (LLM 输出可能被恶意拼入)
+                    String likeValue = escapeLikePattern(wc.getValue().toString());
                     whereClauses.add(col + " LIKE ?");
-                    params.add(wc.getValue());
+                    params.add(likeValue);
                 } else {
                     if (wc.getValue() == null) {
                         return ToolResult.error("Operator '" + op + "' requires a value");
@@ -243,6 +275,20 @@ public class QueryMysqlTool implements AgentTool {
     private boolean isValidColumnName(String name) {
         if (name == null || name.isEmpty()) return false;
         return name.matches("^[a-zA-Z_][a-zA-Z0-9_]*$");
+    }
+
+    /**
+     * 安全加固 2: LIKE 模式转义 % 和 _
+     * - % 匹配任意字符串 -> 转义为 \%
+     * - _ 匹配单字符 -> 转义为 \_
+     * 让 LLM 输出的 "100%" 也能当字面值查, 不被当作通配符
+     */
+    private String escapeLikePattern(String value) {
+        if (value == null) return null;
+        // 顺序: 先转义 \, 再转义 % 和 _, 避免双重转义
+        return value.replace("\\", "\\\\")
+                    .replace("%", "\\%")
+                    .replace("_", "\\_");
     }
 
     private String sanitizeOrderBy(String orderBy) {
