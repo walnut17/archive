@@ -115,7 +115,7 @@
 
 ### T-I-1: 加 Spring AI 依赖(pom.xml)
 
-- **状态**: 占用-Sisyphus
+- **状态**: 已完成(Sisyphus / 2026-06-09)
 - **占用者**: Sisyphus
 - **影响文件**: `backend/pom.xml`(独占,1 个文件)
 - **工作量**: 0.2 天(1-2 小时)
