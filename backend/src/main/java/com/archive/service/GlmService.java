@@ -88,6 +88,14 @@ public class GlmService {
         }
     }
 
+    /**
+     * 写埋点日志.本期只统计次数,token 字段暂不写(智谱免费).
+     * @param scenario 场景
+     * @param username 调用人(未登录为 null)
+     * @param status SUCCESS / FAILED
+     * @param durationMs 耗时
+     * @param error 失败原因(成功时 null)
+     */
     private void saveLog(LlmScenario scenario, String username, String status,
                         int durationMs, String error) {
         try {
@@ -99,6 +107,7 @@ public class GlmService {
                     .status(status)
                     .errorMessage(error != null && error.length() > 500
                             ? error.substring(0, 500) : error)
+                    // token 字段本期不统计,留 NULL
                     .build();
             llmCallLogRepository.save(log);
         } catch (Exception e) {

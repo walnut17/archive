@@ -114,21 +114,18 @@ onMounted(async () => {
         <el-card shadow="hover" class="metric-card">
           <div class="metric-label">今日</div>
           <div class="metric-value">{{ fmt(stats?.today?.count) }} <small>次</small></div>
-          <div class="metric-sub">{{ fmt(stats?.today?.totalTokens) }} tokens</div>
         </el-card>
       </el-col>
       <el-col :span="8">
         <el-card shadow="hover" class="metric-card">
           <div class="metric-label">本周</div>
           <div class="metric-value">{{ fmt(stats?.thisWeek?.count) }} <small>次</small></div>
-          <div class="metric-sub">{{ fmt(stats?.thisWeek?.totalTokens) }} tokens</div>
         </el-card>
       </el-col>
       <el-col :span="8">
         <el-card shadow="hover" class="metric-card">
           <div class="metric-label">本月</div>
           <div class="metric-value">{{ fmt(stats?.thisMonth?.count) }} <small>次</small></div>
-          <div class="metric-sub">{{ fmt(stats?.thisMonth?.totalTokens) }} tokens</div>
         </el-card>
       </el-col>
     </el-row>
@@ -139,8 +136,7 @@ onMounted(async () => {
           <template #header>按场景(本月)</template>
           <el-table :data="stats?.byScenario || []" stripe>
             <el-table-column prop="key" label="场景" width="140" />
-            <el-table-column prop="count" label="调用次数" width="100" />
-            <el-table-column prop="totalTokens" label="Token" />
+            <el-table-column prop="count" label="调用次数" />
           </el-table>
         </el-card>
       </el-col>
@@ -149,13 +145,17 @@ onMounted(async () => {
           <template #header>按用户(本月)</template>
           <el-table :data="stats?.byUser || []" stripe>
             <el-table-column prop="key" label="用户" width="140" />
-            <el-table-column prop="count" label="调用次数" width="100" />
-            <el-table-column prop="totalTokens" label="Token" />
+            <el-table-column prop="count" label="调用次数" />
           </el-table>
         </el-card>
       </el-col>
     </el-row>
 
+    <el-alert type="info" :closable="false" show-icon style="margin-top: 16px">
+      <template #title>
+        本期只统计调用次数。智谱 GLM 免费(60 req/min),token 统计暂未启用。
+      </template>
+    </el-alert>
     <el-card shadow="never" style="margin-top: 16px">
       <template #header>最近调用</template>
       <el-table :data="stats?.recent || []" stripe>

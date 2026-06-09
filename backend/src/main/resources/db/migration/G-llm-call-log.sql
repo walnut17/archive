@@ -2,6 +2,10 @@
 -- Plan G: LLM 用量统计 - llm_call_log 表
 -- 创建日期: 2026-06-09
 -- 用途: 记录每次 LLM 调用的用户/场景/token/耗时/状态
+--
+-- **本期范围**:只统计调用次数(智谱 GLM-4-Flash 免费,token 统计暂不启用)
+-- token 字段保留 schema(留扩展点),实际数据恒为 NULL
+-- 后续若需精确统计,GlmService 增加 parseUsage(responseBody) 即可
 -- ==========================================================
 
 CREATE TABLE IF NOT EXISTS llm_call_log (
