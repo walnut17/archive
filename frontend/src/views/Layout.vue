@@ -68,7 +68,7 @@ function onLogout() {
             <el-icon><Document /></el-icon>
             <span>知识库问答</span>
           </el-menu-item>
-          <el-menu-item index="/llm-usage">
+          <el-menu-item index="/llm-usage" @click="router.push('/llm-usage')">
             <el-icon><DataAnalysis /></el-icon>
             <span>AI 用量</span>
           </el-menu-item>
