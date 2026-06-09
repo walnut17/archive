@@ -58,13 +58,25 @@
 - ❌ 一个 commit 改多个任务的代码
 - ❌ 占用了但**没 push** 超过 10 分钟(失联,别人接管)
 
-**冲突解决**: 
+**冲突解决**:
 - 晚 push 的人 `git pull --rebase` 解冲突(本项目拆得很开,冲突概率极低)
 - 同一文件多 commit 冲突 → 1 个人加新方法,另 1 个人加新类,**不冲突**
 
 **任务粒度** = 1 commit = 1-3 小时。**拆得够细,才能并行**。
 
 **完整说明**: [`TASKS.md`](TASKS.md) 的「状态机」「冲突处理 SOP」段。
+
+---
+
+## ✅ 0.6 README 自检(读完能回答 3 个问题,就能开工)
+
+接手 AI / 程序员**读完 §0 + §0.5 + §3** 后,能回答这 3 个问题,就 OK:
+
+- [ ] **Q1**: 我从哪个文件找任务? → **答**: [`TASKS.md`](TASKS.md)
+- [ ] **Q2**: 抢一个任务要做什么? → **答**: 改那一节 `状态: 未开发` → `占用-<我的名字>`,10 秒内 `git commit + push`,**push 成功才算占**
+- [ ] **Q3**: 干完活怎么标记? → **答**: 改 `占用-X` → `已完成(X / 日期)`,commit + push,代码也 push
+
+**3 个问题都能答,跳到 §3 Step 0 开始抢任务**。答不上,重新看 §0.5。
 
 ---
 
@@ -203,25 +215,39 @@ mvn compile -DskipTests -B -o
 
 **编译过不了,先看 `docs/LESSONS-LEARNED.md`**(15+ 条历史坑,可能命中)
 
-### Step 5: 开始 I-1(2 小时)
+### Step 5: 开始抢到的任务(2 小时,详读 spec + 写代码)
+
+**重要**: 你从 Step 0 抢到的是哪个任务,就从哪个任务开始,**不是**必须从 I-1 开始。任务可能是:
+
+- **T-I-1**(pom): 详读 plan-I §2 I-1 → 改 `backend/pom.xml` → `mvn compile` → push
+- **T-I-3**(包骨架): 详读 plan-I §2 I-3 → 创建 7 个新文件 → `mvn compile` → push
+- **T-I-4**(SearchFulltextTool): 详读 plan-I §2 I-4 → 写 `SearchFulltextTool.java` → push
+- **T-I-5** ~ **T-I-13**: 同上模式
+
+**示例**: 抢到 T-I-4
 
 ```bash
-# 看 plan-I §2 I-1 详细规范
-sed -n '95,200p' .mavis/plans/plan-I-agent-implementation.md
+# 1. 详读 plan-I §2 I-4 详细规范
+sed -n '/### I-4: /,/### I-5: /p' .mavis/plans/plan-I-agent-implementation.md
 
-# 编辑 pom.xml
-vim backend/pom.xml
-# 加 spring-ai-bom 1.1.0 + 4 个 starter
-# 详见 plan-I §2 I-1 关键代码段
+# 2. 写代码
+vim backend/src/main/java/com/archive/agent/tool/SearchFulltextTool.java
+# 依照 spec 写,含 3 个 测例
 
-# 跑编译验证
-mvn compile -DskipTests -B
-# 期望: BUILD SUCCESS,依赖下载成功
+# 3. 验收
+mvn compile -DskipTests -B    # 期望: BUILD SUCCESS
+mvn test -Dtest=SearchFulltextToolTest -B   # 期望: 3 测例过
 
-# commit + push
-git add backend/pom.xml
-git commit -m "chore(deps,I-1): add Spring AI 1.1 BOM + 4 starters"
+# 4. 完工 SOP: 改 TASKS.md + commit + push
+vim TASKS.md
+# T-I-4 节: 状态: 占用-X → 已完成(X / <日期>),占用者: <你>
+git add backend/src/main/java/com/archive/agent/tool/SearchFulltextTool.java \
+        backend/src/test/java/com/archive/agent/tool/SearchFulltextToolTest.java \
+        TASKS.md
+git commit -m "feat(agent,I-4): add SearchFulltextTool (3 test cases pass) + mark TASKS done"
 git push origin minimax
+
+# 5. 跳到下一个任务 或 退出
 ```
 
 ---
