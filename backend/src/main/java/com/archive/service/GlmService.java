@@ -9,6 +9,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.archive.common.LlmScenario;
+import com.archive.entity.LlmCallLog;
+import com.archive.repository.LlmCallLogRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -51,6 +57,12 @@ public class GlmService {
     @Value("${app.glm.timeout-seconds:60}")
     private int timeoutSeconds;
 
+    /**
+     * 埋点仓库(用 setter 注入,不破坏现有构造).
+     */
+    @Autowired
+    private LlmCallLogRepository llmCallLogRepository;
+
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
@@ -58,9 +70,63 @@ public class GlmService {
     private final ObjectMapper mapper = new ObjectMapper();
 
     /**
+     * 埋点包装:任何 LLM 调用都通过它,记录用户/场景/token/耗时/状态.
+     */
+    private <T> T callWithLog(LlmScenario scenario, java.util.function.Supplier<T> call) {
+        long start = System.currentTimeMillis();
+        String username = currentUsername();
+        try {
+            T result = call.get();
+            saveLog(scenario, username, "SUCCESS", (int) (System.currentTimeMillis() - start), null);
+            return result;
+        } catch (RuntimeException e) {
+            saveLog(scenario, username, "FAILED", (int) (System.currentTimeMillis() - start), e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            saveLog(scenario, username, "FAILED", (int) (System.currentTimeMillis() - start), e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void saveLog(LlmScenario scenario, String username, String status,
+                        int durationMs, String error) {
+        try {
+            LlmCallLog log = LlmCallLog.builder()
+                    .username(username)
+                    .scenario(scenario.name())
+                    .model(chatModel)
+                    .durationMs(durationMs)
+                    .status(status)
+                    .errorMessage(error != null && error.length() > 500
+                            ? error.substring(0, 500) : error)
+                    .build();
+            llmCallLogRepository.save(log);
+        } catch (Exception e) {
+            // 埋点失败不能影响业务路径
+            log.warn("LlmCallLog save failed (non-fatal): {}", e.getMessage());
+        }
+    }
+
+    private String currentUsername() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+                return null;
+            }
+            return auth.getName();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
      * 通用文本问答.
      */
     public String chat(String systemPrompt, String userPrompt) {
+        return callWithLog(LlmScenario.QA, () -> doChat(systemPrompt, userPrompt));
+    }
+
+    private String doChat(String systemPrompt, String userPrompt) {
         checkApiKey();
 
         try {
@@ -112,6 +178,10 @@ public class GlmService {
      * @return 重排后的 top 列表(LLM 返回 JSON 数组)
      */
     public String rerank(String question, List<KnowledgeSearchService.SearchResult> candidates) {
+        return callWithLog(LlmScenario.RERANK, () -> doRerank(question, candidates));
+    }
+
+    private String doRerank(String question, List<KnowledgeSearchService.SearchResult> candidates) {
         checkApiKey();
         if (candidates == null || candidates.isEmpty()) {
             return "[]";
