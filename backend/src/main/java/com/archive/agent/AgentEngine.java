@@ -197,7 +197,12 @@ public class AgentEngine {
                 return null;
             }
         }
-        return mapper.readValue(argsJson, argsClass);
+        try {
+            return mapper.readValue(argsJson, argsClass);
+        } catch (Exception e) {
+            log.warn("[Agent] Failed to parse tool args: {}", truncate(argsJson, 200));
+            return null;
+        }
     }
 
     /**

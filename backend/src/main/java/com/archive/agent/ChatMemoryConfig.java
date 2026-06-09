@@ -26,7 +26,6 @@ public class ChatMemoryConfig {
     public JdbcChatMemoryRepository chatMemoryRepository(DataSource dataSource) {
         return JdbcChatMemoryRepository.builder()
                 .dataSource(dataSource)
-                .tableName("chat_memory")
                 .build();
     }
 

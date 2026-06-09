@@ -12,6 +12,7 @@
 .version/
 NOTES.md
 scratch/
+tools/
 *.tmp
 
 # Plan engine runtime state (board.md, outputs/, etc.) — only the curated
