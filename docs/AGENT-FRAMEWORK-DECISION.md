@@ -638,6 +638,45 @@ private static final Map<String, Set<String>> ALLOWED_FIELDS = Map.of(
 - **JPA Criteria API**(可选):更安全但代码啰嗦,本期不上。
 - **测试**:`QueryMysqlToolTest` 用 5 个恶意 payload(union select、drop、comment、sleep)做回归。
 
+### 6.2.1 操作符 / 聚合白名单(2026-06-09 补,你原问'还没结清有几个'触发的)
+
+**问题**:初版 `QueryMysqlTool` 只支持 `=` filter + SELECT rows,导致 "还没结清的项目有几个 / 涉及总金额" 类问题只能**让 LLM 自己 rows[].size() / sum()**——精度/截断/幻觉三大问题。
+
+**改法**(I-6 v1.1 修订):
+
+| 维度 | 白名单 |
+|---|---|
+| **operator** | `=` / `!=` / `>` / `>=` / `<` / `<=` / `in` / `like` / `is_null` / `is_not_null` (10 个) |
+| **aggregate** | `count` / `sum` / `avg` / `max` / `min` / `group_by(field)` / `null` (原样返 rows) |
+| **in 长度** | List ≤ 50(防 DoS) |
+| **like 转义** | `value` 自动转义 `%` `_`(防贪婪) |
+| **is_null** | 不占位,JPQL 直接 `IS NULL` |
+
+**典型场景**(你原问的):
+```json
+// 1) 还没结清有几个
+{ "entity": "project", "filters": [{"field": "status", "operator": "!=", "value": "结清"}], "aggregate": "count" }
+// → { "value": 23, "aggregate": "count" }
+
+// 2) 还没结清的总金额
+{ "entity": "project", "filters": [{"field": "status", "operator": "!=", "value": "结清"}], "aggregate": "sum", "aggregateField": "amountWan" }
+// → { "value": 128000.5, "aggregate": "sum", "aggregateField": "amountWan" }
+
+// 3) 今年结清有几个
+{ "entity": "project", "filters": [
+    {"field": "status", "operator": "=", "value": "结清"},
+    {"field": "createdAt", "operator": ">=", "value": "2026-01-01"}
+  ], "aggregate": "count" }
+// → { "value": 5, "aggregate": "count" }
+```
+
+**LLM 提示词约束**:
+- **必须**用 SQL 算聚合 (`aggregate: "count"` / `"sum"`)
+- **禁止**自己 `rows[].size()` / `rows[].sum()` —— 会数错 / 截断 / 幻觉
+- 大表查询 (`expected_rows > 1000`) 必用 `count` 不返 rows
+
+**测试用例**:8 个(含聚合 + 越权 + 注入 + 边界)
+
 ### 6.3 数据库账号权限
 
 **专用账号 `archive_agent_app`**(DBA 加):
