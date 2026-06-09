@@ -341,8 +341,8 @@
 
 ### T-I-13: 多轮对话(MessageChatMemoryAdvisor + JdbcChatMemoryRepository + chat_memory 表)
 
-- **状态**: 未开发
-- **占用者**: -
+- **状态**: 已完成(Sisyphus / 2026-06-09)
+- **占用者**: Sisyphus
 - **影响文件**:
   - `backend/src/main/resources/db/migration/I-chat-memory.sql`(新)
   - `backend/src/main/java/com/archive/agent/ChatMemoryConfig.java`(新)
