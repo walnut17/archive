@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import http, { getData } from '../api/http'
+import AgentStepsPanel from '../components/AgentStepsPanel.vue'
 
 interface Source {
   versionId: number
@@ -17,17 +18,29 @@ interface Source {
   score: number
 }
 
+interface AgentStep {
+  iteration: number
+  thought: string
+  tool: string
+  toolArgs: string
+  observation: string
+}
+
 interface QaResponse {
   question: string
   answer: string | null
   sources: Source[]
   reranked: boolean
   elapsedMs: number
+  agentMode?: boolean | null
+  steps?: AgentStep[] | null
+  toolCalls?: number | null
 }
 
 const question = ref('')
 const loading = ref(false)
 const useRerank = ref(true)
+const agentMode = ref(true)
 const result = ref<QaResponse | null>(null)
 
 async function onAsk() {
@@ -73,6 +86,7 @@ const exampleQuestions = [
       />
       <div style="margin-top: 12px; display: flex; align-items: center; gap: 16px">
         <el-checkbox v-model="useRerank">使用 LLM 重排(更准,需要智谱 API key)</el-checkbox>
+        <el-switch v-model="agentMode" active-text="Agent 模式" inactive-text="简单检索" />
         <el-button type="primary" :loading="loading" @click="onAsk">提问</el-button>
       </div>
     </el-card>
@@ -102,6 +116,7 @@ const exampleQuestions = [
           </div>
         </template>
         <div style="white-space: pre-wrap">{{ result.answer }}</div>
+        <AgentStepsPanel v-if="result.steps" :steps="result.steps" />
       </el-card>
 
       <el-card>
