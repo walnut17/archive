@@ -35,6 +35,53 @@
 
 ---
 
+## 🟢 实时可抢任务清单(Mavis 沙箱手动维护)
+
+> **接手 AI 看这里就知道现在能抢什么**。这个清单 = "依赖已完成 且 状态未开发"的任务集合。
+> Mavis 沙箱在每次 push 后手动 update 本表。
+> **最后 update**: 2026-06-09 15:11(任务初始发布,全未开始)
+
+| 任务 | 为什么现在可抢 | 备注 |
+|---|---|---|
+| **T-I-1**(pom) | 无依赖,首个 | 1-2 小时,接手 AI 必抢的起点 |
+| T-I-2(yml) | 需等 T-I-1 | |
+| T-I-3(包骨架) | 需等 T-I-2 | |
+| T-I-4(SearchFulltextTool) | 需等 T-I-3 | 等 T-I-3 完,5 人可同时抢 |
+| T-I-5(FindProjectTool) | 需等 T-I-3 | 同上 |
+| T-I-6(QueryMysqlTool) | 需等 T-I-3 | 同上 |
+| T-I-7(LlmSummarize+AskClarification) | 需等 T-I-3 | 同上 |
+| T-I-8(GetProjectBusinessData) | 需等 T-I-3 | 同上 |
+| T-I-9(AgentEngine) | 需等 T-I-4~T-I-8 全完 | 关键路径 |
+| T-I-10(QaController) | 需等 T-I-9 | |
+| T-I-11(集成测试) | 需等 T-I-10 + T-I-13 | |
+| T-I-12(前端) | 需等 T-I-10 | 代码可先写,验收等 T-I-10 |
+| T-I-13(多轮对话) | 需等 T-I-1 + T-I-9 | pom 冲突 T-I-1 |
+
+**当前能抢的**(2026-06-09 15:11,所有任务未开始):
+- 🟢 **T-I-1**(pom 依赖) — 唯一能直接抢的任务
+
+**抢完 T-I-1 后能抢**:
+- T-I-2(yml) — 串行
+
+**T-I-2 完能抢**:
+- T-I-3(包骨架) — 串行
+
+**T-I-3 完能抢**(5 人同时):
+- T-I-4 / T-I-5 / T-I-6 / T-I-7 / T-I-8 — 5 个并行
+
+**5 工具全完能抢**:
+- T-I-9(AgentEngine) + T-I-13(多轮对话)— 2 个并行
+
+**T-I-9 完能抢**:
+- T-I-10(QaController) — 串行
+
+**T-I-10 完能抢**:
+- T-I-11(测试) + T-I-12(前端) — 2 个并行(但 I-11 等 I-13)
+
+**全部完**: 13+ commits, ~8.3 天总工期
+
+---
+
 ## 📋 任务清单(按 13 子项拆,7 个可并行)
 
 ### 任务依赖图
@@ -240,9 +287,12 @@
   - `backend/src/test/java/com/archive/agent/AgentIntegrationTest.java`(新,大文件 ~400 行)
   - `backend/src/test/resources/application-test.yml`(可能加)
 - **工作量**: 1 天(6-8 小时)
-- **依赖**: T-I-10
-- **可并行**: ✅ 是(可跟 T-I-12 / T-I-13 同时)
-- **开始步骤**: 同 T-I-1
+- **依赖**: **T-I-10**(QaController) **+ T-I-4 ~ T-I-8**(5 工具全部已完成) **+ T-I-13**(chat_memory 表)
+- **可并行**: ✅ 是(可跟 T-I-12 同时,但**不能跟 T-I-13 同时** —— I-11 依赖 I-13)
+- **冲突点**:
+  - 测试启动要 `@SpringBootTest` 起全 Spring 上下文 → 依赖所有 bean 都存在
+  - **T-I-13 必须先 push**(chat_memory 表要存在)
+- **开始步骤**: 同 T-I-1,**先看本表 T-I-4/5/6/7/8/13 都是 `已完成` 再开工**
 - **详细 spec**: `.mavis/plans/plan-I-agent-implementation.md` §2 I-11
 - **验收**: `mvn test` 10 用例全过
 
@@ -256,11 +306,12 @@
   - `frontend/src/components/AgentStepsPanel.vue`(新)
   - `frontend/src/views/Knowledge.vue`(改,**独占**)
 - **工作量**: 0.5 天(2-4 小时)
-- **依赖**: T-I-10
-- **可并行**: ✅ 是
+- **依赖**: **T-I-10**(QaController 必须有 `/api/qa/ask` 返 `steps` 字段)
+- **可并行**: ✅ 是(可以写代码,但**验收要等 T-I-10 完成 + T-I-11 测试过**)
 - **开始步骤**: 同 T-I-1
 - **详细 spec**: `.mavis/plans/plan-I-agent-implementation.md` §2 I-12
 - **验收**: `npm run build` 0 错 + 浏览器端到端
+- **注意**: 端到端验证要 T-I-10 + T-I-11 都完成。代码可以先写,验收最后
 
 ---
 
@@ -275,12 +326,14 @@
   - `backend/src/main/java/com/archive/agent/MultiTurnService.java`(新)
   - `backend/pom.xml` 改(加 `spring-ai-starter-model-chat-memory-repository-jdbc`)
 - **工作量**: 0.5 天(2-4 小时)
-- **依赖**: T-I-9
+- **依赖**: **T-I-1**(pom.xml 必须先有) **+ T-I-9**(AgentEngine 先有)
 - **可并行**: ✅ 是(可跟 T-I-10 / T-I-11 / T-I-12 同时)
 - **冲突点**:
-  - `pom.xml` 跟 T-I-1 冲突 —— **T-I-13 要等 T-I-1 push 后再 add 依赖**(Mavis 沙箱加 git pull)
+  - **`pom.xml` 跟 T-I-1 冲突** —— **T-I-13 必须等 T-I-1 push 完**(`状态: 已完成` 才能开工)
+  - 开工时**先 `git pull`** 拉 T-I-1 的 pom.xml,再 `add` chat-memory-repository 依赖
   - `application.yml` 不动(MultiTurnController 自动注 ChatClient)
-- **开始步骤**: 同 T-I-1
+  - **跟 T-I-11 集成测试串行**: I-11 测试要建 chat_memory 表,**I-11 集成测会要 I-13 先 commit**
+- **开始步骤**: 同 T-I-1,**先看本表 T-I-1 状态是 `已完成` 再开工**
 - **详细 spec**: `.mavis/plans/plan-I-agent-implementation.md` §2 I-13
 - **验收**: 浏览器连问 3 轮 + 重启不丢
 
