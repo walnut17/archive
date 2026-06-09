@@ -1,5 +1,7 @@
 package com.archive.agent;
 
+import com.archive.dto.QaRequest;
+
 import java.util.List;
 import java.util.Map;
 
@@ -9,6 +11,19 @@ public class AgentRequest {
     private String sessionId;
     
     public AgentRequest() {}
+    
+    public AgentRequest(String question) {
+        this.question = question;
+    }
+    
+    /**
+     * 从 QaRequest 转换为 AgentRequest.
+     */
+    public static AgentRequest fromQaRequest(QaRequest req) {
+        AgentRequest ar = new AgentRequest();
+        ar.question = req.getQuestion();
+        return ar;
+    }
     
     public String getQuestion() { return question; }
     public void setQuestion(String question) { this.question = question; }

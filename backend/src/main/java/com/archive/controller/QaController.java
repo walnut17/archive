@@ -1,5 +1,8 @@
 package com.archive.controller;
 
+import com.archive.agent.AgentEngine;
+import com.archive.agent.AgentRequest;
+import com.archive.agent.AgentResponse;
 import com.archive.common.ApiResponse;
 import com.archive.dto.QaRequest;
 import com.archive.dto.QaResponse;
@@ -9,42 +12,70 @@ import com.archive.service.KnowledgeSearchService.SearchResult;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 知识库问答 API.
  *
- * 流程:
- *   1. KnowledgeSearchService 走 MySQL FULLTEXT 找 top N
- *   2. (可选)GlmService 用 GLM-4-Flash 重排
- *   3. (可选)GlmService 拿 top K 拼成 prompt 调 LLM 生成答案
- *   4. 返回 sources + answer
- *
- * 降级:
- *   - apiKey 为空 → 跳过 LLM 阶段,只返回 sources
- *   - 检索结果为空 → 返回空列表 + 友好提示
+ * 双路径:
+ *   1. Agent 模式(spring.ai.agent.enabled=true):AgentEngine 手写 5 步 ReAct 循环
+ *   2. 老路径(降级):KnowledgeSearchService FULLTEXT → GlmService rerank → GlmService generate
  *
  * @author Mavis
  */
 @Slf4j
 @RestController
 @RequestMapping("/api/qa")
-@RequiredArgsConstructor
 public class QaController {
 
     private final KnowledgeSearchService searchService;
     private final GlmService glmService;
     private final ObjectMapper mapper = new ObjectMapper();
 
+    @Autowired(required = false)
+    private AgentEngine agentEngine;
+
+    @Value("${spring.ai.agent.enabled:true}")
+    private boolean agentEnabled;
+
+    public QaController(KnowledgeSearchService searchService, GlmService glmService) {
+        this.searchService = searchService;
+        this.glmService = glmService;
+    }
+
     @PostMapping("/ask")
     public ApiResponse<QaResponse> ask(@Valid @RequestBody QaRequest req) {
         long start = System.currentTimeMillis();
+
+        // 路径 1:Agent 模式
+        if (agentEnabled && agentEngine != null) {
+            try {
+                AgentRequest agentReq = AgentRequest.fromQaRequest(req);
+                AgentResponse ar = agentEngine.run(agentReq);
+                QaResponse qr = QaResponse.fromAgentResponse(ar);
+                qr.setQuestion(req.getQuestion());
+                qr.setElapsedMs(System.currentTimeMillis() - start);
+                return ApiResponse.ok(qr);
+            } catch (Exception e) {
+                log.warn("Agent 失败,降级到老路径", e);
+                // 不返 500,降级走老路径
+            }
+        }
+
+        // 路径 2:老 FULLTEXT 路径(原 M2)
+        return legacyAsk(req, start);
+    }
+
+    /**
+     * 老路径:search → rerank → generate(原 M2 逻辑,保留降级用).
+     */
+    private ApiResponse<QaResponse> legacyAsk(QaRequest req, long start) {
         int topN = req.getTopN() != null ? req.getTopN() : 10;
         boolean rerank = req.getRerank() == null || req.getRerank();
 
@@ -58,7 +89,6 @@ public class QaController {
                 String orderJson = glmService.rerank(req.getQuestion(), sources);
                 List<Integer> order = mapper.readValue(orderJson, new TypeReference<List<Integer>>() {});
                 if (order != null && !order.isEmpty()) {
-                    // 按 LLM 返回的顺序重排(1-based → 0-based)
                     List<SearchResult> rerankedList = new ArrayList<>();
                     for (Integer idx : order) {
                         if (idx != null && idx >= 1 && idx <= sources.size()) {
@@ -81,7 +111,6 @@ public class QaController {
             try {
                 answer = generateAnswer(req.getQuestion(), sources);
             } catch (IllegalStateException e) {
-                // apiKey 未配置,跳过 LLM
                 log.info("GLM key not configured, skip answer generation");
             } catch (Exception e) {
                 log.warn("Generate answer failed", e);
