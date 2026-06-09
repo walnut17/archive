@@ -60,17 +60,15 @@
 | T-I-12(前端) | 需等 T-I-10 | 代码可先写,验收等 T-I-10 |
 | T-I-13(多轮对话) | 需等 T-I-1 + T-I-9 | pom 冲突 T-I-1 |
 
-**当前能抢的**(2026-06-09 15:11,所有任务未开始):
-- 🟢 **T-I-1**(pom 依赖) — 唯一能直接抢的任务
+**当前能抢的**(2026-06-09 16:17,Sisyphus 已完工 T-I-1~T-I-3):
+- 🟢 T-I-4(SearchFulltextTool) — 可并行
+- 🟢 T-I-5(FindProjectTool) — 可并行
+- 🟢 T-I-6(QueryMysqlTool) — 可并行
+- 🟢 T-I-7(LlmSummarize+AskClarification) — 可并行
+- 🟢 T-I-8(GetProjectBusinessData) — 可并行
 
-**抢完 T-I-1 后能抢**:
-- T-I-2(yml) — 串行
-
-**T-I-2 完能抢**:
-- T-I-3(包骨架) — 串行
-
-**T-I-3 完能抢**(5 人同时):
-- T-I-4 / T-I-5 / T-I-6 / T-I-7 / T-I-8 — 5 个并行
+**5 工具全完能抢**:
+- T-I-9(AgentEngine) + T-I-13(多轮对话)— 2 个并行
 
 **5 工具全完能抢**:
 - T-I-9(AgentEngine) + T-I-13(多轮对话)— 2 个并行
@@ -171,8 +169,8 @@
 
 ### T-I-3: agent 包骨架(7 个新文件)
 
-- **状态**: 未开发
-- **占用者**: -
+- **状态**: 已完成(Sisyphus / 2026-06-09)
+- **占用者**: Sisyphus
 - **影响文件**:
   - `backend/src/main/java/com/archive/agent/AgentConfig.java`(新)
   - `backend/src/main/java/com/archive/agent/AgentRequest.java`(新)
