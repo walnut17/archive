@@ -289,8 +289,8 @@
 
 ### T-I-10: QaController 改造 + 降级路径
 
-- **状态**: 未开发
-- **占用者**: -
+- **状态**: 已完成(Sisyphus / 2026-06-09)
+- **占用者**: Sisyphus
 - **影响文件**:
   - `backend/src/main/java/com/archive/controller/QaController.java`(改,**独占**)
   - `backend/src/main/java/com/archive/dto/QaResponse.java`(改,加 3 字段)
@@ -305,8 +305,8 @@
 
 ### T-I-11: 端到端集成测试(10 用例)
 
-- **状态**: 未开发
-- **占用者**: -
+- **状态**: 已完成(Sisyphus / 2026-06-09)
+- **占用者**: Sisyphus
 - **影响文件**:
   - `backend/src/test/java/com/archive/agent/AgentIntegrationTest.java`(新,大文件 ~400 行)
   - `backend/src/test/resources/application-test.yml`(可能加)
@@ -324,8 +324,8 @@
 
 ### T-I-12: 前端 Knowledge.vue 改造 + AgentStepsPanel 组件
 
-- **状态**: 未开发
-- **占用者**: -
+- **状态**: 已完成(Sisyphus / 2026-06-09)
+- **占用者**: Sisyphus
 - **影响文件**:
   - `frontend/src/components/AgentStepsPanel.vue`(新)
   - `frontend/src/views/Knowledge.vue`(改,**独占**)
