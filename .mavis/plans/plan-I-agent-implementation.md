@@ -39,9 +39,32 @@
 ### 0.3 关键技术点(必看)
 
 - **Spring AI 1.1 GA 已发布**(2025 年底),用 `spring-ai-starter-model-openai` 兼容智谱 GLM(智谱声明 OpenAI 兼容)
-- **Spring AI Alibaba 1.1** 用 DashScope 阿里云百炼,Qwen / DeepSeek / GLM 都能跑
-- **本项目选 OpenAI 兼容路径**(走 `spring-ai-starter-model-openai` + 智谱 base-url),不引阿里云 starter(避免再引一组依赖)
+- **本项目选 OpenAI 兼容路径**(走 `spring-ai-starter-model-openai` + 智谱 base-url)
+- **不引 `spring-ai-alibaba-starter-dashscope`**: L1 已定智谱 GLM,再引 DashScope 得多 1 套阿里云密钥 + 1 组传递依赖,价值约等于 0。详见 `AGENT-FRAMEWORK-DECISION.md` §1.2.1.1
 - **实际 jar 增量 < 15MB,运行时 < 100MB,完全适合 32GB 单机**
+
+**资源链接**:
+- Spring AI 官方文档: <https://docs.spring.io/spring-ai/reference/> (1.1 GA 2025 年底发布)
+- Spring AI GitHub: <https://github.com/spring-projects/spring-ai>
+- Maven Central 搜 `spring-ai-starter-model-openai` 1.1.0: <https://central.sonatype.com/artifact/org.springframework.ai/spring-ai-starter-model-openai/versions>
+- 智谱 GLM OpenAI 兼容 API 文档: <https://open.bigmodel.cn/dev/api/openai-sdk> (其实就是 OpenAI SDK + base_url=https://open.bigmodel.cn/api/paas/v4)
+- 智谱 API Key 申请: <https://open.bigmodel.cn/usercenter/apikeys> (项目方已有 `GLM_API_KEY`,直接复用)
+
+**配置片段**(写进 `application.yml`):
+```yaml
+spring:
+  ai:
+    openai:
+      api-key: ${GLM_API_KEY}     # 复用现有 env 变量,不新引
+      base-url: https://open.bigmodel.cn/api/paas/v4   # 智谱 OpenAI 兼容入口
+      chat:
+        options:
+          model: glm-4-flash       # 智谱免费模型
+          temperature: 0.3
+          max-tokens: 2048
+```
+
+> ⚠️ 接手 AI 必看: 智谱 GLM 走 OpenAI 兼容协议,**不是**真的 OpenAI。`spring-ai-starter-model-openai` 这个 starter **接受** 自定义 `base-url`,所以能用。如果发现 4xx 错,看 I-2 § 关键 调 `model: glm-4-flash` 显式指定。
 
 ### 0.4 基线 commit
 

@@ -32,7 +32,7 @@
 
 | 候选 | 决策 | 理由 |
 |---|---|---|
-| **Spring AI 1.1 + Spring AI Alibaba 1.1** | ✅ **采用** | 见 §1.2.1(项目方 v1.0 拍板) |
+| **Spring AI 1.1 + spring-ai-starter-model-openai** | ✅ **采用** | 见 §1.2.1(项目方 v1.0 拍板)。**不引** spring-ai-alibaba,详见 §1.2.1.1 |
 | LangChain4j 1.0+ | ❌ 不采用 | 备选(若 Spring AI 适配踩坑可退而求其次),但 Java 生态最广,MCP 原生,首选备胎 |
 | 自研 ReAct | ❌ 不采用 | 初版架构师拍板,被项目方 v1.0 推翻(理由见 §1.2.2) |
 | Agents Flex(国产) | ❌ 不采用 | 商业绑定 |
@@ -41,16 +41,30 @@
 **§1.2.1 为什么 Spring AI**(项目方 v1.0 决策):
 
 1. **生产特性现成**:`ReactAgent` 10 行起步,**内置** HITL / 上下文压缩 / 工具重试 / 调用限流,这些"易错模块"中文 LLM 自己写要 ~300 行且容易出 bug。
-2. **中文 LLM 原生支持**:Spring AI Alibaba 1.1 提供 DashScope(阿里云百炼)官方 starter,Qwen / DeepSeek / GLM 都能用,且 Spring AI OpenAI 兼容 starter 可直接调智谱。
+2. **中文 LLM 走 OpenAI 兼容协议**:`spring-ai-starter-model-openai` 配置智谱 base-url 直接调 GLM-4-Flash。智谱官方声明 OpenAI 兼容,实测可用(待 Plan I-11 验证)。**Spring AI Alibaba 1.1** 是另一条路(走 DashScope 阿里云百炼),Qwen/DeepSeek/GLM 都能跑,本项目**不**走这条路,见 §1.2.1.1。
 3. **Spring Boot 3.3 集成 0 摩擦**:`spring-ai-starter-*` 全是 spring-boot-starter 风格,自动配置、`@ConditionalOn*` 一致。
 4. **MCP 协议支持**:未来要接外部工具/数据源(企业微信 / 邮件 / 钉钉 / 飞书),MCP 是事实标准,Spring AI 1.1 原生客户端。
 5. **维护成本低**:Spring 官方 + 阿里云双背书,周更,文档完整,生产案例多(2024 年底 ~2025 已经多个 2C 大厂落地)。
 6. **可观测性 hook 点齐全**:`ModelCallListener` / `ToolCallListener` 接口标准,直接接到现有 `llm_call_log` + `audit_log` 埋点。
 
+**§1.2.1.1 为什么**不**引 spring-ai-alibaba**(项目方 v1.0 决策):
+
+调研员最初 Top 1 推"**Spring AI + Spring AI Alibaba 1.1**"双依赖。但项目方 v1.0 重新评估后,决定**只引** `spring-ai-starter-model-openai`,**不**引 `spring-ai-alibaba-starter-dashscope`。理由:
+
+1. **L1 模型已定 GLM-4-Flash**(智谱)。再引 DashScope 路径,要再注册阿里云账号 + 配 API Key + 配 access key secret,**多一套密钥管理**。
+2. **走 OpenAI 兼容** 一行配置就能调智谱 GLM,跟现有 `GlmProperties` 复用同一个 `GLM_API_KEY`,**零新增密钥**。
+3. **spring-ai-alibaba 的真价值是"Qwen/DeepSeek 多模型路由"**,但本项目 LLM 单一(智谱),价值约等于 0。
+4. **避免再引一组传递依赖**(`spring-ai-alibaba-core` / `spring-ai-alibaba-autoconfigure-dashscope` / `aliyun-java-sdk-core` 等),jar 增量能省 8-10MB。
+5. **不锁定单一云厂商**:以后想换 Qwen / DeepSeek,把 `base-url` 改一下就行,starter 还是同一个,跨厂商 0 摩擦。
+
+**保留的退路**:未来真要接 Qwen(比如 GLM 限流),加 1 个 `spring-ai-alibaba-starter-dashscope` 即可(2 个 starter 共存,Spring AI 支持),不破坏当前架构。
+
+---
+
 **§1.2.2 为什么推翻初版的"自研"**(项目方 v1.0 反馈):
 - 初版架构师怕引"5-30 个传递 jar",但 Spring AI 1.1 实际**核心依赖就 5 个**(spring-ai-core / spring-ai-model / spring-ai-retry / spring-ai-commons + dashscope starter),**实测 jar 增量 < 15MB**,完全不构成"重型"。
 - 初版架构师担忧 Spring AI 0.8.x GA 时间短,但项目方决定"这是单台 Win Server 32GB 内存单机,本机 Java 进程已跑 M0~M2 占 1GB 不到,内存 30GB 富余,多 15MB jar 0 压力"。
-- 初版架构师担心 GLM 适配非官方,但 Spring AI 1.1 的 `spring-ai-starter-model-openai` 走 OpenAI 兼容协议(智谱 GLM 已声明兼容),**实测可用**(待 Plan I-11 集成测试验证)。
+- 初版架构师担心 GLM 适配非官方,但 Spring AI 1.1 的 `spring-ai-starter-model-openai` 走 OpenAI 兼容协议(智谱 GLM 已声明兼容),**实测可用**(待 Plan I-11 集成测试验证)。Spring AI Alibaba 走 DashScope 是另一条路,但项目方 v1.0 决策走 OpenAI 兼容,理由见 §1.2.1.1。
 - 项目方核心诉求:**"自己写的 agent 框架生产风险 = 自己背,Spring AI 背书 = 社区背书"**。这个判断是对的。
 - 自研保留为**回退方案**:`ReactAgent` 跑不起来时,AgentEngine 自研版(~300 行)作为 plan B 顶上。
 
@@ -72,7 +86,7 @@
 
 ### 1.4 一句话总结
 
-> **Spring AI 1.1 + Spring AI Alibaba 1.1**(走 DashScope 阿里云百炼,OpenAI 兼容协议兜底智谱 GLM),`ReactAgent` 单 Agent 起步,**5 步上限**,**5 个工具**(search_fulltext / query_mysql / llm_summarize / ask_clarification / find_project),白名单 + JSON DSL,GlmService 兜底降级。对外仍走 `QaController` 但行为升级为 agent 调度。
+> **Spring AI 1.1 + spring-ai-starter-model-openai**(走 OpenAI 兼容协议调智谱 GLM-4-Flash,**不**引 spring-ai-alibaba),`ReactAgent` 单 Agent 起步,**5 步上限**,**6 个工具**(search_fulltext / find_project / query_mysql / get_project_business_data / llm_summarize / ask_clarification),白名单 + JSON DSL,GlmService 兜底降级。对外仍走 `QaController` 但行为升级为 agent 调度。
 
 ---
 
@@ -101,13 +115,14 @@ backend/src/main/java/com/archive/agent/
     └── AgentDegradedException.java  # Spring AI 框架挂(回退 GlmService 老路径)
 
 backend/src/main/resources/
-├── application.yml               # 加 spring.ai.dashscope.* 配置 + agent.* 开关
+├── application.yml               # 加 spring.ai.openai.* 配置 + agent.* 开关
 ```
 
 **新增文件数**:~14 个
 **新增包**:1 个(`agent`)
-**pom 新增依赖**:5 个(spring-ai-core / -model / -commons / -retry + spring-ai-alibaba-starter-dashscope)
-**新增 jar 体积**:< 15MB(实测)
+**pom 新增依赖**:4 个(spring-ai-core / -model / -commons / -retry / -autoconfigure-agent + spring-ai-starter-model-openai + spring-ai-starter-model-chat-memory + spring-ai-test)
+**新增 jar 体积**:< 15MB(实测,不含 spring-ai-alibaba)
+**不引依赖**:`spring-ai-alibaba-starter-dashscope`(项目方 v1.0 决策,理由 §1.2.1.1)
 **新增内存**:< 100MB(Spring AI 框架在 agent 调用时按需 lazy load)
 
 ### 2.2 沿用(0 改动)

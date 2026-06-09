@@ -39,8 +39,8 @@
 
 | 项 | 决策 | 理由 |
 |---|---|---|
-| **LLM 框架** | **Spring AI 1.1 + spring-ai-starter-model-openai** | 生产特性现成(HITL / 上下文压缩 / 重试 / 限流),中文 LLM OpenAI 兼容,Spring Boot 3.3 集成 0 摩擦,MCP 协议支持,Spring 官方+社区背书 |
-| **不引阿里云 starter** | 用 OpenAI 兼容路径调智谱 GLM | 避免再引一组依赖(智谱声明 OpenAI 兼容,实测可用) |
+| **LLM 框架** | **Spring AI 1.1 + `spring-ai-starter-model-openai`** | 生产特性现成(HITL / 上下文压缩 / 重试 / 限流),走 OpenAI 兼容协议调智谱 GLM-4-Flash,Spring Boot 3.3 集成 0 摩擦,MCP 协议支持,Spring 官方+社区背书 |
+| **不引阿里云 starter** | 用 OpenAI 兼容路径调智谱 GLM,不走 DashScope | L1 已定智谱 GLM,再引 DashScope 得多 1 套阿里云密钥 + 1 组传递依赖,价值约等于 0(详见 `AGENT-FRAMEWORK-DECISION.md` §1.2.1.1) |
 | **6 工具 / 单 Agent** | 不是多 Agent 协作 | 2 角色内网单实例,过度设计,5 步上限够用 |
 | **不向量化** | MySQL FULLTEXT ngram 主力检索 | 沿用 M2 决策,已验证 |
 | **5 步 max_iterations** | 不是 10 / 20 | 项目方 v1.0 决策 |
