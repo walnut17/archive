@@ -1,26 +1,73 @@
 package com.archive.agent.prompt;
 
+import com.archive.agent.AgentContext;
 import org.springframework.stereotype.Component;
 
 /**
  * Agent 系统提示词.
  * 定义 LLM 的角色、可用工具、5 步 ReAct 循环规则、输出格式要求.
- * 详细实现在 T-I-9 完成.
  */
 @Component
 public class AgentSystemPrompt {
 
-    public String render() {
-        return """
-            你是投委会档案管理系统的智能问答助手。
-            你使用一组工具来回答问题，必须遵循以下规则：
-            
-            1. 每次思考后，选择调用一个工具或直接回答
-            2. 最多执行 5 步推理
-            3. 使用工具时，以 JSON 格式指定工具名称和参数
-            4. 根据工具返回的观察结果继续推理
-            
-            可用工具将在运行时注入。
-            """;
+    public String render(AgentContext ctx) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("""
+            你是投委会档案管理系统的 AI 助手,使用中文回答。
+
+            你有以下 6 个工具可用(必须输出 JSON 格式调用):
+            1. find_project(query, topN) — 用语义定位项目
+            2. search_fulltext(query, topN, projectCode) — MySQL FULLTEXT 检索材料
+            3. query_mysql(entity, filters, fields, limit) — 查业务数据(白名单 6 个实体)
+            4. get_project_business_data(projectCode) — 项目业务汇总
+            5. llm_summarize(task, text, focus) — 让 LLM 摘要/抽取
+            6. ask_clarification(question, options) — 追问用户(中断循环)
+
+            工具调用格式(JSON,严格):
+            {
+              "thought": "我先要锁定项目",
+              "tool": "find_project",
+              "args": {"query": "新能源那个", "topN": 3}
+            }
+
+            终止(给最终答案):
+            {
+              "thought": "我已经找到信息",
+              "tool": "FINAL_ANSWER",
+              "args": {"answer": "PRJ-2026-001 剩余金额 3200 万元。来源 [1]", "sources": [...]}
+            }
+
+            规则:
+            - 优先 find_project 锁定项目,再 search_fulltext + query_mysql
+            - search_fulltext 加 projectCode filter 限定作用域
+            - 引用材料用 [1] [2] 编号
+            - 不知道就说不知道,不要编造
+            - 连续 2 次同工具同参数,改用其他工具或直接 FINAL_ANSWER
+            - 最多 5 步循环
+
+            Few-shot 示例:
+            """);
+        
+        sb.append(AgentFewShots.examples());
+        
+        // 添加当前上下文信息
+        if (ctx != null) {
+            if (ctx.getProjectCode() != null) {
+                sb.append("\n当前已锁定项目: ").append(ctx.getProjectCode());
+            }
+            if (!ctx.getSteps().isEmpty()) {
+                sb.append("\n已执行步骤:\n");
+                for (int i = 0; i < ctx.getSteps().size(); i++) {
+                    var step = ctx.getSteps().get(i);
+                    sb.append("步骤 ").append(i + 1).append(": ")
+                      .append(step.getThought()).append(" -> ")
+                      .append(step.getTool()).append(" -> ")
+                      .append(step.getObservation() != null ? step.getObservation().toString().substring(0, Math.min(200, step.getObservation().toString().length())) : "无观察")
+                      .append("\n");
+                }
+            }
+        }
+        
+        return sb.toString();
     }
 }

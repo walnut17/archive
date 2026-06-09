@@ -271,8 +271,8 @@
 
 ### T-I-9: AgentEngine 核心(ChatClient + @Tool + 手写 5 步 ReAct 循环)
 
-- **状态**: 未开发
-- **占用者**: -
+- **状态**: 已完成(Sisyphus / 2026-06-09)
+- **占用者**: Sisyphus
 - **影响文件**:
   - `backend/src/main/java/com/archive/agent/AgentEngine.java`(新,大文件 ~250 行)
   - `backend/src/main/java/com/archive/agent/prompt/AgentSystemPrompt.java`(新)
