@@ -157,8 +157,8 @@
 
 ### T-I-2: application.yml 加 Spring AI 配置
 
-- **状态**: 未开发
-- **占用者**: -
+- **状态**: 已完成(Sisyphus / 2026-06-09)
+- **占用者**: Sisyphus
 - **影响文件**: `backend/src/main/resources/application.yml`(独占,1 个文件)
 - **工作量**: 0.1 天(0.5-1 小时)
 - **依赖**: T-I-1

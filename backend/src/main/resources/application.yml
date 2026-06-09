@@ -44,6 +44,21 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
+  # Spring AI — 智能问答 Agent(Plan I)
+  ai:
+    openai:
+      api-key: ${GLM_API_KEY:}
+      base-url: ${GLM_BASE_URL:https://open.bigmodel.cn/api/paas/v4}
+      chat:
+        options:
+          model: glm-4-flash
+          temperature: 0.3
+          max-tokens: 2048
+    agent:
+      enabled: ${AGENT_ENABLED:true}
+      observation-truncate-chars: 2000
+      # 5 步上限硬编码在 AgentEngine.MAX_ITERATIONS = 5
+
 server:
   port: ${app.server.port:8080}
   servlet:
