@@ -41,6 +41,7 @@ interface LlmUsageStats {
 
 const stats = ref<LlmUsageStats | null>(null)
 const loading = ref(false)
+const errorMsg = ref<string | null>(null)
 const scope = ref<'all' | 'mine'>('mine')
 const isAdmin = ref(false)
 
@@ -60,8 +61,9 @@ async function load() {
       : '/api/llm/my-usage?recentLimit=50'
     const resp = await http.get<any, any>(url)
     stats.value = resp.data?.data || resp.data
-  } catch (e) {
+  } catch (e: any) {
     console.error('加载用量失败', e)
+    errorMsg.value = e?.response?.data?.message || e?.message || '未知错误(可能后端 /api/llm 接口未启用,需要跑 G 迁移 + 重启后端)'
   } finally {
     loading.value = false
   }
@@ -99,6 +101,15 @@ onMounted(async () => {
 
 <template>
   <div class="llm-usage">
+    <el-alert
+      v-if="errorMsg"
+      :title="'加载失败'"
+      type="error"
+      :description="errorMsg"
+      show-icon
+      :closable="false"
+      style="margin-bottom: 16px"
+    />
     <el-card shadow="never" class="header-card">
       <div class="header-row">
         <h2>🤖 LLM 用量统计</h2>
