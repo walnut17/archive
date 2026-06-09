@@ -76,11 +76,17 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,prometheus,httptrace,loggers,threaddump,heapdump
   endpoint:
     health:
       show-details: when-authorized
       probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
         enabled: true
 
 logging:
