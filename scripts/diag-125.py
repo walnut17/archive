@@ -104,22 +104,22 @@ else:
     print(f"{FAIL} me status={status} body={body}")
 
 # ============================================================
-# 4. /api/llm-providers (核心 — 验证 GLM key 是否被加载)
+# 4. /api/llm/my-usage (核心 — 验证 GLM key 是否被加载)
 # ============================================================
-section("4. GET /api/llm-providers (GLM key loaded?)")
-status, body = req("GET", "/api/llm-providers", token=token)
+section("4. GET /api/llm/my-usage?recentLimit=5 (GLM key loaded?)")
+status, body = req("GET", "/api/llm/my-usage?recentLimit=5", token=token)
 if status == 200 and isinstance(body, dict) and body.get("code") == 0:
     data = body.get("data")
-    print(f"{PASS} llm-providers OK")
+    print(f"{PASS} llm/my-usage OK")
     print(f"  data: {json.dumps(data, ensure_ascii=False)[:300]}")
 elif status == 500:
-    print(f"{FAIL} llm-providers 500 — GLM key 可能仍未加载")
+    print(f"{FAIL} llm/my-usage 500 — GLM key 可能仍未加载")
     print(f"  body: {body}")
     print()
     print("  >>> 看 backend.log 里 '加载 config.json' 这行:")
     print("  >>>   Get-Content D:\\archive\\logs\\backend.log | Select-String config.json")
 else:
-    print(f"{FAIL} llm-providers status={status} body={body}")
+    print(f"{FAIL} llm/my-usage status={status} body={body}")
 
 # ============================================================
 # 5. POST /api/qa/ask (真打智谱)
@@ -147,7 +147,7 @@ else:
 # 6. 核心业务 API 探活
 # ============================================================
 section("6. core APIs smoke test")
-for path in ["/api/projects", "/api/dict/types", "/api/trigger-rules", "/api/materials"]:
+for path in ["/api/projects", "/api/dict/types", "/api/trigger-rules", "/api/materials", "/api/llm/my-usage?recentLimit=5", "/api/llm/stats?recentLimit=5"]:
     status, body = req("GET", path, token=token)
     if status == 200:
         code = body.get("code") if isinstance(body, dict) else "?"
