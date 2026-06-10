@@ -6,6 +6,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
@@ -21,7 +22,10 @@ import java.util.List;
  *
  * 修法: 写个 ChatModel 实现, 直接调 GlmService (项目自家, 已经验过智谱 v4 endpoint 通)
  *
- * @author Mavis (修 Sisyphus P0-15 + 智谱 v4 不兼容问题)
+ * **温度控制 (Mavis 修 P0-19)**: GLM-4-Flash-250414 是 8B 小模型, 默认 temperature=0.7
+ * ReAct JSON 输出不稳, 测例 fail. 在这里读 ChatOptions 拿 temperature 0.1 让输出稳定.
+ *
+ * @author Mavis (修 Sisyphus P0-15 + P0-19)
  */
 @Component
 @Primary
@@ -44,11 +48,20 @@ public class GLMChatModel implements ChatModel {
                 // 多轮历史, 作为 user 拼上去
                 userMsg.append("\n[历史] ").append(am.getText());
             } else {
-                // 兜底: 拼 .getText()
                 userMsg.append(msg.getText());
             }
         }
-        String content = glmService.chat(systemPrompt, userMsg.toString());
+
+        // 读 ChatOptions 拿 temperature + maxTokens (Spring AI 1.1 公开 API)
+        Double temperature = 0.1;  // 默认低温度, 让小模型 ReAct JSON 稳
+        Integer maxTokens = 2048;
+        ChatOptions opts = prompt.getOptions();
+        if (opts != null) {
+            if (opts.getTemperature() != null) temperature = opts.getTemperature();
+            if (opts.getMaxTokens() != null) maxTokens = opts.getMaxTokens();
+        }
+
+        String content = glmService.chat(systemPrompt, userMsg.toString(), temperature, maxTokens);
         return new ChatResponse(List.of(new Generation(new AssistantMessage(content))));
     }
 }

@@ -132,10 +132,22 @@ public class GlmService {
      * 通用文本问答.
      */
     public String chat(String systemPrompt, String userPrompt) {
-        return callWithLog(LlmScenario.QA, () -> doChat(systemPrompt, userPrompt));
+        return callWithLog(LlmScenario.QA, () -> doChat(systemPrompt, userPrompt, null, null));
+    }
+
+    /**
+     * 带可选参数 (temperature / maxTokens) 的 chat 重载.
+     * null 表示用 GlmService 默认值.
+     */
+    public String chat(String systemPrompt, String userPrompt, Double temperature, Integer maxTokens) {
+        return callWithLog(LlmScenario.QA, () -> doChat(systemPrompt, userPrompt, temperature, maxTokens));
     }
 
     private String doChat(String systemPrompt, String userPrompt) {
+        return doChat(systemPrompt, userPrompt, null, null);
+    }
+
+    private String doChat(String systemPrompt, String userPrompt, Double temperature, Integer maxTokens) {
         checkApiKey();
 
         try {
@@ -147,8 +159,11 @@ public class GlmService {
             }
             messages.add(Map.of("role", "user", "content", userPrompt));
             body.put("messages", messages);
-            body.put("temperature", 0.3);
-            body.put("max_tokens", 2048);
+            // 可选参数 (Mavis 加): 调低 temperature 让小模型 JSON 输出更稳
+            if (temperature != null) body.put("temperature", temperature);
+            if (maxTokens != null) body.put("max_tokens", maxTokens);
+            // 注: 之前这里有硬编码 body.put("temperature", 0.3) + body.put("max_tokens", 2048) 覆盖
+            // 参数, 删了 (P0-19 修)
 
             String json = mapper.writeValueAsString(body);
 

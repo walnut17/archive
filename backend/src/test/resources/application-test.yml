@@ -2,9 +2,10 @@
 # 测试环境配置 (I-11 Agent 集成测试用)
 #
 # 目的: 让 @SpringBootTest 启动不依赖真实 GLM_API_KEY
-# - 用 mock api-key 让 Spring AI 启动 OK
-# - ChatClient 不会真被调 (test 不走 LLM 调用)
-# - AgentTools 用真实 DB (test container 或 H2, 见 AgentIntegrationTest)
+# - 用 H2 内存数据库 (MySQL 兼容 mode)
+# - 用真 GLM key (GLM_API_KEY env var) 让 AgentIntegrationTest 真跑
+# - 禁 Flyway (user 是 H2 关键字 + 没 v2-schema 需要的 MySQL 特性)
+# - Spring AI OpenAI 占位 key 让 OpenAiChatModel Bean 启动 OK
 # ==========================================================
 
 spring:
@@ -18,19 +19,25 @@ spring:
           model: glm-4-flash
     agent:
       enabled: true
-  datasource:
-    # 测试用 H2 内存数据库 (Spring AI 1.1 跟 Hibernate 都支持 H2)
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
-    username: sa
-    password:
-    driver-class-name: org.h2.Driver
+  flyway:
+    enabled: false  # H2 测例禁 Flyway (user 是 H2 关键字)
   jpa:
     hibernate:
       ddl-auto: create-drop
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
+        globally_quoted_identifiers: true  # 全加引号, 避免 user 冲突
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
 
-logging:
-  level:
-    com.archive.agent: DEBUG
+# 让项目自家的 GlmService 拿到真 key (P0-19 修: 之前测例 MockBean GlmService, 现在真调)
+app:
+  glm:
+    api-key: ${GLM_API_KEY:test-mock-key}
+    chat-url: https://open.bigmodel.cn/api/paas/v4/chat/completions
+    chat-model: glm-4-flash-250414
+    timeout-seconds: 60

@@ -50,8 +50,15 @@ public class AgentConfig {
         MessageChatMemoryAdvisor mem = memoryAdvisor.getIfAvailable();
         if (mem != null) advisors.add(mem);
 
+        // 默认 ChatOptions: temperature 0.1 (小模型 ReAct 稳), maxTokens 2048
+        // 注: GLMChatModel 实际读 prompt.getOptions(), 这里设 defaultOptions 影响全 chat
+        var defaultOpts = new org.springframework.ai.chat.prompt.DefaultChatOptions();
+        defaultOpts.setTemperature(0.1);
+        defaultOpts.setMaxTokens(2048);
+
         return ChatClient.builder(model)
                 .defaultSystem(systemPrompt.render(null))  // 初始无上下文
+                .defaultOptions(defaultOpts)
                 .defaultAdvisors(advisors.toArray(new org.springframework.ai.chat.client.advisor.api.Advisor[0]))
                 .build();
     }

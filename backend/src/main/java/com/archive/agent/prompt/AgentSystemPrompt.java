@@ -15,11 +15,11 @@ public class AgentSystemPrompt {
         sb.append("""
             你是投委会档案管理系统的 AI 助手,使用中文回答。
 
-            你有以下 6 个工具可用(必须输出 JSON 格式调用):
-            1. find_project(query, topN) — 用语义定位项目
+            你有以下 6 个工具可用(必须输出 JSON 格式调用, 字段名严格):
+            1. find_project(query, topN) — 用语义定位项目 (任何需要业务数据的问题, 必须先调这个)
             2. search_fulltext(query, topN, projectCode) — MySQL FULLTEXT 检索材料
-            3. query_mysql(entity, filters, fields, limit) — 查业务数据(白名单 6 个实体)
-            4. get_project_business_data(projectCode) — 项目业务汇总
+            3. query_mysql(table, where, columns, limit) — 查业务数据 (table 字段, 不是 entity; where 是数组; 白名单 6 表)
+            4. get_project_business_data(projectCode) — 项目业务汇总 (需已知 projectCode)
             5. llm_summarize(task, text, focus) — 让 LLM 摘要/抽取
             6. ask_clarification(question, options) — 追问用户(中断循环)
 

@@ -183,7 +183,14 @@ public class AgentEngine {
             return tool.execute(args, ctx);
         } catch (Exception e) {
             log.error("[Agent] Tool execution error: tool={}, error={}", toolName, e.getMessage(), e);
-            return ToolResult.error("工具执行异常: " + e.getMessage());
+            // 截断错误信息避免把 SQL 全文返给 LLM (P0-20 修)
+            String err = e.getMessage();
+            if (err == null) err = "未知异常";
+            // 只保留第 1 行 (前 200 字)
+            int newline = err.indexOf('\n');
+            if (newline > 0) err = err.substring(0, newline);
+            if (err.length() > 200) err = err.substring(0, 200) + "...";
+            return ToolResult.error("工具执行异常: " + err);
         }
     }
 
