@@ -153,14 +153,15 @@
         <!-- Spring AI (Plan I: 智能问答 Agent) -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-starter-model-openai</artifactId>
-            <!-- 智谱 GLM 走 OpenAI 兼容协议 -->
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-chat-memory-repository-jdbc</artifactId>
             <!-- 多轮对话记忆持久化到 MySQL(I-13 用) -->
         </dependency>
+        <!--
+            删 spring-ai-starter-model-openai (Mavis 修 2026-06-10):
+            GLMChatModel 是自定义 ChatModel (implements ChatModel), 内部调 GlmService
+            不依赖 Spring AI 的 OpenAiChatModel. 留着这个 starter 会拉起 OpenAiAudioSpeechModel
+            等 Bean, 启动时强制要 OpenAI API key.
+        -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-test</artifactId>

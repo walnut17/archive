@@ -5,18 +5,11 @@
 # - 用 H2 内存数据库 (MySQL 兼容 mode)
 # - 用真 GLM key (GLM_API_KEY env var) 让 AgentIntegrationTest 真跑
 # - 禁 Flyway (user 是 H2 关键字 + 没 v2-schema 需要的 MySQL 特性)
-# - Spring AI OpenAI 占位 key 让 OpenAiChatModel Bean 启动 OK
+# - GLMChatModel 是自定义 ChatModel, 不依赖 spring-ai-openai starter
 # ==========================================================
 
 spring:
   ai:
-    openai:
-      # 测试用占位 key, 让 OpenAiChatModel Bean 实例化
-      api-key: test-mock-key-not-used
-      base-url: http://localhost:0
-      chat:
-        options:
-          model: glm-4-flash
     agent:
       enabled: true
   flyway:
