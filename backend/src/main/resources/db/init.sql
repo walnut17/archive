@@ -1,7 +1,22 @@
 -- ==========================================================
--- 投委会档案管理系统 - 数据库初始化脚本
--- 数据库:archive_db
--- 字符集:utf8mb4 / 排序规则:utf8mb4_unicode_ci
+-- 投委会档案管理系统 - 数据库初始化脚本 (整合所有迁移)
+-- 版本: Plan I 完工 (2026-06-10)
+-- 数据库: archive_db
+-- 字符集: utf8mb4 / utf8mb4_unicode_ci
+-- MySQL: 8.0+ (需要 FULLTEXT + ngram parser)
+--
+-- 用途:
+--   1. 全新部署: 直接跑这个脚本建库
+--   2. 重建: DROP 旧表, 重新跑这个脚本
+--
+-- 包含迁移:
+--   - M0~M2: 基础表 + FULLTEXT 索引 (material_version.parsed_text)
+--   - Plan A~F: proposal/material/material_version 完善
+--   - Plan G: llm_call_log 表
+--   - Plan I: customer_name 字段 + project FULLTEXT 索引 + spring_ai_chat_memory 表
+--
+-- 注意: 这是 DROP + CREATE 一键重建, 会丢失所有业务数据!
+--       生产环境慎用, 请先备份。
 -- ==========================================================
 
 -- 1. 创建数据库(若不存在)
@@ -11,7 +26,13 @@ CREATE DATABASE IF NOT EXISTS archive_db
 
 USE archive_db;
 
+-- 1.5 删 Flyway 历史表(从头重建, 避免 Flyway 启动报错)
+-- 生产没用 Flyway, 手工跑 init.sql 即可
+DROP TABLE IF EXISTS flyway_schema_history;
+
+-- ==========================================================
 -- 2. 角色表
+-- ==========================================================
 DROP TABLE IF EXISTS role;
 CREATE TABLE role (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -24,7 +45,9 @@ CREATE TABLE role (
     INDEX idx_code (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色';
 
+-- ==========================================================
 -- 3. 用户表
+-- ==========================================================
 DROP TABLE IF EXISTS user;
 CREATE TABLE user (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -45,7 +68,7 @@ CREATE TABLE user (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户';
 
 -- ==========================================================
--- 初始数据
+-- 4. 初始数据
 -- ==========================================================
 
 -- 4 个预置角色
@@ -62,13 +85,14 @@ INSERT INTO user (username, display_name, password_hash, email, role_id, departm
 ('admin', '系统管理员', '$2a$10$wjN3YFZDlu.ThmfrRe0XvOA9A1AW2TybgeKAddA/TTxTEhEGvg/Ve', 'admin@example.com', 1, '信息技术部', '在岗');
 
 -- ==========================================================
--- 4. 项目表(M1-1)
+-- 5. 项目表(M1-1) - Plan I 加 customer_name 字段 + FULLTEXT 索引
 -- ==========================================================
 DROP TABLE IF EXISTS project;
 CREATE TABLE project (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     code VARCHAR(64) NOT NULL UNIQUE COMMENT '项目编号,如 PRJ-2026-001',
     name VARCHAR(256) NOT NULL COMMENT '项目名称',
+    customer_name VARCHAR(256) COMMENT '客户名称 (Plan I-5: FindProjectTool 语义搜索用)',
     category VARCHAR(64) COMMENT '业务类别:股权类/固收类/混合类/其他',
     owner_id BIGINT COMMENT '项目经理 ID(关联 user.id)',
     amount_wan BIGINT COMMENT '投资金额(万元)',
@@ -83,11 +107,13 @@ CREATE TABLE project (
     INDEX idx_code (code),
     INDEX idx_status (status),
     INDEX idx_owner_id (owner_id),
-    INDEX idx_created_at (created_at)
+    INDEX idx_created_at (created_at),
+    -- Plan I-5: 项目语义搜索 FULLTEXT 索引 (FindProjectTool 用)
+    FULLTEXT INDEX ft_name_cust (name, customer_name) WITH PARSER ngram
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='项目';
 
 -- ==========================================================
--- 5. 议案表(M1-1)
+-- 6. 议案表(M1-1)
 -- ==========================================================
 DROP TABLE IF EXISTS proposal;
 CREATE TABLE proposal (
@@ -112,7 +138,7 @@ CREATE TABLE proposal (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='议案';
 
 -- ==========================================================
--- 6. 材料表(M1-1)
+-- 7. 材料表(M1-1)
 -- ==========================================================
 DROP TABLE IF EXISTS material;
 CREATE TABLE material (
@@ -135,7 +161,7 @@ CREATE TABLE material (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='材料';
 
 -- ==========================================================
--- 7. 材料版本表(M1-1)
+-- 8. 材料版本表(M1-1) - 含 FULLTEXT 索引(M2 知识库问答)
 -- ==========================================================
 DROP TABLE IF EXISTS material_version;
 CREATE TABLE material_version (
@@ -167,27 +193,68 @@ CREATE TABLE material_version (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='材料版本';
 
 -- ==========================================================
--- 8. 迁移检查:确认 FULLTEXT 索引已创建
+-- 9. Plan G: LLM 调用日志表 (埋点统计)
 -- ==========================================================
-SELECT 'ft_parsed_text 索引已创建' AS info
-WHERE EXISTS (
-    SELECT 1 FROM information_schema.STATISTICS
-    WHERE table_schema = 'archive_db'
-      AND table_name = 'material_version'
-      AND index_name = 'ft_parsed_text'
-);
+DROP TABLE IF EXISTS llm_call_log;
+CREATE TABLE llm_call_log (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(64) COMMENT '调用人',
+    scenario VARCHAR(32) NOT NULL COMMENT '场景:QA/RERANK/EXTRACT/SUMMARIZE 等',
+    model VARCHAR(64) NOT NULL COMMENT '模型名',
+    duration_ms INT NOT NULL COMMENT '耗时(毫秒)',
+    status VARCHAR(16) NOT NULL COMMENT 'SUCCESS / FAILED',
+    error_message VARCHAR(500) COMMENT '错误信息',
+    prompt_tokens INT COMMENT '提示 token 数(本期不统计, 留 NULL)',
+    completion_tokens INT COMMENT '完成 token 数(本期不统计, 留 NULL)',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_username (username),
+    INDEX idx_scenario (scenario),
+    INDEX idx_created_at (created_at),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='LLM 调用日志';
 
 -- ==========================================================
--- 验证
+-- 10. Plan I-13: 多轮对话记忆表 (Spring AI 1.1)
+-- Spring AI 1.1 公开 API: JdbcChatMemoryRepository 默认表名是 spring_ai_chat_memory
+-- 字段名必须严格匹配 Spring AI 1.1 源码 SQL 模板
 -- ==========================================================
-SELECT 'roles' AS table_name, COUNT(*) AS count FROM role
+DROP TABLE IF EXISTS spring_ai_chat_memory;
+CREATE TABLE spring_ai_chat_memory (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    conversation_id VARCHAR(64) NOT NULL COMMENT '会话 ID',
+    content TEXT NOT NULL COMMENT '消息内容',
+    type VARCHAR(16) NOT NULL COMMENT 'user / assistant / system / tool',
+    `timestamp` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_conversation_timestamp (conversation_id, `timestamp`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Agent 多轮对话记忆 (Spring AI 1.1 MessageChatMemoryAdvisor)';
+
+-- ==========================================================
+-- 11. 迁移检查
+-- ==========================================================
+SELECT '角色表 role' AS table_name, COUNT(*) AS count FROM role
 UNION ALL
-SELECT 'users', COUNT(*) FROM user
+SELECT '用户表 user', COUNT(*) FROM user
 UNION ALL
-SELECT 'projects', COUNT(*) FROM project
+SELECT '项目表 project', COUNT(*) FROM project
 UNION ALL
-SELECT 'proposals', COUNT(*) FROM proposal
+SELECT '议案表 proposal', COUNT(*) FROM proposal
 UNION ALL
-SELECT 'materials', COUNT(*) FROM material
+SELECT '材料表 material', COUNT(*) FROM material
 UNION ALL
-SELECT 'material_versions', COUNT(*) FROM material_version;
+SELECT '材料版本表 material_version', COUNT(*) FROM material_version
+UNION ALL
+SELECT 'LLM调用日志表 llm_call_log', COUNT(*) FROM llm_call_log
+UNION ALL
+SELECT '对话记忆表 spring_ai_chat_memory', COUNT(*) FROM spring_ai_chat_memory;
+
+-- FULLTEXT 索引验证
+SELECT 'project.ft_name_cust 索引' AS index_name,
+       IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
+                 WHERE table_schema='archive_db' AND table_name='project' AND index_name='ft_name_cust'),
+          '✓ 已创建', '✗ 缺失') AS status
+UNION ALL
+SELECT 'material_version.ft_parsed_text 索引',
+       IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
+                 WHERE table_schema='archive_db' AND table_name='material_version' AND index_name='ft_parsed_text'),
+          '✓ 已创建', '✗ 缺失');
