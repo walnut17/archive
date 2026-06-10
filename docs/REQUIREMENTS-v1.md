@@ -16,7 +16,7 @@
 系统核心能力:
 - **项目档案管理**: 一个项目从立项到结清的全部材料
 - **报告智能分析**: 上传报告,自动抽字段、识分类、提时点
-- **知识库问答**: 全文检索(基于 MySQL FULLTEXT,不向量化)
+- **知识库问答**: 全文检索(基于 MySQL FULLTEXT,不向量化; v1.1 起增 Agent 模式 5 步 ReAct + 简称/拼音语义兜底,见 §5.6)
 - **待办中心**: 三来源汇聚(LLM 抽、手工加、规则触发),首页提醒
 - **触发规则引擎**: 材料分类 → 自动生成待办
 - **累计金额计算**: 初始 - 付出 + 收回(全自动,DECIMAL)
@@ -552,6 +552,89 @@ Prompt 模板(预置):
 
 ---
 
+### 5.6 智能问答 (Agent 模式)
+
+> v1.1 变更: 智能问答从"单轮 FULLTEXT 检索 + LLM 总结"升级为 **Agent ReAct 循环**,支持多步工具调用 + 简称/拼音/口头语语义匹配.
+
+#### 5.6.1 架构
+
+```
+用户问题
+   ↓
+┌────────────────────────────────────────────┐
+│  AgentEngine.run() — 手写 5 步 ReAct 循环   │
+│                                            │
+│  for i = 1..MAX_ITERATIONS (默认 5):       │
+│    1. LLM 看上下文 (system prompt + 历次   │
+│       thought/tool/observation) → 输出     │
+│       {thought, tool, args}                 │
+│    2. 如果 tool = FINAL_ANSWER → 跳出       │
+│    3. 否则 dispatch tool                    │
+│    4. observation 喂回 LLM, 进入下一轮      │
+│    5. 死循环检测 (loopTriggerThreshold=1)   │
+│       - 第 1 次触发 → 注入 hint             │
+│       - 第 2 次触发 → 强制 FINAL_ANSWER     │
+└────────────────────────────────────────────┘
+```
+
+#### 5.6.2 工具清单 (4 个)
+
+| 工具 | 作用 | 何时调 |
+|---|---|---|
+| `find_project(query, topN)` | 4 级兜底定位项目 | 任何业务问题必须先调 |
+| `search_fulltext(query, topN, projectCode)` | MySQL FULLTEXT 检索材料 | 找材料内容时 |
+| `query_mysql(table, where, columns, limit)` | 查业务数据 (白名单 6 表) | 找数据时 |
+| `get_project_business_data(projectCode)` | 项目业务汇总 | 已知 projectCode 时 |
+
+#### 5.6.3 find_project 4 级兜底链 (核心设计)
+
+| 级别 | 方法 | 适用场景 | 成本 |
+|---|---|---|---|
+| 1 | `findByCode` (精确) | 用户报 projectCode | 0 LLM, <10ms |
+| 2 | `searchByNameOrCustomerFulltext` (MySQL FULLTEXT) | 完整名称 / 客户名 | 0 LLM, ~50ms |
+| 3 | `searchByKeywordAsList` (JPQL LIKE %%) | 简称 / 模糊词 (新增 v1.1) | 0 LLM, ~100ms |
+| 4 | `glmService.semanticMatchProjects` (LLM 兜底) | 拼音首字母 / 口头语 (如 "lmz" → "林谋志") | 1 LLM, ~1.5s |
+
+**触发条件**：
+- 级别 1: 总是跑, 命中即返回
+- 级别 2: 级别 1 miss 时跑
+- 级别 3: 级别 2 miss 时跑 (新增 v1.1)
+- 级别 4: 级别 3 miss **且** `projectRepo.count() <= llmFallbackMaxTotal` (默认 300, 可配 `FIND_PROJECT_LLM_FALLBACK_MAX_TOTAL` 环境变量) 时跑
+
+**为什么不维护静态索引 (如 MD 文件 / 额外表)**：
+- 项目数 < 300 是有限可枚举的, 全量喂给 LLM 比维护索引更省事
+- 数据自动同步 (项目表新增/改名/别名无需手工更新)
+- LLM 兜底 = "把项目列表当 prompt 上下文",**0 维护成本**
+
+#### 5.6.4 死循环保护 (v1.1 新增)
+
+**问题**: 5 步 ReAct 容易让 LLM 死循环调同 tool 同 args (如连续 5 次 find_project("lmz")).
+
+**策略** (可配 `spring.ai.agent.find-project.loop-trigger-threshold`, 默认 1):
+- 连续 (阈值) 步 (tool, toolArgs) 完全相同 → 视为死循环
+- 第 1 次触发: 注入 hint "你已连续 N 次用相同工具和参数得到相同结果, 请换不同关键词/工具 或直接 FINAL_ANSWER"
+- 第 2 次触发: 强制 FINAL_ANSWER, 不再让 LLM 重试 (节省 token + 避免 5 步全空跑)
+
+**总死循环预算 = 3 步** (步 1, 步 2 触发 hint, 步 3 又触发 → 强制 FINAL_ANSWER), MAX_ITERATIONS=5 留 2 步给真正干活.
+
+#### 5.6.5 性能 (修订)
+
+| 模式 | 响应时间 | 适用 |
+|---|---|---|
+| 单轮检索 (无 Agent) | < 3s | 简单问题, 已知 projectCode |
+| Agent 模式 (5 步 ReAct) | < 30s | 业务问题, 需多步推理 |
+
+**前端 axios timeout = 120s**, 给 Agent 模式留 4x buffer.
+
+#### 5.6.6 验收 (v1.1 修订)
+
+- [ ] 简称 → 全名: "lmz项目" 找到 "林谋志" 项目 (走 LLM 兜底, 1.5s 内返回)
+- [ ] 死循环保护: 模拟 LLM 死循环 (mock tool 返回同 obs), 第 3 步强制 FINAL_ANSWER
+- [ ] 5 步预算: 单次 qa-ask 调用 LLM ≤ 5 次 (稳态), < 7 次 (含死循环保护)
+- [ ] 响应时间: Agent 模式 < 30s (P95)
+
+---
+
 ## 6. 报告字段抽取扩展机制
 
 ### 6.1 流程
@@ -737,6 +820,7 @@ Prompt 模板(预置):
 - 单用户系统,**没有高并发诉求**
 - 上传后 1-2 分钟内进入"已解析"状态可接受
 - 首页加载 < 2 秒
+- 知识库问答 (v1.1 修订): 单轮检索 < 3s, Agent 模式 < 30s, 前端 axios timeout = 120s
 
 ### 9.2 安全
 
@@ -778,7 +862,7 @@ Prompt 模板(预置):
 - 后端: Spring Boot 3.3 + JPA + Tika + 智谱 GLM
 - 前端: Vue 3 + TypeScript + Element Plus + Vite + Pinia
 - 部署: WinSW + Caddy
-- 检索: MySQL FULLTEXT ngram(不向量化)
+- 检索: MySQL FULLTEXT ngram(不向量化; v1.1 增 JPQL LIKE 模糊 + LLM 语义兜底)
 - 鉴权: JWT + BCrypt
 
 ---
@@ -841,7 +925,7 @@ Prompt 模板(预置):
 
 - [ ] 首页加载 < 2 秒(100 个项目规模)
 - [ ] 1 个材料上传 → 5 分钟内完成解析 + 字段抽取 + 时点抽取 + 规则触发
-- [ ] 知识库问答 10 万字库 < 3 秒返回
+- [ ] 知识库问答 10 万字库 < 3 秒返回 (v1.1 修订: 单轮检索 < 3s, Agent 模式 < 30s)
 
 ---
 

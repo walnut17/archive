@@ -62,6 +62,16 @@ spring:
       enabled: ${AGENT_ENABLED:true}
       observation-truncate-chars: 2000
       # 5 步上限硬编码在 AgentEngine.MAX_ITERATIONS = 5
+      # find_project 工具: 4 级兜底链配置
+      find-project:
+        # 4 级: code 精确 -> FULLTEXT -> LIKE -> LLM 语义匹配
+        # LLM 兜底只在项目总数 < 此值时调用 (避免 token 爆炸, 100 万字库项目不会炸)
+        llm-fallback-max-total: ${FIND_PROJECT_LLM_FALLBACK_MAX_TOTAL:300}
+        # 死循环保护: 连续同 (tool, args) 几次 = 死循环
+        # 1 = 第 1 次死循环就注入 hint
+        # 2 = 第 2 次死循环强制 FINAL_ANSWER
+        # 配 1 较严, 配 2 较宽, 默认 1
+        loop-trigger-threshold: ${AGENT_LOOP_THRESHOLD:1}
 
 server:
   port: ${app.server.port:8080}

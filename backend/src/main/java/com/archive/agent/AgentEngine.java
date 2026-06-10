@@ -26,8 +26,14 @@ public class AgentEngine {
     private static final Logger log = LoggerFactory.getLogger(AgentEngine.class);
     private static final int MAX_ITERATIONS = 5;
     private static final String FINAL_ANSWER = "FINAL_ANSWER";
-    private static final int MAX_LOOP_HINTS = 1; // 死循环提示最多给几次, 之后直接强制 FINAL_ANSWER
     private final ObjectMapper mapper = new ObjectMapper();
+
+    /**
+     * 死循环触发阈值: 连续 (loopTriggerThreshold) 步 (tool, toolArgs) 完全相同 = 死循环.
+     * 1 = 立即死循环 (严); 2 = 宽容 1 步再判 (宽). 默认 1.
+     */
+    @org.springframework.beans.factory.annotation.Value("${spring.ai.agent.find-project.loop-trigger-threshold:1}")
+    private int loopTriggerThreshold;
 
     private final ChatClient chatClient;
     private final AgentSystemPrompt systemPrompt;
@@ -93,25 +99,26 @@ public class AgentEngine {
                 break;
             }
 
-            // 4.5) 死循环检测: 连续 2 步 (tool, toolArgs) 完全相同 -> 强制 LLM 总结
+            // 4.5) 死循环检测: 连续 (loopTriggerThreshold) 步 (tool, toolArgs) 完全相同 -> 强制 LLM 总结
             if (isLoopingStep(ctx.getSteps())) {
                 loopHintCount++;
-                if (loopHintCount > MAX_LOOP_HINTS) {
-                    // 已经提示过一次, LLM 还没换策略 -> 强制 FINAL_ANSWER
-                    log.warn("[Agent] 死循环 2 次, 强制 FINAL_ANSWER. tool={}", step.getTool());
-                    step.setThought("连续 2 次死循环, 强制结束");
-                    step.setTool(FINAL_ANSWER);
-                    step.setToolArgs("{\"answer\":\"抱歉, 多次尝试未找到匹配结果. 请尝试换更具体的关键词, 或直接联系档案管理员.\"}");
-                    finalAnswer = "抱歉, 多次尝试未找到匹配结果. 请尝试换更具体的关键词, 或直接联系档案管理员.";
-                    break;
+                if (loopHintCount == 1) {
+                    // 第一次触发死循环 -> 注入 hint, 给 LLM 一次换策略的机会
+                    log.warn("[Agent] 死循环触发 (第 1 次, 阈值={}), 注入 hint. tool={}", loopTriggerThreshold, step.getTool());
+                    String hint = String.format(
+                            "你已连续 %d 次用相同的工具 (%s) 和相同的参数得到相同结果. 请立即: "
+                          + "1) 换不同关键词重新查询, 或 2) 换不同工具, 或 3) 直接给出 FINAL_ANSWER 说明情况",
+                            loopTriggerThreshold, step.getTool());
+                    step.setObservation(hint);
+                    continue; // 跳过本轮 dispatch, 下一轮 LLM 看到 hint 后做选择
                 }
-                log.warn("[Agent] 检测到死循环 (连续 2 步 tool+args 相同), 提示 LLM 换策略. tool={}", step.getTool());
-                String hint = String.format(
-                        "你已连续 2 次用相同的工具 (%s) 和相同的参数得到相同结果. 请立即: "
-                      + "1) 换不同关键词重新查询, 或 2) 换不同工具, 或 3) 直接给出 FINAL_ANSWER 说明情况",
-                        step.getTool());
-                step.setObservation(hint);
-                continue; // 跳过本轮 dispatch, 下一轮 LLM 看到 hint 后做选择
+                // 第 2+ 次死循环 -> 强制 FINAL_ANSWER
+                log.warn("[Agent] 死循环触发 (第 {} 次), 强制 FINAL_ANSWER. tool={}", loopHintCount, step.getTool());
+                step.setThought(String.format("连续 %d 次死循环, 强制结束", loopHintCount));
+                step.setTool(FINAL_ANSWER);
+                step.setToolArgs("{\"answer\":\"抱歉, 多次尝试未找到匹配结果. 请尝试换更具体的关键词, 或直接联系档案管理员.\"}");
+                finalAnswer = "抱歉, 多次尝试未找到匹配结果. 请尝试换更具体的关键词, 或直接联系档案管理员.";
+                break;
             }
 
             // 5) 执行工具
@@ -304,11 +311,12 @@ public class AgentEngine {
     }
 
     /**
-     * 死循环检测: 最近 2 个非死循环提示的 step 的 (tool, toolArgs) 完全相同 -> 视为死循环.
+     * 死循环检测: 最近 (loopTriggerThreshold) 个非死循环提示的 step 的 (tool, toolArgs) 完全相同 -> 视为死循环.
      */
     private boolean isLoopingStep(List<AgentStep> steps) {
-        if (steps.size() < 2) return false;
-        AgentStep prev = steps.get(steps.size() - 2);
+        int threshold = Math.max(1, loopTriggerThreshold);
+        if (steps.size() < threshold) return false;
+        AgentStep prev = steps.get(steps.size() - threshold);
         AgentStep curr = steps.get(steps.size() - 1);
         if (prev.getTool() == null || curr.getTool() == null) return false;
         if (FINAL_ANSWER.equals(prev.getTool()) || FINAL_ANSWER.equals(curr.getTool())) return false;

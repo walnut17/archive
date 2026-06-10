@@ -7,9 +7,9 @@ import com.archive.service.GlmService;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
@@ -20,15 +20,21 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
-@RequiredArgsConstructor
 public class FindProjectTool implements AgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(FindProjectTool.class);
-    /** LLM 兜底阈值: 项目总数 < 此值才走 LLM, 避免项目多了 token 爆炸. */
-    private static final long LLM_FALLBACK_MAX_TOTAL = 300;
 
     private final ProjectRepository projectRepo;
     private final GlmService glmService;
+
+    /** LLM 兜底阈值: 项目总数 < 此值才走 LLM, 避免项目多了 token 爆炸. 可配 (默认 300). */
+    @Value("${spring.ai.agent.find-project.llm-fallback-max-total:300}")
+    private long llmFallbackMaxTotal;
+
+    public FindProjectTool(ProjectRepository projectRepo, GlmService glmService) {
+        this.projectRepo = projectRepo;
+        this.glmService = glmService;
+    }
 
     @Override
     public String name() {
@@ -78,9 +84,9 @@ public class FindProjectTool implements AgentTool {
             return finalizeFromEntities(likeRows, ctx, "LIKE");
         }
 
-        // 4) LLM 兜底 (项目总数 < 300 才调, 避免 token 爆炸)
+        // 4) LLM 兜底 (项目总数 < 配置阈值才调, 避免 token 爆炸)
         long total = projectRepo.count();
-        if (total > 0 && total <= LLM_FALLBACK_MAX_TOTAL) {
+        if (total > 0 && total <= llmFallbackMaxTotal) {
             log.info("[find_project] LIKE miss for q='{}' (total={}), trying LLM semantic fallback", q, total);
             List<Project> all = projectRepo.findAll();
             List<String> matchedCodes = glmService.semanticMatchProjects(q, all, topN);
