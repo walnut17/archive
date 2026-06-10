@@ -229,6 +229,215 @@ CREATE TABLE spring_ai_chat_memory (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Agent 多轮对话记忆 (Spring AI 1.1 MessageChatMemoryAdvisor)';
 
+CREATE TABLE IF NOT EXISTS chapter_summary (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    material_version_id BIGINT NOT NULL COMMENT '所属材料版本 ID',
+    chapter_no INT NOT NULL COMMENT '章节序号',
+    chapter_title VARCHAR(512),
+    content MEDIUMTEXT,
+    summary TEXT,
+    keywords VARCHAR(512),
+    page_start INT,
+    page_end INT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by VARCHAR(64),
+    updated_by VARCHAR(64),
+    FULLTEXT KEY ft_content_summary (content, summary) WITH PARSER ngram,
+    INDEX idx_material_version (material_version_id),
+    INDEX idx_chapter_no (chapter_no),
+    CONSTRAINT fk_cs_material_version
+        FOREIGN KEY (material_version_id) REFERENCES material_version(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='章节摘要';
+
+CREATE TABLE IF NOT EXISTS timepoint (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    project_id BIGINT NOT NULL,
+    material_version_id BIGINT,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(32) NOT NULL DEFAULT '其他',
+    due_at DATE NOT NULL,
+    reminder_days VARCHAR(64) DEFAULT '30,7,1,0',
+    status VARCHAR(16) NOT NULL DEFAULT '待提醒',
+    source_text TEXT,
+    source_page INT,
+    confidence DECIMAL(3,2),
+    extracted_by VARCHAR(16) NOT NULL DEFAULT 'manual',
+    owner_id BIGINT,
+    remark VARCHAR(1000),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by VARCHAR(64),
+    updated_by VARCHAR(64),
+    INDEX idx_tp_project (project_id),
+    INDEX idx_tp_due (due_at),
+    INDEX idx_tp_status (status),
+    INDEX idx_tp_type (type),
+    INDEX idx_tp_owner (owner_id),
+    CONSTRAINT fk_tp_project
+        FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE,
+    CONSTRAINT fk_tp_material_version
+        FOREIGN KEY (material_version_id) REFERENCES material_version(id) ON DELETE SET NULL,
+    CONSTRAINT fk_tp_owner
+        FOREIGN KEY (owner_id) REFERENCES user(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='时点';
+
+CREATE TABLE IF NOT EXISTS todo (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(255) NOT NULL,
+    source VARCHAR(16) NOT NULL,
+    source_ref_id BIGINT,
+    project_id BIGINT,
+    owner_id BIGINT,
+    priority VARCHAR(16) NOT NULL DEFAULT 'medium',
+    status VARCHAR(16) NOT NULL DEFAULT 'pending',
+    due_at DATETIME,
+    completed_at DATETIME,
+    remark VARCHAR(1000),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by VARCHAR(64),
+    updated_by VARCHAR(64),
+    INDEX idx_todo_status (status),
+    INDEX idx_todo_due (due_at),
+    INDEX idx_todo_owner_status (owner_id, status),
+    INDEX idx_todo_project (project_id),
+    INDEX idx_todo_source (source, source_ref_id),
+    CONSTRAINT fk_todo_project
+        FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE,
+    CONSTRAINT fk_todo_owner
+        FOREIGN KEY (owner_id) REFERENCES user(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='待办';
+
+CREATE TABLE IF NOT EXISTS trigger_rule (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code VARCHAR(64) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(1000),
+    trigger_event VARCHAR(64) NOT NULL,
+    trigger_condition VARCHAR(1000) NOT NULL,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    builtin TINYINT(1) NOT NULL DEFAULT 0,
+    priority INT NOT NULL DEFAULT 3,
+    last_run_at DATETIME,
+    last_match_count INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by VARCHAR(64),
+    updated_by VARCHAR(64),
+    INDEX idx_tr_code (code),
+    INDEX idx_tr_event_enabled (trigger_event, enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='触发规则';
+
+CREATE TABLE IF NOT EXISTS trigger_action (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    rule_id BIGINT NOT NULL,
+    action_type VARCHAR(32) NOT NULL,
+    action_template JSON NOT NULL,
+    sort_order INT NOT NULL DEFAULT 1,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by VARCHAR(64),
+    updated_by VARCHAR(64),
+    INDEX idx_ta_rule (rule_id),
+    INDEX idx_ta_rule_sort (rule_id, sort_order),
+    CONSTRAINT fk_ta_rule
+        FOREIGN KEY (rule_id) REFERENCES trigger_rule(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='触发动作';
+
+CREATE TABLE IF NOT EXISTS extraction_method (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code VARCHAR(64) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(1000),
+    apply_to VARCHAR(32) NOT NULL DEFAULT 'material',
+    prompt_template TEXT NOT NULL,
+    output_schema JSON NOT NULL,
+    builtin TINYINT(1) NOT NULL DEFAULT 0,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by VARCHAR(64),
+    updated_by VARCHAR(64),
+    INDEX idx_em_code (code),
+    INDEX idx_em_apply_enabled (apply_to, enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='字段抽取方法';
+
+CREATE TABLE IF NOT EXISTS comparison_method (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code VARCHAR(64) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(1000),
+    from_type VARCHAR(32) NOT NULL DEFAULT '立项',
+    to_type VARCHAR(32) NOT NULL DEFAULT '申请',
+    prompt_template TEXT NOT NULL,
+    output_schema JSON NOT NULL,
+    builtin TINYINT(1) NOT NULL DEFAULT 0,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by VARCHAR(64),
+    updated_by VARCHAR(64),
+    INDEX idx_cm_code (code),
+    INDEX idx_cm_from_to (from_type, to_type, enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='对比方法';
+
+CREATE TABLE IF NOT EXISTS dict_type (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    type_code VARCHAR(64) NOT NULL UNIQUE,
+    type_name VARCHAR(128) NOT NULL,
+    description VARCHAR(500),
+    sort_order INT NOT NULL DEFAULT 0,
+    is_system TINYINT(1) NOT NULL DEFAULT 0,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by VARCHAR(64),
+    updated_by VARCHAR(64),
+    INDEX idx_dt_code (type_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='字典分类';
+
+CREATE TABLE IF NOT EXISTS dict_item (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    type_code VARCHAR(64) NOT NULL,
+    item_key VARCHAR(64) NOT NULL,
+    item_value VARCHAR(256) NOT NULL,
+    sort_order INT NOT NULL DEFAULT 0,
+    is_default TINYINT(1) NOT NULL DEFAULT 0,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    is_system TINYINT(1) NOT NULL DEFAULT 0,
+    remark VARCHAR(500),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by VARCHAR(64),
+    updated_by VARCHAR(64),
+    UNIQUE KEY uk_di_type_key (type_code, item_key),
+    INDEX idx_di_type_enabled (type_code, enabled, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='字典项';
+
+CREATE TABLE IF NOT EXISTS audit_log (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    actor VARCHAR(64) NOT NULL,
+    action VARCHAR(64) NOT NULL,
+    entity_type VARCHAR(64),
+    entity_id BIGINT,
+    old_value JSON,
+    new_value JSON,
+    ip_address VARCHAR(45),
+    user_agent VARCHAR(500),
+    request_id VARCHAR(64),
+    extra JSON,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_al_actor_created (actor, created_at),
+    INDEX idx_al_action_created (action, created_at),
+    INDEX idx_al_entity (entity_type, entity_id),
+    INDEX idx_al_request (request_id),
+    INDEX idx_al_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='审计日志';
+
 -- ==========================================================
 -- 11. 迁移检查
 -- ==========================================================
@@ -243,6 +452,26 @@ UNION ALL
 SELECT '材料表 material', COUNT(*) FROM material
 UNION ALL
 SELECT '材料版本表 material_version', COUNT(*) FROM material_version
+UNION ALL
+SELECT '章节摘要表 chapter_summary', COUNT(*) FROM chapter_summary
+UNION ALL
+SELECT '时点表 timepoint', COUNT(*) FROM timepoint
+UNION ALL
+SELECT '待办表 todo', COUNT(*) FROM todo
+UNION ALL
+SELECT '触发规则表 trigger_rule', COUNT(*) FROM trigger_rule
+UNION ALL
+SELECT '触发动作表 trigger_action', COUNT(*) FROM trigger_action
+UNION ALL
+SELECT '抽取方法表 extraction_method', COUNT(*) FROM extraction_method
+UNION ALL
+SELECT '对比方法表 comparison_method', COUNT(*) FROM comparison_method
+UNION ALL
+SELECT '字典类型表 dict_type', COUNT(*) FROM dict_type
+UNION ALL
+SELECT '字典项表 dict_item', COUNT(*) FROM dict_item
+UNION ALL
+SELECT '审计日志表 audit_log', COUNT(*) FROM audit_log
 UNION ALL
 SELECT 'LLM调用日志表 llm_call_log', COUNT(*) FROM llm_call_log
 UNION ALL
