@@ -7,9 +7,13 @@ spring:
     # 不排除会导致 openAiAudioSpeechModel 报 OpenAI API key 必须设置
     autoconfigure:
       exclude:
+        # Mavis 加: 不用 Spring AI 的 OpenAI chat model (用 GLMChatModel 自定义)
+        - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
         - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
         - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
         - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+        - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+        - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
   # 占位符从 config.json 注入(由 ConfigJsonLoader 加载,见 META-INF/spring.factories)
   # 如果 config.json 不存在,用这里的默认值(开发环境)
   datasource:

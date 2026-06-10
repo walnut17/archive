@@ -10,6 +10,12 @@
 
 spring:
   ai:
+    openai:
+      api-key: test-mock-key-not-used
+      base-url: http://localhost:0
+      chat:
+        options:
+          model: glm-4-flash
     agent:
       enabled: true
   flyway:
