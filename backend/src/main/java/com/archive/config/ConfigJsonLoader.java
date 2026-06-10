@@ -22,8 +22,9 @@ import java.util.Map;
  *
  * 启动时依次查找以下路径:
  *   1. ${CONFIG_JSON_PATH} 环境变量(WinSW 服务可设置)
- *   2. ./config/config.json(JAR 同级目录的 config/)
- *   3. ../config/config.json(上一级 config/,开发期常用)
+ *   2. D:/archive/config/config.json (生产期固定路径,与 app.storage.* 同根)
+ *   3. ./config/config.json(JAR 同级目录的 config/)
+ *   4. ../config/config.json(上一级 config/,开发期常用)
  *
  * 找到后把 JSON 拍平为 key-value,作为高优先级 PropertySource 注入 Spring Environment.
  * 占位符 ${app.glm.api-key} 等可在 application.yml 里引用.
@@ -90,13 +91,19 @@ public class ConfigJsonLoader implements EnvironmentPostProcessor {
             log.warn("CONFIG_JSON_PATH={} 不存在", envPath);
         }
 
-        // 2. ./config/config.json
+        // 2. 生产期固定路径 (与 app.storage.file-root/parsed-root/log-root 同根 D:/archive)
+        Path pProd = Paths.get("D:/archive/config/config.json");
+        if (Files.exists(pProd)) {
+            return pProd;
+        }
+
+        // 3. ./config/config.json (JAR 当前工作目录)
         Path p1 = Paths.get("config", "config.json");
         if (Files.exists(p1)) {
             return p1;
         }
 
-        // 3. ../config/config.json
+        // 4. ../config/config.json (上一级)
         Path p2 = Paths.get("..", "config", "config.json");
         if (Files.exists(p2)) {
             return p2;
