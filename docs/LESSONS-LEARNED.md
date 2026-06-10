@@ -663,3 +663,241 @@ mvn compile
 - 写新 .vue 前**先看现有模块怎么 import**(`grep "import.*http" frontend/src/api/`)
 - named vs default 不一致是 JS 模块系统最大坑之一
 - TypeScript 在 Vue SFC `<script setup>` 里**不会**警告 import 错(运行时才崩)
+
+---
+
+## 9. 部署/网络类 — 2026-06-10 实战 (今天)
+
+### 9.1 CORS 白名单遗漏内网 IP 段, 浏览器登录报"权限不足"
+
+**Commit**: `013e0c9` (fix)
+
+**症状**:
+- 后端 API 单独用 curl/Postman 调 100% 正常
+- 浏览器登录页输账号密码点登录 → 前端 axios 拦截器显示 `ElMessage.error('权限不足')`
+- F12 Network 看 `/api/auth/login` 状态码 `403 Forbidden`,Body `Invalid CORS request`
+
+**根因**:
+- `SecurityConfig.corsConfigurationSource()` 的 `allowedOriginPatterns` 只写了:
+  ```java
+  "http://localhost:*", "http://127.0.0.1:*", "https://*"
+  ```
+- 实际部署: 前端在 `182.168.1.125:5173`, 浏览器发请求时 Origin 头是 `http://182.168.1.125:5173`
+- **CORS 是浏览器独有的强校验**, curl/Postman 不发 Origin 头, 后端只看到浏览器请求 + 不在白名单的 Origin → 拒 → 403
+- 前端 axios 拦截器看到 403 → 统一显示"权限不足", 误导排查方向 (以为是角色权限问题)
+
+**修复** (CORS 修复 patch):
+```java
+cfg.setAllowedOriginPatterns(List.of(
+    "http://localhost:*",
+    "http://127.0.0.1:*",
+    "http://192.168.*:*",   // 家/办公网
+    "http://10.*:*",        // 公司内网
+    "http://172.16.*:*",    // RFC1918 私网
+    "http://182.*:*",       // 182.168.1.125 所在网段 (本项目)
+    "https://*"
+));
+```
+
+**教训**:
+- **CORS 是浏览器独占, curl 测不出** — 任何前后端分离项目, 浏览器验证是不可省略的环节
+- 前端 axios 拦截器的"权限不足"提示**信息量不够**, 应该把 403 的 Response body 也 `console.error` 出来 (本期改进项)
+- 开发期 CORS 白名单**必须覆盖内网常见网段** (192.168/10/172.16), 不要只写 localhost
+- `182.168.1.125` 不是 RFC1918 私网 (标准私网是 10/8, 172.16/12, 192.168/16) — 可能是公司特殊网段, 实际项目里遇到过
+
+---
+
+### 9.2 `mvn clean` 失败但被忽略, 旧 jar 继续被用
+
+**Commit**: 隐式 (本次部署期间)
+
+**症状**:
+- 修了 CORS 改, `mvn clean package` 跑完
+- 重启 java 进程, **新 jar 启动成功** (backend.log 显示 `Started ArchiveApplication in 22.9s`)
+- **但** `/api/auth/login` 仍返回 403 CORS 错误 (跟没改 CORS 之前一样)
+
+**根因**:
+- 前一次 mvn 命令输出 `BUILD SUCCESS`, 但**实际** `maven-clean-plugin` 阶段就失败了:
+  ```
+  Failed to execute goal org.apache.maven.plugins:maven-clean-plugin:3.3.2:clean
+  (default-clean) on project archive-backend: Failed to clean project:
+  Failed to delete D:\projects-online\backend\target\archive.jar
+  ```
+- 旧 jar **被 java 进程占着** (Windows 文件句柄未释放), mvn 删不掉
+- mvn 跳过 clean → 用**旧 target/ 目录里的旧 class** 继续 compile + package
+- 结果: 新 jar **包含了旧 SecurityConfig.class** (没 192.168/10/172.16/182)
+- 看着像"修了但没生效"
+
+**修复**:
+```powershell
+# 1) 先杀 java + 等 5 秒 + 删整个 target
+Get-Process -Name "java" -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Sleep -Seconds 5
+Remove-Item -Recurse -Force D:\projects-online\backend\target
+
+# 2) 再打包
+Set-Location D:\projects-online\backend
+mvn -DskipTests clean package
+```
+
+**教训**:
+- **"BUILD SUCCESS" ≠ "jar 是新的"** — 任何时候都要 `Get-Item target\archive.jar | Select LastWriteTime` 验证 jar 时间戳
+- Windows 上 `Stop-Process -Force` 后**文件句柄要等几秒才完全释放** (3-5s), 删除 target 前必须 sleep
+- mvn clean 失败时, **整个生命周期都不可信** — 应该先 `Remove-Item -Recurse target` 手动清, 再 `mvn package`
+- 加 `2>&1 | Select-String "ERROR|FAILURE"` **过滤** mvn 输出, 关键错误才不会被 `BUILD SUCCESS` 掩盖
+
+---
+
+### 9.3 `git pull` 静默失败, 部署机 HEAD 落后于 origin
+
+**Commit**: 隐式 (本次部署期间)
+
+**症状**:
+- 本地 `git log` 显示 `HEAD = 013e0c9` (含 CORS 修复)
+- 推送成功后, 在 125 上跑 `git pull origin main`, 命令返回"成功"
+- 但 125 上 `git log` HEAD 仍是 `9774b8e` (**少了 CORS commit**)
+- 后续 mvn package 出来的 jar 不含 CORS 修复
+
+**根因**:
+- 125 上之前是 `minimax` 分支, 后来切到 `main` 但**没真正同步**最新 commit
+- `git pull origin main` 可能在某些状态 (detached HEAD / 未跟踪文件冲突 / Gitee SSH 临时不可达) 静默失败
+- 命令退出码 0 但**没拉到东西**
+
+**修复**:
+```powershell
+# 显式分两步走 + 验证
+git -C D:\projects-online fetch origin main          # 显式 fetch
+git -C D:\projects-online merge --ff-only origin/main # fast-forward 合并 (不 ff 时会报错)
+git -C D:\projects-online log --oneline -3            # 验证 HEAD
+```
+
+**教训**:
+- **`git pull` 是"fetch + merge"两步的简写**, 失败模式不直观 — 拆成 `fetch` + `merge --ff-only`, 失败时报错更清晰
+- 每次 `git pull` 后**必跑** `git log HEAD..origin/main --oneline` 验证 (空输出 = 已最新)
+- 部署机 + 本地 + 远端**三方同步检查**是部署前的标准动作, 不要相信"我 pull 了"的口头确认
+- 部署机上 `git remote -v` 确认远端 URL 是对的 (本项目 125 上是 `git@gitee.com:frisker/projects-online.git`)
+
+---
+
+### 9.4 Vite 5 dev server 缓存脏, 浏览器所有请求 pending
+
+**Commit**: 隐式 (本次部署期间, 已修复)
+
+**症状**:
+- Vite dev server 启动 OK (日志 `VITE v5.4.21 ready in 2331ms`)
+- 浏览器访问 `http://182.168.1.125:5173/login` → 页面空白
+- F12 Network 看**所有请求**状态 `pending` (不返回, 不报错)
+- F12 Console 空
+- 后端 java 进程在跑, 8080 健康
+
+**根因**:
+- `node_modules/.vite/` 缓存目录的**依赖优化信息过期/损坏**
+- Vite 5 启动时**预扫描** element-plus 等依赖做 deps optimization (用 esbuild 子进程)
+- 缓存脏了之后, esbuild 在某个 element-plus 子模块的 AST 解析上**死循环或死锁**
+- 表现: HTML 模板 `/` 能返 (静态), 但所有 `/src/*.ts` 编译请求**全部挂起**
+
+**修复**:
+```powershell
+# 1) 停 Vite
+Get-Process -Name "node" -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Sleep -Seconds 3
+
+# 2) 删 .vite 缓存
+Remove-Item -Recurse -Force D:\projects-online\frontend\node_modules\.vite
+
+# 3) 重启 Vite (重新做 deps optimization)
+Set-Location D:\projects-online\frontend
+npm run dev
+```
+
+重启后日志:
+```
+VITE v5.4.21  ready in 2331 ms
+[vite] new dependencies optimized: element-plus/es, element-plus/es/components/...
+[vite] optimized dependencies changed. reloading
+```
+
+**教训**:
+- **Vite 5 + 大型 UI 库 (element-plus) + 缓存脏** = dev server 死锁, 表现是 "页面空白 + 请求全 pending"
+- **重启 Vite 前必删** `node_modules/.vite/` 缓存, 否则旧的脏缓存还会生效
+- `npm run dev` 启动时**关注 "new dependencies optimized" 日志**, 长时间没出现 = 预扫描卡住
+- 生产构建 (`npm run build`) 不受影响, 只 dev server 会卡 — 别因为 dev 挂了急着动 build 配置
+- 排查顺序: **清缓存 → 重启 → 验证 Network**, 比反复 reload 页面高效 10 倍
+
+---
+
+### 9.5 Spring Boot Actuator health 503 DOWN: mail health 缩进错位
+
+**Commit**: `9774b8e` (fix)
+
+**症状**:
+- `/actuator/health` 返回 `503 DOWN`, `groups: ["liveness", "readiness"]`
+- `/actuator/health/liveness` 和 `/health/readiness` 单独都返回 `200 UP` ✅
+- backend.log 有 `SocketTimeoutException: Connect timed out` 在 `org.eclipse.angus.mail.smtp.SMTPTransport`
+
+**根因**:
+- `5c14ab9` 之前尝试禁 mail health indicator, commit message 写的是 `management.health.mail.enabled: false`
+- 但**实际 patch 把 mail.enabled 加错位置** (在 endpoint.health 下, 不是 management.health 下):
+  ```yaml
+  management:
+    endpoint:
+      health:
+        show-details: when-authorized
+        probes:
+          enabled: true
+        mail:              # ❌ 错 — 在 endpoint 块内
+          enabled: false
+  ```
+- Spring 的 mail health indicator 关闭键是 `management.health.mail.enabled` (注意是 `management.health` 不是 `endpoint.health`)
+- `endpoint.health.mail.enabled` 这个 key **Spring 根本不识别**, mail health 继续在跑
+- mail health 尝试连 `smtp.internal.example.cn` (占位符) → 超时 → DOWN
+- liveness/readiness group **默认不包含 mail indicator**, 所以单独看是 UP, 只有聚合 health 总览才暴露问题
+
+**修复** (把 mail.enabled 移出 endpoint 块):
+```yaml
+management:
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  health:                  # ✅ 对 — management.health 命名空间
+    mail:
+      enabled: false
+```
+
+**教训**:
+- **Spring Boot Actuator 配置有 3 个独立命名空间**:
+  1. `management.endpoints.web.exposure.include` — 暴露哪些端点
+  2. `management.endpoint.<name>.*` — 单独端点的配置 (如 show-details, probes)
+  3. `management.health.<indicator>.*` — 单个 health indicator 的配置 (如 mail.enabled, db.enabled)
+- **commit message 写什么 ≠ 代码做了什么** — review diff 时要核对 YAML 实际缩进位置, 不能信 message
+- `liveness/readiness` 不等于 `总览 health` — 总览包含**所有** indicator, liveness/readiness 包含**部分** (Spring 默认 livenessState / readinessState)
+- 排查 health DOWN 时: **看 stderr 日志找具体超时 indicator** + **show-details=always 拿到 details** (本项目 show-details 配 `when-authorized`, 未认证拿不到 details, 排查时要临时改成 `always`)
+
+---
+
+## 10. 经验教训总结 v2 (2026-06-10 增补)
+
+| # | 教训 |
+|---|---|
+| 21 | **CORS 是浏览器独占, curl 测不出** — 前后端分离必须浏览器验证, 内网网段 (192.168/10/172.16) 必须加白名单 |
+| 22 | **"BUILD SUCCESS" ≠ "jar 是新的"** — 部署前必查 `archive.jar` LastWriteTime, mvn clean 失败要手动删 target |
+| 23 | **`git pull` 静默失败是真实风险** — 拆成 fetch + merge --ff-only, 每次必跑 `git log HEAD..origin/main` 验证 |
+| 24 | **Vite 5 + element-plus 缓存脏** = dev server 死锁 — 重启前必删 `node_modules/.vite/` |
+| 25 | **Spring Actuator health 配置 3 个命名空间别搞混** — `management.health.<indicator>` 不是 `management.endpoint.health.<indicator>` |
+| 26 | **liveness/readiness ≠ 总览 health** — 排查总览 DOWN 时单独看 liveness/readiness 是 200 没意义, 必看 stderr 找具体 indicator |
+| 27 | **"权限不足"是 axios 拦截器对 403 的统一提示** — 前端拦截器错误信息太粗, 应该 console.error Response body 帮排查 |
+
+---
+
+## 11. 协议变更日志 v2 (2026-06-10 增补)
+
+| 坑号 | 描述 | 关联 commit |
+|---|---|---|
+| 9.1 | CORS 白名单遗漏内网 IP 段 | `013e0c9` |
+| 9.2 | mvn clean 失败旧 jar 继续被用 | (本次部署隐式) |
+| 9.3 | git pull 静默失败 HEAD 落后 | (本次部署隐式) |
+| 9.4 | Vite 5 + element-plus 缓存脏死锁 | (本次部署隐式) |
+| 9.5 | Actuator health mail 配置缩进错 | `9774b8e` |
+
