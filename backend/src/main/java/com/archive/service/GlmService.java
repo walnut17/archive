@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.archive.common.LlmScenario;
 import com.archive.entity.LlmCallLog;
+import com.archive.entity.Project;
 import com.archive.repository.LlmCallLogRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -258,5 +259,63 @@ public class GlmService {
 
     private String safe(String s) {
         return s == null ? "" : s.replace("\n", " ").trim();
+    }
+
+    /**
+     * 语义匹配项目 (find_project LLM 兜底).
+     *
+     * <p>适用场景: FULLTEXT + LIKE %% 都搜不到 (用户用简称/拼音首字母/口头语, 如 "lmz" 实际指 "林谋志").
+     * 把所有项目名+code 喂给 LLM, 让它从全量项目里挑出最相关的 topN.
+     *
+     * @param query 用户查询
+     * @param candidates 所有项目 (库 <= 300 个, 1 次 LLM 调用就够)
+     * @param topN 返回 top N
+     * @return 匹配的项目 code 列表 (按相关度排序). 失败/空/未配置 → 返回空列表 (由调用方 fallback)
+     */
+    public List<String> semanticMatchProjects(String query, List<Project> candidates, int topN) {
+        if (candidates == null || candidates.isEmpty()) return List.of();
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("[semanticMatchProjects] API key 未配置, 跳过 LLM 兜底");
+            return List.of();
+        }
+
+        return callWithLog(LlmScenario.PROJECT_MATCH, () -> doSemanticMatchProjects(query, candidates, topN));
+    }
+
+    private List<String> doSemanticMatchProjects(String query, List<Project> candidates, int topN) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("用户查询: \"").append(query).append("\"\n\n");
+        prompt.append("以下是系统中所有 ").append(candidates.size()).append(" 个项目. ");
+        prompt.append("请根据用户查询 (可能是简称 / 拼音首字母 / 错别字 / 口头语), 找出最相关的 top ").append(topN).append(" 个项目.\n");
+        prompt.append("只返回这些项目的 code (格式: PRJ-XXXX-XXX), 用英文逗号分隔, 不要解释, 不要换行, 不要 markdown.\n");
+        prompt.append("如果确实没有任何项目相关, 返回 NONE.\n\n");
+        for (Project p : candidates) {
+            prompt.append("- code: ").append(p.getCode()).append(" | name: ").append(safe(p.getName()));
+            if (p.getCustomerName() != null && !p.getCustomerName().isBlank()) {
+                prompt.append(" | customer: ").append(safe(p.getCustomerName()));
+            }
+            prompt.append("\n");
+        }
+
+        String system = "你是档案馆项目检索助手, 擅长从项目名称/编号/客户中匹配用户的简称/拼音/口头语查询.";
+
+        try {
+            String resp = chat(system, prompt.toString(), 0.2, 200);
+            String trimmed = resp.strip();
+            if ("NONE".equalsIgnoreCase(trimmed) || trimmed.isBlank()) {
+                return List.of();
+            }
+            // 解析 "PRJ-1, PRJ-2, PRJ-3"
+            List<String> result = new ArrayList<>();
+            for (String s : trimmed.split("[,，\\s]+")) {
+                if (s.isBlank()) continue;
+                result.add(s);
+                if (result.size() >= topN) break;
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("[semanticMatchProjects] LLM 兜底失败, 返回空 (调用方 fallback): {}", e.getMessage());
+            return List.of();
+        }
     }
 }

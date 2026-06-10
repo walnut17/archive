@@ -2,9 +2,10 @@ import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 
 // 创建一个 axios 实例,统一拦截 401
+// timeout: 120s. Agent 模式最坏情况 5 步 ReAct + 5 次 LLM 调用 ≈ 50s, 留 2x buffer
 const http: AxiosInstance = axios.create({
   baseURL: '/api',
-  timeout: 30000,
+  timeout: 120000,
 })
 
 http.interceptors.request.use(

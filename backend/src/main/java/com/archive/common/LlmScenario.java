@@ -19,5 +19,7 @@ public enum LlmScenario {
     /** 问答重排序. */
     RERANK,
     /** 摘要生成. */
-    SUMMARY
+    SUMMARY,
+    /** 项目语义匹配 (find_project LLM 兜底: 简称/拼音/错别字 → 全名). */
+    PROJECT_MATCH
 }
