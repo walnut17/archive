@@ -44,16 +44,10 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
-  # Spring AI — 智能问答 Agent(Plan I)
+  # Spring AI — 智能问答 Agent（Plan I）
+  # 注: 不配 spring.ai.openai.*, 因为智谱用 v4 (非标准 v1)
+  # 改用自定义 GLMChatModel (调项目自家 GlmService -> 智谱 v4 endpoint)
   ai:
-    openai:
-      api-key: ${GLM_API_KEY:}
-      base-url: ${GLM_BASE_URL:https://open.bigmodel.cn/api/paas/v4}
-      chat:
-        options:
-          model: glm-4-flash
-          temperature: 0.3
-          max-tokens: 2048
     agent:
       enabled: ${AGENT_ENABLED:true}
       observation-truncate-chars: 2000
@@ -71,7 +65,7 @@ server:
 # 应用专属配置(从 config.json 注入,见 ConfigJsonLoader)
 app:
   glm:
-    api-key: 
+    api-key:
     chat-url: https://open.bigmodel.cn/api/paas/v4/chat/completions
     vision-url: https://open.bigmodel.cn/api/paas/v4/vision
     chat-model: glm-4-flash

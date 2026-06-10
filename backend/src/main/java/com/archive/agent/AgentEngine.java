@@ -36,16 +36,17 @@ public class AgentEngine {
     public AgentEngine(ChatClient.Builder builder,
                        AgentSystemPrompt systemPrompt,
                        List<AgentTool> agentTools,
-                       MessageChatMemoryAdvisor memoryAdvisor) {
+                       org.springframework.beans.factory.ObjectProvider<MessageChatMemoryAdvisor> memoryAdvisorProvider) {
         this.systemPrompt = systemPrompt;
-        this.memoryAdvisor = memoryAdvisor;
+        this.memoryAdvisor = memoryAdvisorProvider.getIfAvailable();
         this.toolMap = new ConcurrentHashMap<>();
         for (AgentTool tool : agentTools) {
             toolMap.put(tool.name(), tool);
         }
+        // 不传 defaultTools: AgentEngine 手写 ReAct 循环, 工具由 toolMap 自己 dispatch
+        // (Mavis 修 P0-15: Sisyphus 误用 defaultTools(AgentTool[]), 1.1 公开 API 期望 @Tool 注解)
         this.chatClient = builder
                 .defaultSystem(systemPrompt.render(null))
-                .defaultTools(agentTools.toArray(new AgentTool[0]))
                 .build();
     }
 
@@ -128,11 +129,11 @@ public class AgentEngine {
      * 调用 LLM (ChatClient + Memory).
      */
     private String callLlm(String prompt) {
-        return chatClient.prompt()
-                .user(prompt)
-                .advisors(memoryAdvisor)
-                .call()
-                .content();
+        var spec = chatClient.prompt().user(prompt);
+        if (memoryAdvisor != null) {
+            spec = spec.advisors(memoryAdvisor);
+        }
+        return spec.call().content();
     }
 
     /**
