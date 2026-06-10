@@ -1,554 +1,539 @@
 # 投委会档案管理系统
 
-> 投委会专属档案管理与智能分析 Web 应用
-> **当前任务**:实施 **Plan I — 智能问答 Agent**(Spring AI 1.1,基线已就绪,等你开工)
-> **基线 commit**:`a34f540`(M0~M2 + Plan A~G 全部完工 + Plan I 方案定稿 + v1.1 评审修)
-> **接手 AI 必读**: 本 README + plan-I §0 接手 Agent 必读
+> 投委会专属档案管理与智能分析 Web 应用 (Spring Boot 3.3 + Vue 3)
 >
-> 🚨 **接手 AI / 新接手 agent 必读 (开工 3 步)**:
-> 1. **拉 [docs/reviews/README.md](docs/reviews/README.md) + [docs/LESSONS-LEARNED.md](docs/LESSONS-LEARNED.md)** —— 看上一个接手 AI 漏的 P0 / P1, 避免重复
-> 2. **看本 README + plan-I §0** —— 了解项目架构
-> 3. **看 [TASKS.md](TASKS.md) 抢任务** —— 拉最新, 抢 `未开发` 的
+> **项目一句话**: 让投委会秘书/委员 5 分钟内回答"这个项目抵押物处理到哪一步了 / 江苏地区空债权平均回收率多少"
 >
-> **上个接手 AI 踩了 5 P0 + 1 P1**: [docs/reviews/2026-06-09-plan-i-p0-review.md](docs/reviews/2026-06-09-plan-i-p0-review.md)
+> **当前阶段**: **v1.1 业务需求评审** (2026-06-10) — Plan I v1.0 (智能问答 Agent) 已完工, 现在按 `docs/requirements/ARCH-DECOMPOSITION.md` 的 **RI-1~45** 推进 v1.1 增量
+> **基线 commit**: `0c6325f` (v1.0 + v1.1 §5.6 评审修)
+> **生产服务器**: 182.168.1.125 (单机, Windows + Caddy + Spring Boot)
+>
+> 🚨 **接手方必读**: 先看下面 **§1 角色导航**, 找到自己是哪类人, 跟着对应章节开工, 5 分钟即可认识项目 + 找到入口.
 
 ---
 
-## 🚨 0. 你是谁?你要做什么?(接手 AI 看这里就够)
+## 📑 目录
 
-**你的唯一任务**:**实施 Plan I 智能问答 Agent**,把现有 `QaController` 写死的"search → rerank → generate"三步管道,**升级为 Spring AI 1.1 智能 Agent**,支持自适应选工具、语义定位项目、追问用户、多轮对话。
-
-**多人 / 多 agent 物理并行开发** —— 11 个子项可拆并行,每个人都看 [`TASKS.md`](TASKS.md) 抢任务,**谁先 push 谁占**。**不要手快先点 commit,先看 [§0.5 并行开发规则](#-05-多人多-agent-物理并行开发规则) 再动手**。
-
-**3 步开工**:
-1. **`cat .mavis/plans/plan-I-agent-implementation.md` §0「接手 Agent 必读」**(~10 分钟)
-2. **看 [`TASKS.md`](TASKS.md) 找一个 `可并行: ✅` + `未开发` 的任务,立即 commit + push 占用**(以防别人抢)
-3. 按 plan-I §2 详读那个子项的 spec,写代码,完工更新 TASKS.md + commit + push
-
-**特别预警** —— 反复看 3 遍:
-- ⚠️ **Spring AI 1.1 公开 API 没有 `ReactAgent` class**(那是 1.2 路线 / 阿里云 Spring AI Alibaba 概念)。本项目用 `ChatClient` + `@Tool` 注解 + `Advisor` + **手写 5 步 ReAct 循环**。详见决策 doc §1.2.1.1 第 6 点 + plan-I §0.3。
-- ⚠️ **`spring.ai.agent.max-iterations` 不存在** —— 5 步上限**硬编码在 `AgentEngine` 的 for 循环里**(`MAX_ITERATIONS = 5`)。
-- ⚠️ **业务需求 §4.4「多轮对话」必须实现**(plan-I I-13 子项)—— 不要跳过。
+- [§0. 项目是什么](#-0-项目是什么)
+- [§1. 角色导航 (核心)](#-1-角色导航-核心)
+- [§2. 需求文档位置](#-2-需求文档位置)
+- [§3. 项目背景与版本路线](#-3-项目背景与版本路线)
+- [§4. 必读文档 (按角色分类)](#-4-必读文档-按角色分类)
+- [§5. 程序员开工: 抢任务 SOP](#-5-程序员开工-抢任务-sop)
+- [§6. 卡住怎么办 / 找谁](#-6-卡住怎么办--找谁)
+- [§7. 仓库结构 + 文档演进](#-7-仓库结构--文档演进)
 
 ---
 
-## 🤝 0.5 多人/多 agent 物理并行开发规则
+## 🎯 0. 项目是什么
 
-> **协调表**: [`TASKS.md`](TASKS.md)(仓库根,**唯一**状态表)
->
-> **关键 2026-06-09 项目方新口径**: 多人多 agent 并行推 **main 分支**(开发中, 代码未经审核), Mavis 沙箱 审核后 推到 **minimax 分支**(成品, 生产用)。
+### 0.1 解决什么问题
 
-**分支角色**:
+投委会 (投资决策委员会) 每个项目从立项到结清会产生几百份材料 (合同 / 律师函 / 回款凭证 / 抵押物证明 / 议案 / 备忘录 ...) 和几十次投委会会议决议. **现状**: 业务方查"这个项目抵押物 A 处置到哪了"要翻 Excel + 翻历史 PDF, 几天才能拼出来. **目标**: 输入"这个项目抵押物 A 处置到哪了", **5 秒返回** + 证据链 + 时间线.
 
-| 分支 | 性质 | 谁能推 | 推什么 |
+### 0.2 5 个核心能力
+
+| 能力 | 简述 | 文档 |
+|---|---|---|
+| 📂 项目档案 | 一个项目从立项到结清的全周期材料, 软删/回收站/版本控制 | §5.11 |
+| 🤖 智能问答 (Agent) | 多轮对话, LLM 工具调用 (find_project / search_fulltext / query_mysql), 支持"问这个项目"+"问全公司"两种模式 | §5.6 + Plan I |
+| 📊 关键事实抽取 | LLM 自动从材料里抽"抵押物 / 担保人 / 处置和解"等 32 项业务维度, 存到 `project_fact` + 不可变事件流 `project_fact_event` | §5.8 |
+| 🔍 跨项目聚合 | 业务方问"江苏地区空债权回收率多少", LLM 调 SQL 聚合 (5 个批量工具) | §5.9 |
+| 📚 业务术语字典 | 投委会业务专有术语 (空债权 / 回收率 / 复议 ...), 维护 + 网络查候选 | §5.10 |
+
+### 0.3 仓库规模 (2026-06-10)
+
+- **后端**: Spring Boot 3.3 + JPA + Spring AI 1.1 (Agent), ~50 文件, 200+ 测试
+- **前端**: Vue 3 + Vite + Element Plus, ~30 文件
+- **数据库**: MySQL 8 + FULLTEXT 索引
+- **LLM**: 智谱 GLM-4 (主) + OpenAI 兼容接口 (备)
+- **部署**: 单机 (182.168.1.125) + Caddy + WinSW
+
+---
+
+## 👥 1. 角色导航 (核心)
+
+> **本文档核心目的**: 4 类角色, 各 5 行说清楚你是谁 / 读什么 / 写什么 / 怎么开工 / 不能干什么.
+
+| 角色 | 你是谁 | 你要读 | 你要写 | 你怎么开工 | 边界 |
+|---|---|---|---|---|---|
+| **[需求开发人员](#11-需求开发人员)** (产品/业务分析师) | 把业务方嘴里"我们希望 XX"翻译成结构化需求 §X.Y | `docs/requirements/REQUIREMENTS.md` (现有) + 业务方访谈 | 在 `docs/requirements/REQUIREMENTS.md` 加 §X.Y 新章节, 含 5 字段 (业务/数据/角色/验收/依赖) | [§1.1](#11-需求开发人员) | ❌ 不写代码, 不写 RI 拆解 |
+| **[需求审核人员](#12-需求审核人员)** (PM/业务方代表) | 审新需求 / 拍板模糊点 / 维护术语 | `docs/requirements/REQUIREMENTS.md` + 业务背景资料 | 在 PR 评审里批 +/- 反馈, 维护 `docs/requirements/REQUIREMENTS.md` §13 决策记录 | [§1.2](#12-需求审核人员) | ❌ 不写代码, 不审 RI 拆解 |
+| **[架构师](#13-架构师)** (技术 Lead) | 把需求 §X.Y 拆成可落地的 RI (Requirement Item) | `docs/requirements/REQUIREMENTS.md` + 现有 `docs/ARCHITECTURE-v2.md` + `docs/DB-SCHEMA-v2.md` | 在 `docs/requirements/ARCH-DECOMPOSITION.md` 加 RI-N: 业务/影响表/角色/验收/依赖/估算 | [§1.3](#13-架构师) | ❌ 不直接写代码 (除非示范) |
+| **[程序员](#14-程序员)** (接手 AI / 后端 / 前端 / DBA) | 按 RI 抢任务 + 写代码 + 跑测试 + 提 PR | 必读 [§4.1](#41-程序员必读基线包) + 抢到的 RI 节 | 代码 + 单元测试 + 1 commit / 任务, push 到 main | [§5 抢任务 SOP](#-5-程序员开工-抢任务-sop) | ❌ 不擅自改需求, 不擅自拆别人的 RI |
+
+### 1.1 需求开发人员
+
+**你是谁**: 投委会业务方 (frisker) 嘴里"我想要 XX", 你翻译成结构化需求. **不写代码, 不写 RI 拆解** (那是架构师的事).
+
+**你要读** (按顺序):
+1. `docs/requirements/REQUIREMENTS.md` (1342 行, 业务全貌) — **5 分钟扫目录, 1 小时精读**
+2. 业务方 4 轮访谈纪要 (在 `docs/AGENT-REQUIREMENTS.md` + git history) — 看"原话"vs"结构化"的差距
+3. `docs/LESSONS-LEARNED.md` (15+ 踩坑) — 避免重复别人错过的需求
+
+**你要写** (4 件事):
+- **新需求 §X.Y 章节** (在 `docs/requirements/REQUIREMENTS.md` 末尾 `## 14. <标题>` 之后, 1 节 1 个业务功能) — 含 5 字段:
+  - **业务**: 一句话业务目标
+  - **数据**: 涉及哪些表 / 新增哪些字段
+  - **角色**: 谁有权使用
+  - **验收**: 3-5 条 Given/When/Then
+  - **依赖**: 跟哪些已有 §X.Y 关联
+- **业务术语定义** (在 §5.10) — 业务方嘴里的"空债权" / "复议" / "维护" 等
+- **更新 §3 业务流程图** (如新增环节)
+- **更新 §9 性能 / §10 验收 / §12 版本规划**
+
+**你怎么开工** (5 步):
+1. **读** `docs/requirements/REQUIREMENTS.md` §0~§3 (认识系统)
+2. **采访业务方** (投委会秘书/委员), 记录"原话"
+3. **翻** 已有章节 (避免重复)
+4. **写** 新 §X.Y 章节 (1 节 1 PR)
+5. **提 PR** 给需求审核人员 + 架构师 (架构师会基于你的 §X.Y 写 RI)
+
+**你不能**:
+- ❌ 写代码 (交架构师拆 RI 后给程序员)
+- ❌ 自己拍板"阈值 0.6" (这要架构师拆 RI 时定)
+- ❌ 改 `ARCH-DECOMPOSITION.md` (那是架构师维护)
+- ❌ 跨章节改老需求 (那要单独立 §14.1 "修订记录")
+
+### 1.2 需求审核人员
+
+**你是谁**: PM / 业务方代表, 拍板"这个需求做不做 / 怎么算做完" / 维护业务术语 / 审 RI 拆解. **不写代码**.
+
+**你要读** (按顺序):
+1. `docs/requirements/REQUIREMENTS.md` (全) — 跟需求开发人员**同一份**, 你是审
+2. `docs/requirements/ARCH-DECOMPOSITION.md` (RI-1~45) — 审架构师拆的 RI 是否落地
+3. 业务背景资料 (`docs/SIMILAR-PRODUCTS.md` + 内部 wiki)
+
+**你要写** (3 件事):
+- **PR 评审 +/- 反馈** — 业务逻辑通不通 / 验收标准清不清楚 / 术语准不准确
+- **§13 决策记录** — 在 `REQUIREMENTS.md` §13 末尾追加"PM 拍板: XXX", 锁住已决定的事项
+- **业务术语字典维护** — `docs/requirements/REQUIREMENTS.md` §5.10 引用业务术语, 你审术语定义
+
+**你怎么开工** (每天做的事):
+1. **早上** — 看 GitHub PR (需求 + RI), 标 +/- 反馈
+2. **按需** — 业务方有"新需求碎片"找你, 你先做 30 分钟访谈, 转交需求开发人员
+3. **每周** — 维护一次 `REQUIREMENTS.md` §13 决策记录 (锁住当周拍板)
+4. **每月** — 审 `ARCH-DECOMPOSITION.md` RI 进度 (P0/P1/P2 优先级是否调整)
+
+**你不能**:
+- ❌ 写代码 (你的活儿是**说清楚**, 不是实现)
+- ❌ 改 RI 拆解 (那是架构师 + 程序员)
+- ❌ 不审就放行 (PR 流转: 需求审 → 架构审 → 实现)
+
+### 1.3 架构师
+
+**你是谁**: 技术 Lead, 把需求 §X.Y **拆成可落地的 RI (Requirement Item)**. 不直接写代码 (除非示范).
+
+**你要读** (按顺序):
+1. `docs/requirements/REQUIREMENTS.md` (全) — 跟需求开发/审核**同一份**, 你是拆
+2. `docs/ARCHITECTURE-v2.md` (685 行) — 现有架构基线
+3. `docs/DB-SCHEMA-v2.md` (1060 行) — 现有 schema (你要加表/字段看这里)
+4. `docs/architecture/01~06-arch-*.md` (另一个 AI 写的分章架构) — 现代化拆解参考
+5. `docs/AGENT-FRAMEWORK-DECISION.md` (885 行) — 关键决策 (Spring AI 1.1 + 不引 spring-ai-alibaba)
+
+**你要写** (在 `docs/requirements/ARCH-DECOMPOSITION.md` 加 RI):
+- **RI-N: <标题> (§X.Y 引用)** — 每节 6 字段:
+  - **业务**: 引用需求 §X.Y
+  - **影响表**: 涉及 / 新增 / 修改哪些表
+  - **角色**: 谁能调
+  - **验收**: 3-5 条 Given/When/Then
+  - **依赖**: 跟哪些已有 RI 关联
+  - **估算**: BE 1d / FE 0.5d / 测试 0.5d (人天)
+- **优先级** P0/P1/P2 (在文档末尾"优先级"表里)
+- **关键路径** + **风险** (业务方 / 业务术语 / 法律法规约束)
+
+**你怎么开工** (流程):
+1. **需求开发人员 PR 提了新 §X.Y** → 你 1 小时内读完, 拆 1-3 个 RI
+2. **加到** `docs/requirements/ARCH-DECOMPOSITION.md` (追加 RI-N 节)
+3. **在 PR 评审里** @ 程序员, 标"可抢" / "需先做 RI-K"
+4. **每周** — 看 `TASKS.md` (程序员抢的进度), 调整 RI 优先级 / 砍需求
+
+**你不能**:
+- ❌ 写代码 (你的活儿是**拆清楚**, 实现交程序员)
+- ❌ 直接动 `TASKS.md` (那是程序员自己维护的)
+- ❌ 不审就放行程序员开工 (PR 流转: 需求审 → 架构审 → 实现)
+
+### 1.4 程序员
+
+**你是谁**: 后端 / 前端 / DBA / 测试 / 接手 AI. 你的**唯一任务** = 抢 RI + 写代码 + 提 PR. **不写需求, 不拆 RI** (那是需求开发/架构师).
+
+**你要读** (按角色细分, 见 [§4.1 必读基线包](#41-程序员必读基线包)):
+- **后端 / 接手 AI** — `docs/AGENT-IMPL-PLAN.md` + `docs/DB-SCHEMA-v2.md` + `docs/ARCHITECTURE-v2.md` + 抢到的 RI
+- **前端** — `frontend/README.md` + `docs/AGENT-IMPL-PLAN.md` §I-12 + 抢到的 RI
+- **DBA** — `docs/DB-SCHEMA-v2.md` + 抢到的 RI
+- **测试** — `docs/M1-TEST-TASKS.md` + `docs/V2-TEST-TASKS.md` + 抢到的 RI
+
+**你要写**:
+- **代码** (后端 Java / 前端 Vue / SQL 迁移 / 单元测试)
+- **1 commit / 任务** (不囤)
+- **commit message** 格式: `feat(<scope>,RI-N): <description>` 或 `fix(<scope>): <description>`
+- **更新 `TASKS.md`** — 标"占用-X (时间)" / "已完成 (X / 日期)"
+
+**你怎么开工** ([§5 抢任务 SOP](#-5-程序员开工-抢任务-sop)):
+1. **看 `TASKS.md` 找 `可并行: ✅` + `未开发` + 跟你技术栈匹配的 RI** (或新需求里没拆 RI 的, 自己拆)
+2. **改 `TASKS.md` 那一节** `状态: 未开发` → `占用-<你的名字> (<时间>)`
+3. **10 秒内** `git add TASKS.md && git commit && git push origin main` — **push 成功 = 占用成功**
+4. **写代码** (1-3 小时)
+5. **完工** 改 `TASKS.md` 那一节 → `已完成 (<你的名字> / <日期>)` + 代码 commit + push
+
+**你不能**:
+- ❌ 改 `REQUIREMENTS.md` (那是需求开发人员的活)
+- ❌ 改 `ARCH-DECOMPOSITION.md` RI 拆解 (那是架构师)
+- ❌ 推 `minimax` 分支 (那是沙箱的活)
+- ❌ 多个 RI 写 1 个 commit (1 commit = 1 RI, 拆不开才能合)
+
+---
+
+## 📂 2. 需求文档位置
+
+> **2026-06-10 业务方决策**: 把需求文档**单独放一个文件夹**, 方便识别. 业务方明确要求"放在哪都要在根 README 说明".
+
+**位置**: `docs/requirements/`
+
+**当前文件**:
+
+| 文件 | 行数 | 内容 | 给谁看 |
 |---|---|---|---|
-| `main` | 开发中(代码未经审核) | **项目方 + 沙箱 + 接手 AI** 都可 | 代码 + 配置 + SQL + TASKS.md 状态变更 |
-| `minimax` | 成品(生产用) | **只有 Mavis 沙箱** | Mavis 从 main 拉审过的代码, 推到 minimax |
-| `feat/*` | 个人分支 | 接手 AI | 临时工作(也可以不走 feature, 直接 main 推) |
+| **`docs/requirements/REQUIREMENTS.md`** | 1342 | 业务需求 v1.1 (含 §13 Mavis 拓展) | 业务方 / 全员 |
+| **`docs/requirements/ARCH-DECOMPOSITION.md`** | ~24KB | 需求拆解工作底稿 (RI-1~45) | 架构师 / 后端 / 前端 / DBA / 测试 |
 
-**所有人从 main 拉最新**。接手 AI 推 main 是 OK 的(项目方授权过)。
-
-**状态机**(只能向前推,禁止回退):
+**结构** (简单扁平, 业务方拍"简单"方案):
 ```
-未开发  ──占用人 commit+push 到 main──>  占用-XXX  ──完成 commit+push 到 main──>  已完成(XXX / YYYY-MM-DD)
+docs/requirements/
+├── REQUIREMENTS.md                # 业务需求 v1.1
+└── ARCH-DECOMPOSITION.md          # 拆解工作底稿 RI-1~45
 ```
 
-**抢占 SOP**(3 步,关键!):
-1. **看 [`TASKS.md`](TASKS.md)**,找一个 `可并行: ✅` + `未开发` + 你能做的任务
-2. **立即** 改本表对应节:
-   ```
-   - **状态**: 未开发
-   ```
-   改为
-   ```
-   - **状态**: 占用-<你的名字>(<当前时间>)
-   ```
-3. **10 秒内** `git add TASKS.md && git commit -m "chore(tasks): claim T-I-X by <你的名字>" && git push origin main`
-   - **push 成功 = 占用成功**。别人看到 push 通知,知道你占了,不会重复干。
-   - **没 push 之前不算占** —— 别人可能先 push,你只是改了自己本地文件,别人看不到。
+**历史**:
+- 2026-06-10 前: `docs/REQUIREMENTS-v1.md` (扁平)
+- 2026-06-10 起: `docs/requirements/` (独立目录, 2 文件扁平)
+- 老引用 (`docs/REQUIREMENTS-v1.md`) 已 git-rename 保留历史, 实际路径请用新位置
 
-**完工 SOP**(3 步,关键!):
-1. 改本表对应节: `占用-<名字>` → `已完成(<名字> / <日期>)`
-2. `git add TASKS.md && git commit -m "chore(tasks): mark T-I-X done by <你的名字>" && git push origin main`
-3. 写代码的 commit **也立即 push**(别囤)
-
-**严禁**:
-- ❌ 改 `占用-A` 改回 `未开发`(A 会干掉你)
-- ❌ 一个 commit 改多个任务的代码
-- ❌ 占用了但**没 push** 超过 10 分钟(失联,别人接管)
-- ❌ 直推 `minimax` 分支(沙箱专属, 接手 AI 推会 403)
-
-**接管 SOP** (接手 AI 看到任务被占但占用人失联):
-1. `git log --author="<占用人名字>" -1` 看占用人最后一次 commit 时间
-2. > 30 分钟没动 + 没 PR 等待合并 = 失联
-3. 接管人: 改 TASKS.md `占用-X` → `占用-<自己>(reclaim from X)`, push main
-4. 项目方(Mavis)后续不会追责 (被回收的任务 接管人可继续干)
-5. 原占用人复活看到 → 主动让位 → 抢别的任务
-
-**冲突解决**:
-- 晚 push 的人 `git pull --rebase` 解冲突(本项目拆得很开,冲突概率极低)
-- 同一文件多 commit 冲突 → 1 个人加新方法,另 1 个人加新类,**不冲突**
-- **多 session 同时间抢同任务**: 1 个先 push main, 后到的 pull 看到占用, 换任务
-
-**任务粒度** = 1 commit = 1-3 小时。**拆得够细,才能并行**。
-
-**Mavis 沙箱 工作流**(新口径, 2026-06-09):
-1. 接手 AI 都在 main 推代码 (Mavis 不审, 代码未经审核)
-2. 接手 AI 完工后, 在 IM/邮件 通知 Mavis
-3. Mavis 拉 main 最新, 审 + 改, 通过
-4. Mavis 从 main 推到 minimax(成品)
-5. 生产服务器从 minimax pull 部署
-
-**完整说明**: [`TASKS.md`](TASKS.md) 的「状态机」「冲突处理 SOP」段。
+**重命名映射**:
+- `docs/REQUIREMENTS-v1.md` → `docs/requirements/REQUIREMENTS.md` (业务需求, 874→1342 行, 内容未删)
+- `docs/REQUIREMENTS-ARCH-DECOMPOSITION.md` → `docs/requirements/ARCH-DECOMPOSITION.md` (拆解底稿, RI-1~45)
 
 ---
 
-## ✅ 0.6 README 自检(读完能回答 3 个问题,就能开工)
+## 🏗 3. 项目背景与版本路线
 
-接手 AI / 程序员**读完 §0 + §0.5 + §3** 后,能回答这 3 个问题,就 OK:
+### 3.1 v1 (2026-06-08) — 单机基线
 
-- [ ] **Q1**: 我从哪个文件找任务? → **答**: [`TASKS.md`](TASKS.md)
-- [ ] **Q2**: 抢一个任务要做什么? → **答**: 改那一节 `状态: 未开发` → `占用-<我的名字>`,10 秒内 `git commit + push`,**push 成功才算占**
-- [ ] **Q3**: 干完活怎么标记? → **答**: 改 `占用-X` → `已完成(X / 日期)`,commit + push,代码也 push
+- **架构**: 双机主备 → 单机轻量 (定稿)
+- **能力**: M0 (端到端) + M1 (档案 CRUD) + M2 (知识库问答框架)
+- **LLM**: 智谱 GLM-4 (主) + 不用向量化
+- **数据库**: MySQL 8 + FULLTEXT 索引
 
-**3 个问题都能答,跳到 §3 Step 0 开始抢任务**。答不上,重新看 §0.5。
+### 3.2 Plan A~G (2026-06-09) — 增量完工
 
----
+- 7 个 plan: 业务核心 / UX 修 / RBAC / 测试打磨 / Phase1 架构修 / LLM 用量统计 / 智能 QA Agent
+- **结果**: 14 个子项完工, 基线 `0c6325f`
 
-## 📊 1. 任务概览(Plan I)
+### 3.3 Plan I (2026-06-09) — 智能问答 Agent (v1.0 完成)
 
-| 项 | 值 |
-|---|---|
-| **任务 ID** | Plan I(智能问答 Agent) |
-| **基线** | `a34f540` |
-| **目标 commit 数** | **13+**(每子项一个) + 1 聚合 |
-| **工期估算** | **~8.3 天** |
-| **关键路径** | I-3 → I-9 → I-10 → I-11 |
-| **可并行** | I-4 / I-5 / I-6 / I-7 / I-8 / I-12 / I-13(7 个) |
-| **零回归** | 现有 M0~M2 + Plan A~G 全部功能不能挂 |
-| **降级路径** | Spring AI 挂时 QaController 走老 GlmService |
+- 13 个子项: Spring AI 1.1 + Agent + 5 步 ReAct 循环 + 6 个工具
+- **关键工具**: `find_project` (4 级兜底) / `search_fulltext` / `query_mysql` (白名单 + 聚合) / `llm_summarize` / `ask_clarification` / `get_project_business_data`
+- **多轮对话**: `MessageChatMemoryAdvisor` + `chat_memory` 表 (30 天)
+- **结果**: 13/13 完工, v1.0 投产
 
-**📋 任务分块清单 + 抢占规则**: 仓库根 [`TASKS.md`](TASKS.md)(13 个任务,可并行标记,谁先 push 谁占)
-**📅 依赖图**:
-```
-I-1(pom) → I-2(yml) → I-3(包骨架) → [I-4 I-5 I-6 I-7 I-8 并行] → I-9(AgentEngine) → I-10(QaController) → [I-11 I-12 并行]
-                                                          I-13(多轮对话,跟 I-9 之后并行)
-```
-**⏱️ 并行机会**: 物理上可以 5 个人同时干(T-I-4 / T-I-5 / T-I-6 / T-I-7 / T-I-8 互相不冲突)
+### 3.4 v1.1 (2026-06-10 进行中) — 业务规则细化 + 智能问答 UI 升级
 
-**13 子项工时表**(详细看 plan-I §1):
+- **新增需求**: §5.6.7~§5.11 + §13 (Mavis 拓展: 置信度 3 级 / 隐式切换 5 级 / 决议变更 / 编号预留 / 网络查字典 / 软删 / RBAC 5 角色 / 审计加强 / 看板 / 通知中心 / 导出 / 预览 / 脱敏视图)
+- **拆解**: RI-1~45 (架构师维护)
+- **基线**: 业务评审通过, 进入开发
 
-| # | 范围 | 估时 | 关键 |
-|---|---|---|---|
-| I-1 | pom.xml 加 Spring AI BOM + 4 starter | 0.2 天 | 不引 autoconfigure-agent |
-| I-2 | application.yml 加 Spring AI + agent 开关 | 0.1 天 | `spring.ai.agent.enabled=false` 即降级 |
-| I-3 | agent 包骨架 + 5 DTO + Listener | 0.5 天 | `@Tool` 接口 + ChatClient config |
-| I-4 | SearchFulltextTool | 0.5 天 | 复用现有 KnowledgeSearchService |
-| I-5 | FindProjectTool + project FULLTEXT 索引 | 0.5 天 | **语义锁项目**关键工具 |
-| I-6 | QueryMysqlTool(白名单 + **聚合** + 操作符) | 1.5 天 | **安全重点** |
-| I-7 | LlmSummarizeTool + AskClarificationTool | 0.5 天 | 复用 LLMProvider |
-| I-8 | GetProjectBusinessDataTool | 0.5 天 | 复用 Plan C-5 |
-| I-9 | **AgentEngine + ChatClient + 手写 5 步 ReAct 循环** | **1.5 天** | **最关键** |
-| I-10 | QaController 改造 + 降级 | 0.5 天 | `@ConditionalOnProperty` 开关 |
-| I-11 | 端到端集成测试(10 用例) | 1 天 | mvn test + 浏览器 |
-| I-12 | 前端 Knowledge.vue + AgentStepsPanel | 0.5 天 | Vue 3 + Element Plus |
-| I-13 | **多轮对话** + MessageChatMemoryAdvisor + chat_memory 表 | 0.5 天 | **补业务需求 §4.4 漏实现** |
+### 3.5 v1.2 (规划) — 跨项目 Plan-and-Execute
+
+- 5 个批量工具升级为 Plan-and-Execute (LLM 自主规划查询)
+- 通知系统接入邮件/钉钉
+- 移动端
+
+### 3.6 v2.0 (远期) — 多用户多项目
+
+- 真正的多用户 (替代单用户 + 角色化)
+- 多租户
 
 ---
 
-## 📚 2. 必读文档(5 份,按顺序)
+## 📚 4. 必读文档 (按角色分类)
+
+> **不再"按顺序"读**, 按**你的角色**读**对应的那一节**.
+
+### 4.1 程序员必读基线包
+
+**5 分钟扫**, 30 分钟精读, 然后看 [§5 抢任务 SOP](#-5-程序员开工-抢任务-sop) 开工.
 
 | 序 | 文件 | 行数 | 必读理由 |
 |---|---|---|---|
-| ① | `.mavis/plans/plan-I-agent-implementation.md` | 1192 | **你的主 spec**——12 子项详细 + 验收 + commit 规范 + 完工 checklist |
-| ② | **`TASKS.md`** | ~300 | **任务分块清单**(本仓库根)—— 13 个子项 + 可并行标记 + 抢占/完工 SOP |
-| ② | `docs/AGENT-IMPL-PLAN.md` | 252 | 总览:6 工具 + 工期 + 风险 + 集成点 + 完工验收 |
-| ③ | `docs/AGENT-FRAMEWORK-DECISION.md` | 885 | 决策:Spring AI 1.1 + **不引** spring-ai-alibaba,**踩坑预警 §1.2.1.1 第 6 点** |
-| ④ | `docs/AGENT-REQUIREMENTS.md` | 257 | 业务:15 真实问题 + 7 场景 + 验收标准(§6 验收场景) |
-| ⑤ | `docs/AGENT-RESEARCH.md` | 194 | 调研:7 框架评分 + Top 3 + 资源链接(必看 §5 资源链接) |
+| ① | `TASKS.md` (仓库根) | ~300 | **任务分块清单** — 找能抢的 RI, 看 [§5](#-5-程序员开工-抢任务-sop) |
+| ② | `docs/requirements/ARCH-DECOMPOSITION.md` | ~24KB | **RI-1~45 拆解底稿** — 找要抢的 RI 详细描述 |
+| ③ | `docs/AGENT-IMPL-PLAN.md` | 252 | Plan I 总览 (Spring AI 1.1 + 5 步 ReAct 循环) |
+| ④ | `docs/AGENT-FRAMEWORK-DECISION.md` | 885 | 决策:Spring AI 1.1 + **不引** spring-ai-alibaba (踩坑预警 §1.2.1.1 第 6 点) |
+| ⑤ | `docs/LESSONS-LEARNED.md` | 19KB | 15+ 踩坑, **避免重蹈覆辙** |
 
-**参考文档(按需查)**:
-- `docs/ENVIRONMENT-DEPENDENCIES.md` (330) — 硬件/网络/凭证,部署细节
-- `docs/DEV-STANDARDS.md` (466) — 开发标准,**§7.2 完工交回清单必读**
-- `docs/LESSONS-LEARNED.md` (19KB) — 15+ 踩坑,**避免重蹈覆辙**
-- `docs/TEAM-ARCHIVE.md` (12KB) — 沙箱 SSH 重建 + 环境
-- `docs/ARCHITECTURE-v2.md` (685) — 现有架构基线
-- `docs/DB-SCHEMA-v2.md` (1060) — 现有 schema(你要给 project 表加 FULLTEXT 索引)
-- `docs/REQUIREMENTS-v1.md` (872) — 业务全貌
+**按技术栈**额外读:
+- **后端** — `docs/ARCHITECTURE-v2.md` (685) + `docs/DB-SCHEMA-v2.md` (1060)
+- **前端** — `frontend/README.md` + `docs/AGENT-IMPL-PLAN.md` §I-12
+- **DBA** — `docs/DB-SCHEMA-v2.md` (1060) + `docs/ENVIRONMENT-DEPENDENCIES.md` (330)
+- **测试** — `docs/M1-TEST-TASKS.md` + `docs/V2-TEST-TASKS.md` + `docs/ACCEPTANCE-GUIDE.md`
+
+### 4.2 需求开发人员必读包
+
+| 序 | 文件 | 行数 | 必读理由 |
+|---|---|---|---|
+| ① | `docs/requirements/REQUIREMENTS.md` | 1342 | **业务全貌** — 5 分钟扫目录, 1 小时精读, 2 小时做笔记 |
+| ② | `docs/AGENT-REQUIREMENTS.md` | 257 | 业务访谈原始记录 (15 真实问题 + 7 场景) |
+| ③ | `docs/SIMILAR-PRODUCTS.md` | 16KB | 行业参考 (DeepSeek / 豆包 / 类似档案系统) |
+| ④ | `docs/AGENT-IMPL-PLAN.md` | 252 | 理解需求怎么落地到代码 (反向理解技术边界) |
+
+### 4.3 需求审核人员必读包
+
+| 序 | 文件 | 行数 | 必读理由 |
+|---|---|---|---|
+| ① | `docs/requirements/REQUIREMENTS.md` | 1342 | 同 4.2 — 你跟需求开发**一起读**, 你是审 |
+| ② | `docs/requirements/ARCH-DECOMPOSITION.md` | ~24KB | 审架构师拆的 RI 落地 |
+| ③ | `docs/LESSONS-LEARNED.md` | 19KB | 看业务方之前踩的坑 (避免重复) |
+
+### 4.4 架构师必读包
+
+| 序 | 文件 | 行数 | 必读理由 |
+|---|---|---|---|
+| ① | `docs/requirements/REQUIREMENTS.md` | 1342 | 业务全貌 |
+| ② | `docs/requirements/ARCH-DECOMPOSITION.md` | ~24KB | RI 拆解样例 (RI-1~45), 你要按这个格式加 RI-N |
+| ③ | `docs/ARCHITECTURE-v2.md` | 685 | 现有架构基线 |
+| ④ | `docs/DB-SCHEMA-v2.md` | 1060 | 现有 schema |
+| ⑤ | `docs/architecture/01~05-arch-*.md` (6 文件) | ~50KB | 另一个 AI 写的现代化分章架构 (在 `docs/architecture/`) |
+| ⑥ | `docs/AGENT-FRAMEWORK-DECISION.md` | 885 | 决策 (Spring AI 1.1 + 不引 spring-ai-alibaba) |
+| ⑦ | `docs/AGENT-IMPL-PLAN.md` | 252 | Plan I 总览 (理解技术决策) |
+
+### 4.5 通用参考 (按需查)
+
+| 文件 | 行数 | 何时读 |
+|---|---|---|
+| `docs/ENVIRONMENT-DEPENDENCIES.md` | 330 | 部署/排错 |
+| `docs/TEAM-ARCHIVE.md` | 12KB | 沙箱 SSH / 环境 |
+| `docs/DEPLOYMENT-LOG.md` | 13KB | 部署历史 (出问题翻这里) |
+| `docs/GLM-KEY-SETUP.md` | 5KB | 配 GLM API key |
+| `docs/DEV-STANDARDS.md` | 466 | 开发标准 (提交前看 §7.2) |
+| `docs/ARCH-REUSE-AUDIT.md` | 12KB | 现有可复用模块审计 |
+| `docs/M1-README.md` / `docs/M1-TEST-TASKS.md` | - | M1 阶段档案 CRUD + 测试 (历史) |
+| `docs/reviews/README.md` | - | 上个接手 AI 的 review 报告 (避坑) |
 
 ---
 
-## 🎯 3. 第一天:5 步开工
+## 🚀 5. 程序员开工: 抢任务 SOP
 
-**多人/多 agent 并行: 先看 [`TASKS.md`](TASKS.md) 占任务!**
+> **5 分钟开工**. 程序员进来按这个流程, 不会错.
 
-### Step 0: 看 [`TASKS.md`](TASKS.md) 抢一个 `可并行: ✅` + `未开发` 的任务(2 分钟)
-
-```bash
-# 1. 看任务表
-cat TASKS.md | less
-
-# 2. 找一个 可并行: ✅ 且 状态: 未开发 的任务(典型: T-I-4 / T-I-5 / T-I-6 / T-I-7 / T-I-8)
-# 3. 改那一节的状态为 占用-<你的名字>
-# 4. 10 秒内 commit + push
-git add TASKS.md
-git commit -m "chore(tasks): claim T-I-X by <你的名字>"
-git push origin main
-# ✅ push 成功 = 占用成功
-
-# 5. 才进 Step 1 开始干活
-```
-
-**如果你和另一个人同时改同一个任务** —— 晚 push 的人会看到 push 失败或冲突,**放弃这个任务,找下一个 `未开发`**。
-
-### Step 1: Clone 仓库 + 验证基线(2 分钟)
+### 5.1 Step 0: 验证环境 (2 分钟)
 
 ```bash
+# 1. 拉仓库
 git clone -b minimax git@gitee.com:frisker/projects-online.git
 cd projects-online
 
-# 验证基线 = a34f540
+# 2. 验证基线 = 0c6325f
 git rev-parse HEAD
-# 期望: a34f54043cb08ad28c360d3cc0399dee99a5a85d
+# 期望: 0c6325f3c454b8713c5ad3f6f86db5e1be87fcf6
 
-# 沙箱编译验证(接手 AI 必跑)
-cd /workspace/projects-online-clone  # 或本机
+# 3. 沙箱编译验证
 mvn compile -DskipTests -B -o
-# 期望: BUILD SUCCESS(零回归,现有代码全过)
+# 期望: BUILD SUCCESS (零回归)
 ```
 
-### Step 2: 读 plan-I §0 接手 Agent 必读(10 分钟)
+**基线不对** → 找 [§6 卡住怎么办](#-6-卡住怎么办--找谁). **编译挂** → 看 `docs/LESSONS-LEARNED.md` 15+ 坑.
+
+### 5.2 Step 1: 找可抢任务 (2 分钟)
 
 ```bash
-cat .mavis/plans/plan-I-agent-implementation.md | head -100
+# 看任务表
+cat TASKS.md | less
 ```
 
-**§0 必看 3 处**:
-- §0.2 必读文档(7 份)
-- §0.3 关键技术点(ReactAgent 幻觉预警 + 资源链接)
-- §0.4 基线 commit `a34f540` 验证方法
+**找满足 3 条件的 RI**:
+1. `可并行: ✅` (或非依赖项, 你能自己干)
+2. `状态: 未开发` (没人占)
+3. 跟你的技术栈匹配 (后端/前端/DBA/测试)
 
-### Step 3: 读决策 doc + 业务 doc(15 分钟)
+**找不到?** — 新需求 (§X.Y) 里**还没拆 RI** 的, 你可以**自己拆**(按 `ARCH-DECOMPOSITION.md` 已有 RI-1~45 的格式), 提 PR 给架构师审.
 
-```bash
-# 决策(踩坑预警 3 处)
-sed -n '40,90p' docs/AGENT-FRAMEWORK-DECISION.md
-sed -n '1,15p' docs/AGENT-FRAMEWORK-DECISION.md   # §1.2.1.1 第 6 点
+### 5.3 Step 2: 占用 (10 秒, 关键!)
 
-# 业务 15 真实问题
-cat docs/AGENT-REQUIREMENTS.md
-```
+1. **改** `TASKS.md` 那一节: `状态: 未开发` → `状态: 占用-<你的名字> (<当前时间>)`
+2. **10 秒内**:
+   ```bash
+   git add TASKS.md
+   git commit -m "chore(tasks): claim <RI-N> by <你的名字>"
+   git push origin main
+   ```
+3. **push 成功 = 占用成功**. 别人看到 push 通知, 不会重复干.
 
-### Step 4: 沙箱编译验证(1 分钟,关键)
+**没 push 之前不算占** — 别人可能先 push, 你只是改了本地, 别人看不到.
 
-```bash
-# 沙箱内
-cd /workspace/projects-online-clone
-mvn compile -DskipTests -B -o
-# 期望: BUILD SUCCESS,无 WARNING(本项目 Spring Boot 3.3 + JDK 17)
-```
+### 5.4 Step 3: 干活 (1-3 小时)
 
-**编译过不了,先看 `docs/LESSONS-LEARNED.md`**(15+ 条历史坑,可能命中)
+1. **读** `ARCH-DECOMPOSITION.md` 对应 RI-N 的"业务/影响表/角色/验收/依赖/估算"
+2. **读** 相关 §X.Y (`REQUIREMENTS.md`) 和现有代码
+3. **写代码** + 单元测试
+4. **跑验收** — `mvn test` / `npm run build` / 浏览器 (按 RI 验收标准)
 
-### Step 5: 开始抢到的任务(2 小时,详读 spec + 写代码)
+### 5.5 Step 4: 完工 (10 秒, 关键!)
 
-**重要**: 你从 Step 0 抢到的是哪个任务,就从哪个任务开始,**不是**必须从 I-1 开始。任务可能是:
+1. **改** `TASKS.md` 那一节: `状态: 占用-X` → `状态: 已完成 (<你的名字> / <日期>)`
+2. **commit + push**:
+   ```bash
+   git add backend/src/main/java/... \
+           backend/src/test/java/... \
+           TASKS.md
+   git commit -m "feat(<scope>,<RI-N>): <description>"
+   git push origin main
+   ```
+3. **跳到下一个** Step 2 抢任务, 或退出.
 
-- **T-I-1**(pom): 详读 plan-I §2 I-1 → 改 `backend/pom.xml` → `mvn compile` → push
-- **T-I-3**(包骨架): 详读 plan-I §2 I-3 → 创建 7 个新文件 → `mvn compile` → push
-- **T-I-4**(SearchFulltextTool): 详读 plan-I §2 I-4 → 写 `SearchFulltextTool.java` → push
-- **T-I-5** ~ **T-I-13**: 同上模式
+### 5.6 严禁 (踩了会被回收)
 
-**示例**: 抢到 T-I-4
+- ❌ 改 `占用-A` 改回 `未开发` (A 会干掉你)
+- ❌ 一个 commit 改多个 RI (1 commit = 1 RI, 拆不开才能合)
+- ❌ 占用了但**没 push** 超过 10 分钟 (失联, 别人接管)
+- ❌ 直推 `minimax` 分支 (沙箱专属, 接手 AI 推会 403)
+- ❌ 改 `REQUIREMENTS.md` (那是需求开发人员)
+- ❌ 改 `ARCH-DECOMPOSITION.md` RI 拆解 (那是架构师)
 
-```bash
-# 1. 详读 plan-I §2 I-4 详细规范
-sed -n '/### I-4: /,/### I-5: /p' .mavis/plans/plan-I-agent-implementation.md
+### 5.7 多人抢同一任务 SOP
 
-# 2. 写代码
-vim backend/src/main/java/com/archive/agent/tool/SearchFulltextTool.java
-# 依照 spec 写,含 3 个 测例
+- **1 个先 push main** 算赢
+- **后到的** pull 看到占用, **换任务**
+- 解决冲突: `git pull --rebase`, 改不同文件/方法不会冲突
+- **冲突激烈** → 找沙箱 PM 仲裁
 
-# 3. 验收
-mvn compile -DskipTests -B    # 期望: BUILD SUCCESS
-mvn test -Dtest=SearchFulltextToolTest -B   # 期望: 3 测例过
+### 5.8 接管失联任务 SOP
 
-# 4. 完工 SOP: 改 TASKS.md + commit + push
-vim TASKS.md
-# T-I-4 节: 状态: 占用-X → 已完成(X / <日期>),占用者: <你>
-git add backend/src/main/java/com/archive/agent/tool/SearchFulltextTool.java \
-        backend/src/test/java/com/archive/agent/tool/SearchFulltextToolTest.java \
-        TASKS.md
-git commit -m "feat(agent,I-4): add SearchFulltextTool (3 test cases pass) + mark TASKS done"
-git push origin main
-
-# 5. 跳到下一个任务 或 退出
-```
+接手 AI 看到任务被占但占用人失联:
+1. `git log --author="<占用人名字>" -1` 看占用人最后一次 commit 时间
+2. **> 30 分钟没动 + 没 PR 等待合并 = 失联**
+3. 接管人: 改 `TASKS.md` `占用-X` → `占用-<自己> (reclaim from X)`, push main
+4. 项目方 (Mavis) 后续不会追责 (被回收的任务接管人可继续干)
 
 ---
 
-## 📝 4. 13 子项执行规范(总览)
-
-**每个子项**:
-1. 读 `plan-I §2 <I-N>` 详细规范
-2. 按规范写代码(配套代码 + SQL + yml 改)
-3. 跑验收(`mvn compile` / `mvn test` / `npm run build` / 浏览器)
-4. **一个 commit + push**(不囤)
-5. 标记 plan-I §3 完工 checklist
-
-**关键路径**(必须按序):
-```
-I-1 → I-2 → I-3 → [I-4 ~ I-8 并行] → I-9 → I-10 → I-11
-                       ↓
-            I-12 / I-13(与 I-11 并行)
-```
-
-**完工验收清单**(必跑,plan-I §3):
-- [ ] `mvn compile -DskipTests -B -o` 0 错
-- [ ] `mvn test` 10 个 AgentIntegrationTest 全过
-- [ ] `npm run build` 0 错
-- [ ] 浏览器 5 个端到端问题都能答(看 plan-I §3)
-- [ ] 关 `spring.ai.agent.enabled=false` 重启 → 问问题 → 走老路径(零回归)
-- [ ] `llm_call_log` 新增 ≥ 3 条(`scenario=AGENT_*`)
-
----
-
-## 🛠 5. 完整 13 子项速查(给接手 AI 当 checklist)
-
-> **速查表**。每项**详细 spec 在 plan-I §2 详读**。这里只是"确认你有没有漏"。
-
-| # | 文件 / 改动 | 验收命令 |
-|---|---|---|
-| **I-1** | `backend/pom.xml` 加 BOM + 4 starter | `mvn dependency:tree \| grep spring-ai` |
-| **I-2** | `backend/src/main/resources/application.yml` 加 `spring.ai.*` | 启动日志看到 `OpenAiChatModel configured` |
-| **I-3** | `backend/src/main/java/com/archive/agent/` 7 个文件(AgentConfig + 3 DTO + AgentStep + AgentTool + 2 listener) | `mvn compile` 0 错 |
-| **I-4** | `agent/tool/SearchFulltextTool.java` | `SearchFulltextToolTest` 3 测例 |
-| **I-5** | `agent/tool/FindProjectTool.java` + `ProjectRepository.searchByNameOrCustomerFulltext` + `db/migration/I-find-project-fulltext.sql` | `FindProjectToolTest` 3 测例 + 浏览器端到端 |
-| **I-6** | `agent/tool/QueryMysqlTool.java`(白名单 + **聚合** + 操作符 + 注入防护,**重点子项**) | 8 测例(含聚合 + 越权 + 注入 + 边界) |
-| **I-7** | `agent/tool/LlmSummarizeTool.java` + `AskClarificationTool.java` | 单元测试 |
-| **I-8** | `agent/tool/GetProjectBusinessDataTool.java`(+ `TodoRepository.countByProjectIdAndStatus` 1 个方法) | 端到端 |
-| **I-9** | `agent/AgentEngine.java` + `agent/prompt/AgentSystemPrompt.java` + `AgentFewShots.java`(**最关键**) | `AgentEngineTest`(mock ChatClient) |
-| **I-10** | `controller/QaController.java` 改造 + `QaResponse` 加 3 字段 | `QaControllerTest` 3 测例 |
-| **I-11** | `backend/src/test/java/com/archive/agent/AgentIntegrationTest.java`(10 测例) | `mvn test` 全过 |
-| **I-12** | `frontend/src/components/AgentStepsPanel.vue` + `frontend/src/views/Knowledge.vue` 改造 | `npm run build` 0 错 + 浏览器 |
-| **I-13** | `db/migration/I-chat-memory.sql` + `agent/ChatMemoryConfig.java` + `agent/MultiTurnController.java` + `agent/MultiTurnService.java` | 浏览器连问 3 轮 + 重启不丢 |
-
----
-
-## 🧪 6. 端到端测试 5 个问题(完工必跑)
-
-**前提**:Spring Boot 启动,MySQL 跑 v2 schema + G-llm-call-log.sql + I-find-project-fulltext.sql + I-chat-memory.sql
-
-**测试场景**(plan-I §I-11 + IMPL-PLAN §6):
-
-1. **"新能源那个项目今年盈利怎么样?"** → 看到 4-5 步 agent 思考 → 锁定 PRJ-2026-001 → 答案
-2. **"PRJ-2026-001 剩余金额?"** → 调 get_project_business_data → 数字准确
-3. **"现在总共还没结清的项目有几个?涉及总金额?"** → 调 query_mysql(`aggregate=count` + `operator!=`) + `aggregate=sum` 2 次 → **SQL 层算聚合,LLM 不数行**
-4. **"今年否决了哪些项目?"** → 调 query_mysql + search_fulltext 综合
-5. **多轮对话**(I-13):第 1 轮"PRJ-2026-001 怎么样" → 第 2 轮"它的剩余金额" → 第 3 轮"谁负责" → 都自动锁定 PRJ-2026-001
-
-**降级测试**:`application.yml` 设 `spring.ai.agent.enabled=false` → 重启 → 问问题 → `agentMode=false`(老路径)
-
-**埋点测试**:
-```sql
-SELECT scenario, COUNT(*) FROM llm_call_log GROUP BY scenario;
--- 期望: 出现 AGENT_STEP / AGENT_FINAL / AGENT_TOOL / AGENT_FALLBACK
-```
-
-**关键修复记录**(2026-06-09): 你原问的"还没结清的项目有几个"暴露 QueryMysqlTool **只返 rows 不做聚合**的 bug。
-- 修复: I-6 加 `aggregate` (count/sum/avg/max/min/group_by) + `operator` (= / != / > / >= / in / like / is_null)
-- LLM **必须**用 SQL 算聚合,**禁止**自己 rows[].size() / sum()(精度 / 截断问题)
-- I-6 估时 1 → 1.5 天, 总工期 7.8 → 8.3 天
-- 详见 plan-I §2 I-6 修订段
-
----
-
-## 🆘 7. 卡住怎么办?
+## 🆘 6. 卡住怎么办 / 找谁
 
 | 问题 | 怎么办 |
 |---|---|
-| Spring AI 1.1 API 找不到 `ReactAgent` | 看 plan-I §0.3 踩坑预警 + 决策 §1.2.1.1 第 6 点 + AGENT-RESEARCH §3.1 |
-| Spring AI BOM 找不到 / 版本对不上 | 改用 `spring-ai-bom` 1.0.6(降级方案) |
-| 智谱 GLM 4xx 错 | `application.yml` 加 `spring.ai.openai.chat.options.model=glm-4-flash` 显式指定 |
-| `@Tool` 注解不生效 | 用 `MethodToolCallbackProvider.builder().toolObjects(tools).build()` 暴露 |
-| 多轮对话 LLM 不带上下文 | 确认 `MessageChatMemoryAdvisor` bean 注入 ChatClient,`conversationId` 从 Controller 传 |
-| 编译错 | `mvn clean compile -DskipTests -B`,看 `LESSONS-LEARNED.md` |
-| **LLM 框架装不上** | **不要死磕**,在 `deliverable.md` 报告"卡住:XXX",Mavis 会接管 |
-| **接手 AI 没遇到但 PM 漏写的** | **不要猜**,在 `deliverable.md` 报告"问题:XXX,需要 PM 决策" |
+| **基线 commit 拉不对** | 找项目方 frisker, 给 SSH key / 重置 |
+| **编译失败** | `mvn clean compile -DskipTests -B`, 看 `docs/LESSONS-LEARNED.md` (15+ 坑) |
+| **LLM 框架装不上** | **不要死磕**, 在 PR 描述里报告"卡住:XXX", Mavis 会接管 |
+| **接手 AI 没遇到但 PM 漏写的** | **不要猜**, 在 PR 描述里报告"问题:XXX, 需要 PM 决策" |
+| **业务方有新需求** | 转给需求开发人员, 不自己拍板 |
+| **RI 拆解不清** | 转给架构师, 不自己拆 (除非占用了 1 个 RI, 可以自己细化子任务) |
+| **跟另一个人冲突** | 看 [§5.7 多人抢同一任务 SOP](#57-多人抢同一任务-sop) |
+| **Spring AI 1.1 API 找不到 `ReactAgent`** | 看 `docs/AGENT-FRAMEWORK-DECISION.md` §1.2.1.1 第 6 点 + `AGENT-RESEARCH.md` §3.1 |
+| **智谱 GLM 4xx 错** | `application.yml` 加 `spring.ai.openai.chat.options.model=glm-4-flash` 显式指定 |
+| **多轮对话 LLM 不带上下文** | 确认 `MessageChatMemoryAdvisor` bean 注入 ChatClient, `conversationId` 从 Controller 传 |
+| **后端崩了** | `docs/TEAM-ARCHIVE.md` §11 |
+| **数据库连不上** | `docs/TEAM-ARCHIVE.md` §11.3 |
+| **推不上去** | `docs/TEAM-ARCHIVE.md` §11.5 (SSH key 检查) |
+
+### 找谁
+
+| 角色 | 联系人 |
+|---|---|
+| **业务方 / 项目方** | frisker (投委会秘书) — 业务决策 + 过目 PR |
+| **Mavis 沙箱 PM** | 主 agent — 写方案 + 审完工, 不写代码 |
+| **接手 AI / 程序员** | 你 — 写代码 + 提 PR |
+| **运维** | 无人 (单机, 自己维护) |
 
 ---
 
-## ✅ 8. 完工产出(`deliverable.md`)
+## 📂 7. 仓库结构 + 文档演进
 
-完工后**写** `deliverable.md` 提交给 Mavis 沙箱审。**必含**:
-
-```markdown
-# Plan I 完工报告
-
-## 1. 13 commit 链接
-- I-1 commit: <hash>
-- I-2 commit: <hash>
-- ...
-- I-13 commit: <hash>
-- 聚合 commit: <hash>
-
-## 2. 编译 / 测试 / 构建 截图
-- mvn compile: [截图或日志]
-- mvn test: [截图或日志,10 个 AgentIntegrationTest 全过]
-- npm run build: [截图或日志]
-
-## 3. 端到端浏览器测试结果
-- 问题 1 (新能源那个项目): [答案 + steps 截图]
-- 问题 2 (剩余金额): [数字 + steps 截图]
-- ...
-- 多轮对话 3 轮: [截图]
-- 降级测试: [截图]
-
-## 4. 已知问题 / 留 TODO
-- (列 5-10 个 I-11 测出来的 Prompt 调优点)
-- (列任何没做完的)
-
-## 5. owner 审请关注
-- 决策对齐: plan-I §0.3 三个踩坑预警都没踩? ✓/✗
-- 零回归: 关开关走老路径? ✓/✗
-- 多轮对话: 3 轮上下文保留? ✓/✗
-```
-
----
-
-## 📂 9. 仓库结构(扁平化,2026-06-08)
+### 7.1 仓库结构 (2026-06-10)
 
 ```
 projects-online/
-├── README.md                                # 本文件(接手 AI 入口)
-├── TASKS.md                                 # 🆕 任务分块清单(13 任务 + 抢占 SOP)
+├── README.md                                # 本文件 (根入口)
+├── TASKS.md                                 # 任务分块清单 (谁占用了哪个 RI)
 ├── .gitignore
 │
-├── backend/                                 # Spring Boot 3.3 + JPA
+├── backend/                                 # Spring Boot 3.3 + JPA + Spring AI 1.1
 │   ├── pom.xml
 │   ├── startup.ps1
 │   └── src/main/java/com/archive/
-│       ├── agent/                           # 🆕 Plan I 新增(~14 个文件)
-│       │   ├── AgentConfig.java
-│       │   ├── AgentEngine.java
-│       │   ├── AgentRequest.java
-│       │   ├── AgentResponse.java
-│       │   ├── AgentStep.java
-│       │   ├── ChatMemoryConfig.java        # I-13
+│       ├── agent/                           # Plan I: Agent 核心 (14 文件)
+│       │   ├── AgentConfig.java / AgentEngine.java
+│       │   ├── AgentRequest.java / AgentResponse.java / AgentStep.java
+│       │   ├── ChatMemoryConfig.java        # I-13 多轮对话
 │       │   ├── MultiTurnController.java     # I-13
 │       │   ├── MultiTurnService.java        # I-13
-│       │   ├── prompt/
-│       │   │   ├── AgentSystemPrompt.java
-│       │   │   └── AgentFewShots.java
-│       │   ├── tool/
-│       │   │   ├── SearchFulltextTool.java  # I-4
-│       │   │   ├── FindProjectTool.java     # I-5
-│       │   │   ├── QueryMysqlTool.java      # I-6 重点
-│       │   │   ├── LlmSummarizeTool.java    # I-7
-│       │   │   ├── AskClarificationTool.java# I-7
-│       │   │   └── GetProjectBusinessDataTool.java  # I-8
-│       │   └── listener/
-│       │       ├── LlmCallListener.java
-│       │       └── ToolCallListener.java
-│       ├── controller/QaController.java     # 🆕 I-10 改造
-│       ├── service/GlmService.java          # 降级路径用
-│       ├── provider/LLMProvider.java        # 抽象层
-│       ├── repository/ProjectRepository.java # 🆕 I-5 加 searchByNameOrCustomerFulltext
-│       ├── common/LlmScenario.java          # 🆕 I-9 加 AGENT_STEP/FINAL/TOOL/FALLBACK
-│       └── ...(现有 M0~M2 代码,零回归)
+│       │   ├── prompt/ (AgentSystemPrompt + AgentFewShots)
+│       │   ├── tool/ (SearchFulltext / FindProject / QueryMysql / LlmSummarize / AskClarification / GetProjectBusinessData)
+│       │   └── listener/ (LlmCallListener + ToolCallListener)
+│       ├── controller/QaController.java     # I-10 改造
+│       ├── service/GlmService.java          # 降级路径
+│       ├── provider/LLMProvider.java        # LLM 抽象层
+│       └── ... (现有 M0~M2 + Plan A~G 代码)
 │
 ├── frontend/
-│   ├── src/views/Knowledge.vue              # 🆕 I-12 改造
-│   └── src/components/
-│       └── AgentStepsPanel.vue              # 🆕 I-12 新增
+│   ├── src/views/Knowledge.vue              # I-12 改造
+│   └── src/components/AgentStepsPanel.vue  # I-12 新增
 │
-├── docs/                                    # ⭐ 11 份核心文档
-│   ├── REQUIREMENTS-v1.md                   # 业务全貌
-│   ├── ARCHITECTURE-v2.md                   # 现有架构
-│   ├── DB-SCHEMA-v2.md                      # 现有 schema
-│   ├── SIMILAR-PRODUCTS.md
-│   ├── ARCH-REUSE-AUDIT.md
-│   ├── DEV-STANDARDS.md                     # §7.2 完工交回清单
-│   ├── TEAM-ARCHIVE.md                      # 沙箱 SSH + 环境
+├── docs/                                    # ⭐ 17+ 份核心文档
+│   ├── requirements/                        # 🆕 v1.1 需求文档独立目录 (2026-06-10)
+│   │   ├── REQUIREMENTS.md                  #    业务需求 v1.1 (1342 行)
+│   │   └── ARCH-DECOMPOSITION.md            #    v1.1 需求拆解工作底稿 (RI-1~45)
+│   ├── architecture/                        # ⏳ 另一个 AI 正在写 (6 份分章架构)
+│   │   ├── 01-arch-overview.md
+│   │   ├── 02-backend-layer-architecture.md
+│   │   ├── 03-frontend-component-architecture.md
+│   │   ├── 04-database-schema.md
+│   │   ├── 05-deployment-and-environment.md
+│   │   └── 06-requirements-gap-analysis.md  # (待补)
+│   ├── ARCHITECTURE-v2.md                   # 现有架构基线 (685 行)
+│   ├── DB-SCHEMA-v2.md                      # 现有 schema (1060 行)
+│   ├── AGENT-IMPL-PLAN.md / AGENT-REQUIREMENTS.md / AGENT-RESEARCH.md / AGENT-FRAMEWORK-DECISION.md  # Plan I 4 份
+│   ├── ACCEPTANCE-GUIDE.md / DEV-STANDARDS.md / ENVIRONMENT-DEPENDENCIES.md / GLM-KEY-SETUP.md
 │   ├── LESSONS-LEARNED.md                   # 15+ 踩坑
-│   ├── DEPLOYMENT-LOG.md
-│   ├── ENVIRONMENT-DEPENDENCIES.md         # 🆕 硬件/网络/凭证
-│   ├── AGENT-IMPL-PLAN.md                   # 🆕 Plan I 总览
-│   ├── AGENT-REQUIREMENTS.md                # 🆕 业务需求
-│   ├── AGENT-RESEARCH.md                    # 🆕 调研
-│   └── AGENT-FRAMEWORK-DECISION.md          # 🆕 决策(踩坑预警)
+│   ├── TEAM-ARCHIVE.md                      # 沙箱 SSH + 环境
+│   ├── DEPLOYMENT-LOG.md / ARCH-REUSE-AUDIT.md / SIMILAR-PRODUCTS.md
+│   ├── M1-README.md / M1-TEST-TASKS.md / V2-TEST-TASKS.md
+│   └── reviews/                             # 上个接手 AI 的 review 报告
 │
-├── .mavis/plans/
-│   ├── plan-A~G/                            # 已完工
-│   ├── plan-H-smart-qa-agent.md             # Plan H 任务
-│   └── plan-I-agent-implementation.md       # 🆕 Plan I 主 spec(接手 AI 主读)
-│
-├── config/                                  # 模板(用户复制填真实值)
+├── .mavis/plans/                            # 8 个 plan (A~I, Plan I 完工)
+├── config/                                  # 模板 (用户复制填真实值)
 ├── deploy/                                  # Caddy / WinSW / SQL
-└── scripts/sync.sh                          # minimax 跟 main 同步
+└── scripts/                                 # 部署/诊断脚本
 ```
 
----
-
-## 🌿 10. Git 工作流(接手 AI 必守)
-
-```bash
-# 每子项一个 commit
-git add <改动文件>
-git commit -m "<type>(<scope>,I-N): <description>"
-
-# commit 模板
-feat(agent,I-1): add Spring AI 1.1 BOM + 4 starters
-feat(agent,I-9): add AgentEngine with ChatClient + @Tool + 5-step ReAct loop
-test(agent,I-11): 10 end-to-end integration tests
-fix(agent,I-12): Knowledge.vue import http error
-docs(agent,Plan I): complete - 13 subitems, all green  # 聚合 commit
-
-# 推 main(开发中分支, 接手 AI 也能推)
-git push origin main
-
-# 完工后
-git tag plan-I-v1.0
-git push origin plan-I-v1.0
-```
-
-**不囤 commit** —— 13 子项 = 13+ commit + 1 聚合。
-
----
-
-## 📞 11. 找谁 / 紧急情况
-
-| 项 | 联系人 |
-|---|---|
-| **业务方 / 项目方** | frisker(投委会秘书)— 业务决策 + 过目 PR |
-| **Mavis 沙箱 PM** | 主 agent —— 写方案 + 审完工,不写代码 |
-| **接手 AI** | 你(生产环境 AI)—— 写代码 + 提 PR |
-| **运维** | 无人(单机,自己维护) |
-
-**紧急情况**:
-- 后端崩了 → `docs/TEAM-ARCHIVE.md` §11
-- 数据库连不上 → §11.3
-- LLM 限速 → 切 `spring.ai.openai.chat.options.model=glm-4-flash` 或换 GLM-4-Plus
-- 推不上去 → `docs/TEAM-ARCHIVE.md` §11.5(SSH key 检查)
-- **Spring AI 装不上** → 报 `deliverable.md` 给 Mavis,**不要死磕**
-
----
-
-## 📜 12. 文档演进(基线 a34f540 之前)
+### 7.2 文档演进 (基线 0c6325f 之前)
 
 | 时间 | 事件 |
 |---|---|
-| 2026-06-05 | v1 架构(双机主备,RAG 纠结) |
-| 2026-06-06 | v2 架构(定位单机轻量) |
-| 2026-06-07 | v3 架构定稿(智谱 + 不向量化) + M0 端到端 |
+| 2026-06-05 | v1 架构 (双机主备, RAG 纠结) |
+| 2026-06-06 | v2 架构 (定位单机轻量) |
+| 2026-06-07 | v3 架构定稿 (智谱 + 不向量化) + M0 端到端 |
 | 2026-06-08 上午 | M1 档案 CRUD 完工 |
 | 2026-06-08 下午 | M2 知识库问答框架 + 修复 |
 | 2026-06-08 傍晚 | 业务需求 v1 + 8 份核心文档 + 6 个 plan |
 | 2026-06-08 晚 | 仓库扁平化 + README 重写 |
 | 2026-06-09 上午 | Plan A~G 完工 + Plan H/I 方案定稿 |
-| 2026-06-09 中午 | **Plan I v1.1 评审修**(3 P0 + 12 P1) — 接手 AI 现在用的基线 |
+| 2026-06-09 中午 | Plan I v1.1 评审修 (3 P0 + 12 P1) |
+| 2026-06-09 晚 | Plan I 13/13 完工, 基线 `0c6325f` |
+| 2026-06-10 上午 | 部署生产 (125) 调试: CORS / Vite / GLM key / 死循环保护 |
+| 2026-06-10 下午 | 业务需求 v1.1 §5.6 + 死循环/LLM 兜底配置可配 |
+| 2026-06-10 晚 | **Mavis 拓展**: 业务规则细化 10 处 + 隐含规则 6 类 + 新功能 8 项 (§13) + 需求拆解 RI-1~45 |
+| 2026-06-10 深夜 | **README 重构**: 角色导航 (§1) + 需求文档位置 (§2) + 程序员开工 SOP (§5) |
+
+### 7.3 文档维护规则 (Mavis 必守)
+
+> **2026-06-10 Mavis 教训**: 写完磁盘的文档**必须立刻 commit** 或放到 git-tracked 路径, 避免 working copy 误删时无 recovery 路径.
+
+- 任何 `docs/` 下新增/修改文档 → 立即 `git add + commit + push`
+- 任何 `TASKS.md` 状态变更 → 立即 `git add + commit + push`
+- 任何 `README.md` 重构 → 立即 `git add + commit + push`
+- 业务方 PR → 立即审, 立即 merge (审过的)
 
 ---
 
-*接手 AI 看完 README,直接 `cat .mavis/plans/plan-I-agent-implementation.md` §0,然后 §1 执行顺序表开工。*
-*Mavis(沙箱 PM)在此待命审完工。*
+*本文档由 Mavis (沙箱 PM) 维护. 4 类角色 (需求开发/审核/架构师/程序员) 各看 [§1 角色导航](#-1-角色导航-核心) 即可 5 分钟开工.*
+
+*Mavis 在此待命审完工 + 答疑.*
