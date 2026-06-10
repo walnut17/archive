@@ -3,17 +3,6 @@ spring:
     name: archive
   main:
     banner-mode: console
-    # 禁掉 Spring AI OpenAI audio (项目用智谱 GLM, 不用 OpenAI)
-    # 不排除会导致 openAiAudioSpeechModel 报 OpenAI API key 必须设置
-    autoconfigure:
-      exclude:
-        # Mavis 加: 不用 Spring AI 的 OpenAI chat model (用 GLMChatModel 自定义)
-        - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
-        - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
-        - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
-        - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
-        - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
-        - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
   # 占位符从 config.json 注入(由 ConfigJsonLoader 加载,见 META-INF/spring.factories)
   # 如果 config.json 不存在,用这里的默认值(开发环境)
   datasource:
@@ -55,10 +44,20 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
-  # Spring AI — 智能问答 Agent（Plan I）
+  # Spring AI — 智能问答 Agent(Plan I)
   # 注: 不配 spring.ai.openai.*, 因为智谱用 v4 (非标准 v1)
   # 改用自定义 GLMChatModel (调项目自家 GlmService -> 智谱 v4 endpoint)
   ai:
+    # 显式关闭 Spring AI 内置模型 (用 GLMChatModel 自定义)
+    # 不关会强制要 spring.ai.openai.api-key (OpenAI key) — matchIfMissing=true
+    model:
+      audio:
+        speech: none   # 关闭 OpenAI audio speech
+        transcription: none  # 关闭 OpenAI audio transcription
+      image: none      # 关闭 OpenAI image (DALL-E)
+      embedding: none  # 关闭 OpenAI embedding
+      moderation: none  # 关闭 OpenAI moderation
+      chat: none       # 关闭 OpenAI chat (GLMChatModel 自定义)
     agent:
       enabled: ${AGENT_ENABLED:true}
       observation-truncate-chars: 2000

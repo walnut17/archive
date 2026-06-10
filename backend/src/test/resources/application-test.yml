@@ -10,12 +10,15 @@
 
 spring:
   ai:
-    openai:
-      api-key: test-mock-key-not-used
-      base-url: http://localhost:0
-      chat:
-        options:
-          model: glm-4-flash
+    # 关闭 Spring AI 内置 OpenAI 模型 (用 GLMChatModel 自定义, 避免强制要 OpenAI key)
+    model:
+      audio:
+        speech: none
+        transcription: none
+      image: none
+      embedding: none
+      moderation: none
+      chat: none
     agent:
       enabled: true
   flyway:
