@@ -571,6 +571,13 @@ spring:
 11. **Spring AI 1.1 API class 名必查** —— spec 写 `JdbcChatMemory` 是错的, 真实是 `JdbcChatMemoryRepository`
 12. **接手 AI 完工前必 `mvn compile`** —— 5 P0 漏都是因为没真编译过
 13. **验收清单要逐项自检"数"** —— 10 个 operator / 6 个 aggregate / 3 重加固, 不能"差不多"
+14. **测例调真 LLM 时别用 @MockBean 关键依赖** —— Mockito 永远返 null 挡住真路径
+15. **Few-shot 跟工具 signature 字段名必须一致** —— LLM 严格按 Few-shot 调
+16. **H2 测例要禁 Flyway** —— `user` 是关键字冲突 + JPA auto DDL 更可控
+17. **MySQL native FULLTEXT 测例要走 findByCode 不走 FULLTEXT** —— H2 没 MATCH 函数
+18. **测例问题别用自然语言歧义词** —— "否决" LLM 会一直 ask_clarification
+19. **测例断言用"业务结果" 不用"必走某工具"** —— LLM 智能选择应该被接受
+20. **加新参数前 grep 旧代码** —— `body.put("temperature", 0.3)` 硬编码会覆盖参数
 
 ---
 
@@ -595,6 +602,12 @@ spring:
 | 6.5.1 | Spring AI 1.1 `JdbcChatMemory` 不存在 | `52cbbb7` (Sisyphus 犯) + `ab57ef3` (Mavis 修) |
 | 6.5.2 | QueryMysqlTool 漏 5 P0 (aggregate / operator / IN / LIKE) | `ab57ef3` |
 | 6.5.3 | `@SpringBootTest` 缺 `application-test.yml` | `ab57ef3` |
+| 6.5.4 | 智谱 v4 跟 OpenAI v1 协议不兼容, 需自定义 ChatModel | `4ff8b98` |
+| 6.5.5 | GlmService 硬编码 `temperature=0.3` 覆盖参数, LLM 调温不生效 | `c3ae805` |
+| 6.5.6 | `@MockBean GlmService` 永远返 null, Agent 集成测必须真调 LLM | `c3ae805` |
+| 6.5.7 | H2 测例 `user` 关键字冲突, 必须禁 Flyway + JPA auto DDL + `globally_quoted_identifiers` | `c3ae805` |
+| 6.5.8 | 测例 setup 没种子数据, find_project 走 FULLTEXT 在 H2 崩 (MATCH 函数 H2 没有) | `c3ae805` |
+| 6.5.9 | Few-shot 字段名跟工具不一致, LLM 按错的 Few-shot 调 | `c3ae805` |
 
 ### 5. Agent 写 Java 代码不编译就 push(C-2 三 Engine 错)
 

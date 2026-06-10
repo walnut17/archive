@@ -62,10 +62,20 @@
 | T-I-12(前端) | 需等 T-I-10 | 代码可先写,验收等 T-I-10 |
 | T-I-13(多轮对话) | 需等 T-I-1 + T-I-9 | pom 冲突 T-I-1 |
 
-**当前能抢的**(2026-06-09 20:35,Plan I 100% 完工,所有任务已完成):
+**当前能抢的**(2026-06-10 02:38,Plan I 100% 完工 + 10/10 测例过 + 0 回归):
 - ✅ **无未开发任务** — Plan I 13 任务 100% 完工
+- ✅ **10/10 AgentIntegrationTest 测例过** (commit `c3ae805`)
+- ✅ **29/29 全部单测过** (agent + tools)
+- ✅ **前端 npm run build 过** (vue-tsc 0 错)
 - 项目方可以验收了: `git clone -b main` + 跳 README 验收清单
 - 或沙箱 Mavis 推 minimax 部署生产
+
+**Mavis 5 P0 复盘 (P0-19~23)** (commit `c3ae805`):
+- P0-19: Few-shot 字段名 (entity→table, filters→where) 跟 QueryMysqlTool 同步
+- P0-20: 测例 @BeforeEach 种子 PRJ-2026-001, findByCode 命中不走 FULLTEXT
+- P0-21: test5 接受 find_project OR get_project_business_data (LLM 智能选)
+- P0-22: test3 改显式 SQL 风格问题, 避免 LLM 一直 ask_clarification
+- P0-23: application-test.yml 禁 Flyway + JPA auto DDL + globally_quoted_identifiers (H2 user 关键字冲突)
 
 **完工清单**:
 - ✅ T-I-1 (Sisyphus)
