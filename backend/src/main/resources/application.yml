@@ -3,6 +3,13 @@ spring:
     name: archive
   main:
     banner-mode: console
+    # 禁掉 Spring AI OpenAI audio (项目用智谱 GLM, 不用 OpenAI)
+    # 不排除会导致 openAiAudioSpeechModel 报 OpenAI API key 必须设置
+    autoconfigure:
+      exclude:
+        - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+        - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+        - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
   # 占位符从 config.json 注入(由 ConfigJsonLoader 加载,见 META-INF/spring.factories)
   # 如果 config.json 不存在,用这里的默认值(开发环境)
   datasource:
