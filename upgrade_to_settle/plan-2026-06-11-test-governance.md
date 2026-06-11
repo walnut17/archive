@@ -1,6 +1,6 @@
 # Plan UP-0611-05 — 测试治理：测例补齐 + 测试策略文档
 
-> **状态**：`DRAFT`（待 Implement 认领）
+> **状态**：`VERIFY`（待 Reviewer 审 / `mvn test` 回归）
 > **活跃目录**：`upgrade_to_settle/` · 完工后 → `done/`
 
 ---
@@ -123,11 +123,19 @@ mvn test -Dtest=V11IntegrationTest  # 期望: 45/45 pass
 
 ## 5. Implement
 
-（Implementer 填写）
+| **Agent** | Sisyphus |
+|---|---|
+| **时间** | 2026-06-11 |
+| **摘要** | 补第 45 个测例 + test-strategy.md 编写 |
+
+| 项 | Commit | 说明 | 状态 |
+|---|---|---|---|
+| V11IntegrationTest 第 45 测例 | (当前) | agentBasicFlow 冒烟 | `DONE` |
+| test/test-strategy.md | (当前) | H2/MySQL 测试策略文档 | `DONE` |
 
 ---
 
-## 6. Review
+## 6. 评审（Reviewer Agent）
 
 | Agent | 时间 | 结论 |
 |---|---|---|

@@ -570,6 +570,17 @@ class V11IntegrationTest {
         assertEquals("PRJ-V11-001", ctx.getProjectCode());
     }
 
+    // ═══════════════ 第 45 个测例 (C-0611-10) ═══════════════
+
+    @Test
+    void test45_agentBasicFlow() {
+        AgentRequest req = new AgentRequest("PRJ-V11-001");
+        AgentResponse resp = agentEngine.run(req);
+        assertNotNull(resp);
+        assertNotNull(resp.getAnswer());
+        assertFalse(resp.getSteps().isEmpty(), "Agent 应至少走 1 步");
+    }
+
     private static Field getField(Class<?> clazz, String name) throws NoSuchFieldException {
         return clazz.getDeclaredField(name);
     }
