@@ -708,7 +708,7 @@ MOD-01 (DB 迁移, 1.7d)
 
 | Plan ID | 文件 | 摘要 | 优先级 | 状态 |
 |---------|------|------|--------|------|
-| UP-0611-01 | [`plan-2026-06-11-archive-local-fs-tools.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) | Agent 只读 `D:/archive` 材料：ls/grep/read + 多模态 | P1 | `未开发` |
+| UP-0611-01 | [`plan-2026-06-11-archive-local-fs-tools.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) | Agent 只读 `D:/archive` 材料：ls/grep/read + 多模态 | P1 | `已完成(Sisyphus / 2026-06-11)` |
 | UP-0611-02 | [`plan-2026-06-11-agent-intent-classification.md`](upgrade_to_settle/plan-2026-06-11-agent-intent-classification.md) | Agent 离题拒答 + 业务域意图分类（C-0611-01） | P1 | `已完成(Sisyphus / 2026-06-11)` |
 | UP-0611-03 | [`plan-2026-06-11-deploy-pipeline.md`](upgrade_to_settle/plan-2026-06-11-deploy-pipeline.md) | 部署 SOP / I-RI-39 源文件修复 / `ddl-auto: validate`（C-0611-02/03/04/05/09） | P1 | `已完成(Sisyphus / 2026-06-11)` |
 | UP-0611-04 | [`plan-2026-06-11-chat-ui.md`](upgrade_to_settle/plan-2026-06-11-chat-ui.md) | 知识库聊天式 UI 重构（C-0611-08） | P2 | `未开发` |

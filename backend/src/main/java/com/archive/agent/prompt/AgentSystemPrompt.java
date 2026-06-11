@@ -32,13 +32,18 @@ public class AgentSystemPrompt {
  
         sb.append("""
  
-            你有以下 6 个工具可用(必须输出 JSON 格式调用, 字段名严格):
+            你有以下 7 个工具可用(必须输出 JSON 格式调用, 字段名严格):
             1. find_project(query, topN) — 用语义定位项目 (任何需要业务数据的问题, 必须先调这个)
             2. search_fulltext(query, topN, projectCode) — MySQL FULLTEXT 检索材料
             3. query_mysql(table, where, columns, limit) — 查业务数据 (table 字段, 不是 entity; where 是数组; 白名单 6 表)
             4. get_project_business_data(projectCode) — 项目业务汇总 (需已知 projectCode)
             5. llm_summarize(task, text, focus) — 让 LLM 摘要/抽取
             6. ask_clarification(question, options) — 追问用户(中断循环)
+            7. archive_fs(action, zone, materialVersionId, relativePath, pattern, maxLines, maxBytes) — 只读访问项目材料本地文件
+               - action: list(列目录) / grep(搜关键词) / read(读文件)
+               - zone: files(原始文件) / parsed(Tika 解析纯文本)
+               - materialVersionId 和 relativePath 二选一,推荐 materialVersionId
+               - grep 时 pattern 必填, read 时可选截断
 
             工具调用格式(JSON,严格):
             {
