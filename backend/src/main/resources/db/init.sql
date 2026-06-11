@@ -1,6 +1,6 @@
 -- ==========================================================
 -- 投委会档案管理系统 - 数据库初始化脚本 (整合所有迁移)
--- 版本: Plan I 完工 (2026-06-10)
+-- 版本: Plan I + v1.1 MOD-01 (2026-06-11)
 -- 数据库: archive_db
 -- 字符集: utf8mb4 / utf8mb4_unicode_ci
 -- MySQL: 8.0+ (需要 FULLTEXT + ngram parser)
@@ -14,6 +14,7 @@
 --   - Plan A~F: proposal/material/material_version 完善
 --   - Plan G: llm_call_log 表
 --   - Plan I: customer_name 字段 + project FULLTEXT 索引 + spring_ai_chat_memory 表
+--   - v1.1 MOD-01: 13 个 I-RI-*.sql 增量 (7 表 ALTER + 7 新表 + 触发器)
 --
 -- 注意: 这是 DROP + CREATE 一键重建, 会丢失所有业务数据!
 --       生产环境慎用, 请先备份。
@@ -36,7 +37,7 @@ DROP TABLE IF EXISTS flyway_schema_history;
 DROP TABLE IF EXISTS role;
 CREATE TABLE role (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    code VARCHAR(64) NOT NULL UNIQUE COMMENT '角色代码:admin/committee/project_owner/employee',
+    code VARCHAR(64) NOT NULL UNIQUE COMMENT '角色代码:admin/pm/legal/committee/secretary/user',
     name VARCHAR(128) NOT NULL COMMENT '显示名称',
     description VARCHAR(512) COMMENT '描述',
     permissions JSON COMMENT '权限位(JSON 数组)',
@@ -59,6 +60,10 @@ CREATE TABLE user (
     department VARCHAR(128) COMMENT '部门',
     status VARCHAR(16) NOT NULL DEFAULT '在岗' COMMENT '在岗/停用',
     last_login_at DATETIME COMMENT '最后登录时间',
+    deleted_at DATETIME COMMENT '软删时间',
+    deleted_by BIGINT COMMENT '软删操作者',
+    version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本',
+    sensitive_view_enabled TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否允许查看脱敏原始值',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_username (username),
@@ -71,18 +76,20 @@ CREATE TABLE user (
 -- 4. 初始数据
 -- ==========================================================
 
--- 4 个预置角色
+-- 6 个预置角色 (v1.1 D-1: admin/pm/legal/committee/secretary + legacy user)
 INSERT INTO role (code, name, description, permissions) VALUES
 ('admin', '系统管理员', '系统所有权限,包括用户管理、角色配置、规则编辑', JSON_ARRAY('*')),
 ('committee', '投委会委员', '审议、查看所有项目、查询知识库、查阅议案', JSON_ARRAY('project:read', 'proposal:read', 'qa:ask', 'task:view')),
-('project_owner', '项目经理', '负责项目的项目经理,可创建项目、编辑材料、触发规则', JSON_ARRAY('project:write', 'material:upload', 'task:write')),
-('employee', '普通员工', '基础查询、提交流转', JSON_ARRAY('project:read', 'qa:ask'));
+('pm', '项目经理', '负责项目的项目经理,可创建项目、编辑材料、触发规则', JSON_ARRAY('project:write', 'material:upload', 'task:write')),
+('user', '普通用户', 'v1.0 兼容普通用户,基础查询、提交流转', JSON_ARRAY('project:read', 'qa:ask')),
+('legal', '法务', '法务审查权限', JSON_ARRAY('project:read', 'legal:review')),
+('secretary', '投委会秘书', '议案登记与秘书事务', JSON_ARRAY('project:read', 'proposal:write', 'task:write'));
 
 -- 1 个预置 admin 账号(密码: admin123)
 -- BCrypt 哈希(强度 10):$2a$10$wjN3YFZDlu.ThmfrRe0XvOA9A1AW2TybgeKAddA/TTxTEhEGvg/Ve
 -- 这是 BCrypt 编码后的 "admin123"
-INSERT INTO user (username, display_name, password_hash, email, role_id, department, status) VALUES
-('admin', '系统管理员', '$2a$10$wjN3YFZDlu.ThmfrRe0XvOA9A1AW2TybgeKAddA/TTxTEhEGvg/Ve', 'admin@example.com', 1, '信息技术部', '在岗');
+INSERT INTO user (username, display_name, password_hash, email, role_id, department, status, sensitive_view_enabled) VALUES
+('admin', '系统管理员', '$2a$10$wjN3YFZDlu.ThmfrRe0XvOA9A1AW2TybgeKAddA/TTxTEhEGvg/Ve', 'admin@example.com', 1, '信息技术部', '在岗', 1);
 
 -- ==========================================================
 -- 5. 项目表(M1-1) - Plan I 加 customer_name 字段 + FULLTEXT 索引
@@ -104,10 +111,15 @@ CREATE TABLE project (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     created_by VARCHAR(64) COMMENT '创建人',
     updated_by VARCHAR(64) COMMENT '更新人',
+    deleted_at DATETIME COMMENT '软删时间',
+    deleted_by BIGINT COMMENT '软删操作者',
+    version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本',
+    archive_status VARCHAR(32) DEFAULT NULL COMMENT '归档状态',
     INDEX idx_code (code),
     INDEX idx_status (status),
     INDEX idx_owner_id (owner_id),
     INDEX idx_created_at (created_at),
+    INDEX idx_deleted_at (deleted_at),
     -- Plan I-5: 项目语义搜索 FULLTEXT 索引 (FindProjectTool 用)
     FULLTEXT INDEX ft_name_cust (name, customer_name) WITH PARSER ngram
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='项目';
@@ -126,11 +138,19 @@ CREATE TABLE proposal (
     status VARCHAR(32) NOT NULL DEFAULT '草稿' COMMENT '草稿/已提交/审议中/通过/暂缓/否决/撤回',
     reviewed_at DATE COMMENT '审议日期',
     decision VARCHAR(2000) COMMENT '审议结论',
+    condition_text TEXT COMMENT '附条件通过的条件描述',
+    condition_status VARCHAR(16) NOT NULL DEFAULT 'NONE' COMMENT 'NONE/PENDING/MET/UNMET',
+    condition_met_at DATETIME COMMENT '条件满足时间',
     remark VARCHAR(2000) COMMENT '备注',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     created_by VARCHAR(64),
     updated_by VARCHAR(64),
+    reserved_at DATETIME COMMENT '编号预留时间',
+    released_at DATETIME COMMENT '编号释放时间',
+    deleted_at DATETIME COMMENT '软删时间',
+    deleted_by BIGINT COMMENT '软删操作者',
+    version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本',
     INDEX idx_code (code),
     INDEX idx_project_id (project_id),
     INDEX idx_status (status),
@@ -154,6 +174,10 @@ CREATE TABLE material (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     created_by VARCHAR(64),
     updated_by VARCHAR(64),
+    deleted_at DATETIME COMMENT '软删时间',
+    deleted_by BIGINT COMMENT '软删操作者',
+    version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本',
+    archived_at DATETIME COMMENT '归档时间',
     INDEX idx_proposal_id (proposal_id),
     INDEX idx_category (category),
     INDEX idx_status (status),
@@ -422,7 +446,9 @@ CREATE TABLE IF NOT EXISTS audit_log (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     actor VARCHAR(64) NOT NULL,
     action VARCHAR(64) NOT NULL,
+    type VARCHAR(32) COMMENT 'WRITE/LOGIN/SENSITIVE_VIEW/EXPORT/LLM',
     entity_type VARCHAR(64),
+    entity_subtype VARCHAR(32) COMMENT '实体子类型',
     entity_id BIGINT,
     old_value JSON,
     new_value JSON,
@@ -431,15 +457,199 @@ CREATE TABLE IF NOT EXISTS audit_log (
     request_id VARCHAR(64),
     extra JSON,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME COMMENT '软删时间',
+    deleted_by BIGINT COMMENT '软删操作者',
+    version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本',
     INDEX idx_al_actor_created (actor, created_at),
     INDEX idx_al_action_created (action, created_at),
     INDEX idx_al_entity (entity_type, entity_id),
     INDEX idx_al_request (request_id),
-    INDEX idx_al_created (created_at)
+    INDEX idx_al_created (created_at),
+    INDEX idx_type (type, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='审计日志';
 
 -- ==========================================================
--- 11. 迁移检查
+-- 11. v1.1 MOD-01: 新增表 + 事实流 + RBAC 关联
+-- ==========================================================
+DROP TABLE IF EXISTS import_error;
+DROP TABLE IF EXISTS import_batch;
+DROP TABLE IF EXISTS notification;
+DROP TABLE IF EXISTS failure_log;
+DROP TABLE IF EXISTS project_member;
+DROP TABLE IF EXISTS user_role;
+DROP TABLE IF EXISTS project_fact_event;
+DROP TABLE IF EXISTS project_fact;
+DROP TABLE IF EXISTS business_term;
+DROP TABLE IF EXISTS proposal_series;
+
+CREATE TABLE proposal_series (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code VARCHAR(64) NOT NULL COMMENT '系列编码, 如 tx/xc',
+    prefix VARCHAR(32) COMMENT '编号前缀',
+    current_seq INT NOT NULL DEFAULT 0 COMMENT '当前自增序号',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='议案编号系列';
+
+CREATE TABLE project_fact (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    project_id BIGINT NOT NULL,
+    fact_type VARCHAR(64) NOT NULL COMMENT 'mortgage/guarantor/settlement/milestone/risk/decision/transaction',
+    fact_value TEXT,
+    confidence DECIMAL(3,2) COMMENT 'LLM 置信度 0-1',
+    confidence_level VARCHAR(16) COMMENT 'CONFIRMED/AI_INFERRED/PENDING_REVIEW',
+    evidence_material_id BIGINT COMMENT '证据材料 ID',
+    evidence_snippet TEXT COMMENT '证据原文摘录',
+    status VARCHAR(32) DEFAULT 'active',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_pf_project_type (project_id, fact_type),
+    CONSTRAINT fk_pf_project FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='项目关键事实';
+
+CREATE TABLE project_fact_event (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    project_id BIGINT NOT NULL,
+    fact_type VARCHAR(64) NOT NULL,
+    event_type VARCHAR(32) NOT NULL COMMENT 'INSERT/UPDATE/DELETE/ROLLBACK',
+    fact_value TEXT,
+    evidence TEXT,
+    confidence DECIMAL(3,2),
+    confidence_level VARCHAR(16) COMMENT 'CONFIRMED/AI_INFERRED/PENDING_REVIEW',
+    owner_id BIGINT COMMENT '责任人 user_id',
+    due_date DATE COMMENT '跟进截止日',
+    resolved_at DATETIME COMMENT '处置完成时间',
+    resolution_note TEXT COMMENT '处置备注',
+    created_by BIGINT COMMENT '操作者 user_id',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME COMMENT '软删时间(逻辑标记, 仍不可物理删)',
+    deleted_by BIGINT COMMENT '软删操作者',
+    version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本',
+    INDEX idx_pfe_project_type (project_id, fact_type),
+    INDEX idx_owner_due (owner_id, due_date),
+    CONSTRAINT fk_pfe_project FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='关键事实事件流(INSERT-only)';
+
+CREATE TABLE business_term (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(128) NOT NULL,
+    english_name VARCHAR(128) COMMENT '英文名称(可选)',
+    aliases VARCHAR(512),
+    category VARCHAR(64),
+    definition TEXT,
+    standard_definition TEXT,
+    source_url VARCHAR(512),
+    data_mapping JSON,
+    status VARCHAR(32) NOT NULL DEFAULT 'draft' COMMENT 'draft/pending_review/active/deprecated',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME COMMENT '软删时间',
+    deleted_by BIGINT COMMENT '软删操作者',
+    version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本',
+    INDEX idx_bt_name (name),
+    INDEX idx_bt_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='业务术语字典';
+
+CREATE TABLE user_role (
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+    assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, role_id),
+    CONSTRAINT fk_ur_user FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ur_role FOREIGN KEY (role_id) REFERENCES role(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户-角色多对多';
+
+CREATE TABLE project_member (
+    project_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    role_in_project VARCHAR(64) NOT NULL DEFAULT 'member' COMMENT 'member/owner/legal',
+    assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (project_id, user_id),
+    CONSTRAINT fk_pm_project FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pm_user FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='项目成员';
+
+CREATE TABLE failure_log (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    path VARCHAR(512) NOT NULL COMMENT '失败路径/端点',
+    failure_type VARCHAR(64) NOT NULL COMMENT '失败类型枚举',
+    error_msg TEXT COMMENT '错误信息',
+    stack_trace TEXT COMMENT '堆栈',
+    resolved TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已解决',
+    occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发生时间',
+    resolved_at DATETIME COMMENT '解决时间',
+    INDEX idx_path_resolved (path, resolved, occurred_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='失败兜底日志';
+
+CREATE TABLE notification (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    type VARCHAR(32) NOT NULL COMMENT 'TODO/FACT/PROPOSAL/SYSTEM',
+    title VARCHAR(256) NOT NULL,
+    content TEXT,
+    link VARCHAR(512) COMMENT '跳转链接',
+    `read` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已读',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_read (user_id, `read`, created_at),
+    CONSTRAINT fk_notif_user FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户通知';
+
+CREATE TABLE import_batch (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    type VARCHAR(64) NOT NULL COMMENT '导入类型: project/proposal/...',
+    total INT NOT NULL DEFAULT 0,
+    success INT NOT NULL DEFAULT 0,
+    failed INT NOT NULL DEFAULT 0,
+    created_by BIGINT COMMENT '操作者',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_type_created (type, created_at),
+    CONSTRAINT fk_ib_user FOREIGN KEY (created_by) REFERENCES user(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='数据导入批次';
+
+CREATE TABLE import_error (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    batch_id BIGINT NOT NULL,
+    row_num INT NOT NULL COMMENT 'Excel 行号',
+    column_name VARCHAR(128) COMMENT '列名',
+    error_msg VARCHAR(1000) NOT NULL,
+    INDEX idx_batch (batch_id),
+    CONSTRAINT fk_ie_batch FOREIGN KEY (batch_id) REFERENCES import_batch(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='导入错误明细';
+
+DROP TRIGGER IF EXISTS trg_fact_event_immutable;
+DROP TRIGGER IF EXISTS trg_fact_event_no_delete;
+
+DELIMITER $$
+CREATE TRIGGER trg_fact_event_immutable
+BEFORE UPDATE ON project_fact_event
+FOR EACH ROW
+BEGIN
+  IF (NEW.event_type <> OLD.event_type
+      OR NEW.fact_value <> OLD.fact_value
+      OR (NEW.evidence <> OLD.evidence OR (NEW.evidence IS NULL) <> (OLD.evidence IS NULL))
+      OR (NEW.confidence <> OLD.confidence OR (NEW.confidence IS NULL) <> (OLD.confidence IS NULL))
+      OR NEW.project_id <> OLD.project_id
+      OR NEW.fact_type <> OLD.fact_type
+      OR NEW.created_at <> OLD.created_at
+      OR (NEW.created_by <> OLD.created_by OR (NEW.created_by IS NULL) <> (OLD.created_by IS NULL))
+      OR (NEW.confidence_level <> OLD.confidence_level OR (NEW.confidence_level IS NULL) <> (OLD.confidence_level IS NULL))) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'project_fact_event is INSERT-only (only owner_id/due_date/resolved_at/resolution_note may be updated)';
+  END IF;
+END$$
+
+CREATE TRIGGER trg_fact_event_no_delete
+BEFORE DELETE ON project_fact_event
+FOR EACH ROW
+BEGIN
+  SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'project_fact_event is INSERT-only (DELETE forbidden)';
+END$$
+DELIMITER ;
+
+-- ==========================================================
+-- 12. 迁移检查
 -- ==========================================================
 SELECT '角色表 role' AS table_name, COUNT(*) AS count FROM role
 UNION ALL
@@ -475,7 +685,27 @@ SELECT '审计日志表 audit_log', COUNT(*) FROM audit_log
 UNION ALL
 SELECT 'LLM调用日志表 llm_call_log', COUNT(*) FROM llm_call_log
 UNION ALL
-SELECT '对话记忆表 spring_ai_chat_memory', COUNT(*) FROM spring_ai_chat_memory;
+SELECT '对话记忆表 spring_ai_chat_memory', COUNT(*) FROM spring_ai_chat_memory
+UNION ALL
+SELECT '关键事实表 project_fact', COUNT(*) FROM project_fact
+UNION ALL
+SELECT '事实事件表 project_fact_event', COUNT(*) FROM project_fact_event
+UNION ALL
+SELECT '业务术语表 business_term', COUNT(*) FROM business_term
+UNION ALL
+SELECT '通知表 notification', COUNT(*) FROM notification
+UNION ALL
+SELECT '失败日志表 failure_log', COUNT(*) FROM failure_log
+UNION ALL
+SELECT '用户角色表 user_role', COUNT(*) FROM user_role
+UNION ALL
+SELECT '项目成员表 project_member', COUNT(*) FROM project_member
+UNION ALL
+SELECT '导入批次表 import_batch', COUNT(*) FROM import_batch
+UNION ALL
+SELECT '导入错误表 import_error', COUNT(*) FROM import_error
+UNION ALL
+SELECT '议案系列表 proposal_series', COUNT(*) FROM proposal_series;
 
 -- FULLTEXT 索引验证
 SELECT 'project.ft_name_cust 索引' AS index_name,

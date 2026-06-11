@@ -510,7 +510,7 @@ MOD-01 (DB 迁移, 1.7d)
 
 #### MOD-01: 数据库迁移 + 7 表 ALTER
 
-- **状态**: 占用-阿根廷
+- **状态**: 已完成 (阿根廷 / 2026-06-11)
 - **占用者**: 阿根廷
 - **影响文件**（独占）: `backend/src/main/resources/db/migration/I-RI-*.sql`（11 新）+ `init.sql`（append）
 - **工作量**: 1.7d
