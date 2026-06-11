@@ -1,0 +1,203 @@
+version: 1
+plan:
+  name: 'v1.1 增量需求架构扩展 + 并行任务表 v2'
+  max_concurrency: 3
+  max_consecutive_failures: 2
+  max_cycles: 8
+  auto_reject_retries: 1
+tasks:
+  # ============================================================
+  # T1: 架构师读 v1.1 需求 + 现有 6 份分章架构 + Plan I 已完工代码
+  #     产出 architecture-v1.1-extended.md
+  #     必须覆盖: 后端 / 前端 / DB schema / Agent 工具集 / 部署
+  #     重点: 跟现有架构 0 冲突, 零回归
+  # ============================================================
+  - id: t1-arch-extended
+    title: 'T1 架构扩展方案 v1.1'
+    prompt: |
+      你是"投委会档案项目"的架构师（agent_name=架构师）。现在主项目 PM 派你做 v1.1 增量需求的架构扩展。
+
+      **必读文档**（按顺序读，5 分钟扫目录，1.5 小时精读）:
+      1. /workspace/projects-online/README.md — 项目入口 + 4 类角色 + v1.1 路线图
+      2. /workspace/projects-online/docs/requirements/REQUIREMENTS.md — 业务需求 v1.1（1341 行），重点读 §5.6（智能问答）、§5.7~§5.11（新增能力）、§13（Mavis 拓展 10 大块：置信度 3 级 / 隐式切换 5 级 / 决议变更 / 编号预留 / 网络查字典 / 软删 / RBAC 5 角色 / 审计加强 / 看板 / 通知中心 / 导出 / 预览 / 脱敏视图）
+      3. /workspace/projects-online/docs/requirements/ARCH-DECOMPOSITION.md — 现有 RI-1~45（已存在）
+      4. /workspace/projects-online/docs/architecture/01~06-arch-*.md — 6 份分章架构（"另一个 AI"写的现代化拆解）
+      5. /workspace/projects-online/docs/AGENT-IMPL-PLAN.md — Plan I 智能问答总方案
+      6. /workspace/projects-online/docs/AGENT-FRAMEWORK-DECISION.md — 关键决策（Spring AI 1.1 + 不引 spring-ai-alibaba）
+      7. /workspace/projects-online/docs/DB-SCHEMA-v2.md — 现有 schema
+      8. /workspace/projects-online/docs/ARCHITECTURE-v2.md — 现有架构基线
+      9. /workspace/projects-online/docs/LESSONS-LEARNED.md — 20+ 踩坑
+      10. /workspace/projects-online/backend/ 下 agent/ 全部 14 文件 — Plan I 实际代码
+      11. /workspace/projects-online/TASKS.md — 现有任务表
+
+      **你的产出（写到 /workspace/projects-online/.mavis/plans/draft/architecture-v1.1-extended.md）**:
+
+      文档结构（必须 6 章 + 1 附录）:
+      - §0 执行摘要（一段话讲清 v1.1 增量对架构的影响面）
+      - §1 现有架构基线（300 字内：3 层架构 + 6 工具 Agent + 关键模块清单）
+      - §2 v1.1 增量需求架构影响（按 §13 顺序，每条需求 → 影响表 / 新增模块 / 接口 / 兼容性）
+      - §3 后端扩展（包结构 / 新 Controller-Service / 改造点 / 与现有 agent/ 集成）
+      - §4 前端扩展（新增 View / Component / 路由 / 状态管理 / 与现有 Knowledge.vue 关系）
+      - §5 数据库扩展（新增表 / 改字段 / 索引 / 迁移脚本命名 I-RI-N.sql）
+      - §6 Agent 工具集扩展（要不要新增 tool？改造现有 6 工具？Prompt/Few-shot 改什么？降级路径？）
+      - §7 部署 & 配置扩展（application.yml 新增 / config.json 新增 / 灰度策略）
+      - 附录 A 跟现有 RI-1~45 的对应关系表（v1.1 增量 → 新 RI 还是合并到旧 RI）
+
+      **硬要求**:
+      - 不要写代码（你是架构师，不写代码）
+      - 不要推翻现有架构（"零回归"是项目方 v1.0 决策）
+      - 必须跟现有 docs/architecture/01~06 风格一致（同样深度，同样章节粒度）
+      - 每条 §X 引用要写回 §13 / RI-N 编号
+      - 凡是发现跟现有架构冲突，写在 §0 末尾的"风险与冲突"段
+      - 工作时间 ≤ 1.5 小时
+
+      写完后 git add + commit + push 到 main（**这条不豁免——架构文档也走 main**）。
+    assigned_to: 架构师
+    verified_by: verifier
+    verify_prompt: |
+      你是 verifier（agent_name=Verifier）。重新读：
+      - /workspace/projects-online/.mavis/plans/draft/architecture-v1.1-extended.md
+      - 跟 /workspace/projects-online/docs/architecture/01~06 对照
+      - 跟 /workspace/projects-online/docs/requirements/REQUIREMENTS.md §13 对照
+      - 跟 /workspace/projects-online/backend/src/main/java/com/archive/agent/ 实际代码对照
+
+      验证 5 件事：
+      1. v1.1 增量需求（§13 列的 10 大块）是否每条都有对应架构影响分析
+      2. 后端/前端/DB/Agent 工具集/部署 5 维都覆盖了
+      3. 跟现有 RI-1~45 的对应关系表完整（不能漏）
+      4. 跟现有 6 份分章架构风格一致（不是另起炉灶）
+      5. "零回归"约束是否在每条改造点都明确写出
+
+      FAIL on: 缺章节、缺引用、跟现有架构冲突没标、v1.1 需求漏覆盖、字面 > 5K 行（爆量）。
+    timeout_ms: 1800000
+
+  # ============================================================
+  # T2: 架构师基于 T1 标出"对哪些旧代码/迁移文件的重构或维修"
+  #     产出 refactor-and-fix-list.md
+  # ============================================================
+  - id: t2-refactor-fix-list
+    title: 'T2 重构与维修清单'
+    prompt: |
+      你是架构师。基于 T1 产出的 architecture-v1.1-extended.md，列出"为支撑 v1.1 增量，需要对哪些旧代码 / 旧迁移 / 旧配置做的重构或维修"。
+
+      必读:
+      - /workspace/projects-online/.mavis/plans/draft/architecture-v1.1-extended.md (T1 产出)
+      - /workspace/projects-online/backend/src/main/java/com/archive/ 全树（重点 agent/、controller/、service/、repository/、common/、provider/）
+      - /workspace/projects-online/frontend/src/ 全树（重点 views/、components/、router/、api/、store/）
+      - /workspace/projects-online/backend/src/main/resources/db/migration/ 全部 SQL 迁移
+      - /workspace/projects-online/backend/src/main/resources/application.yml
+      - /workspace/projects-online/docs/LESSONS-LEARNED.md（P0-1~P0-23 不要重蹈）
+      - /workspace/projects-online/docs/reviews/sisyphus-code-review-2026-06-10.md（Sisyphus 漏的 5 P0 + 1 P1）
+
+      你的产出（写到 /workspace/projects-online/.mavis/plans/draft/refactor-and-fix-list.md）:
+
+      文档结构:
+      - §1 后端重构点（按模块 / 文件列出，每个写明: 文件:行号范围 / 现状 / 改造理由 / 改造后预期 / 是否阻塞 v1.1 某 RI）
+      - §2 前端重构点（同上结构）
+      - §3 数据库迁移修补（哪些 init.sql / I-*.sql 要补 / 合并 / 重写）
+      - §4 配置重构（application.yml / config.json 模板）
+      - §5 文档同步（哪些 docs/ 下文档要重写 / 合并 / 删）
+      - §6 优先级（标 P0/P1/P2，决定哪些必须跟 RI 并行做、哪些可以延后）
+
+      硬要求:
+      - 每条写明**文件:行号**或**commit hash**作为引用证据
+      - 跟 T1 一样不要写代码
+      - 凡是 RI-N 已经在 ARCH-DECOMPOSITION.md 里有现成拆解的，这里**只列改造点不重复拆 RI**
+      - 工作时间 ≤ 1 小时
+      - 写完后 git add + commit + push 到 main
+    assigned_to: 架构师
+    depends_on: [t1-arch-extended]
+    verified_by: verifier
+    verify_prompt: |
+      重新读 refactor-and-fix-list.md，对照:
+      - backend/src/main/java/com/archive/ 实际文件清单
+      - frontend/src/ 实际文件清单
+      - db/migration/ 实际 SQL 文件清单
+      - T1 architecture-v1.1-extended.md 的影响面
+
+      验证 3 件事:
+      1. 每条改造点都引用了具体文件路径或行号
+      2. P0 改造点都标了"是否阻塞 v1.1 某 RI"
+      3. 没漏掉 P0-1~P0-23 lessons learned 里提到的高风险模块
+
+      FAIL on: 引用错误（找不到文件 / 行号）、P0 没标阻塞关系、漏掉 已知 P0。
+    timeout_ms: 1800000
+
+  # ============================================================
+  # T3: 架构师基于 T1+T2 拆 RI v2 + 并行任务表
+  #     这是 PM 最终要交付的"程序员上手表"
+  # ============================================================
+  - id: t3-tasks-v1.1
+    title: 'T3 v1.1 并行任务表 (RI v2)'
+    prompt: |
+      你是架构师。基于 T1 + T2 产出**给程序员直接上手的并行任务表**。这是 PM 的最终交付物，必须能直接被接手 AI 拿去 commit + push。
+
+      必读:
+      - /workspace/projects-online/.mavis/plans/draft/architecture-v1.1-extended.md (T1)
+      - /workspace/projects-online/.mavis/plans/draft/refactor-and-fix-list.md (T2)
+      - /workspace/projects-online/docs/requirements/ARCH-DECOMPOSITION.md 现有 RI-1~45（**保持同样字段格式**）
+      - /workspace/projects-online/TASKS.md 现有任务表（**保持同样抢占 SOP**）
+      - /workspace/projects-online/docs/AGENT-IMPL-PLAN.md 任务表样例
+      - /workspace/projects-online/docs/DEV-STANDARDS.md §7.2 完工交回清单
+      - /workspace/projects-online/docs/reviews/README.md 5 大教训（避免重蹈）
+
+      你的产出（写到 /workspace/projects-online/.mavis/plans/draft/tasks-v1.1.md）:
+
+      文档结构（必须 3 段）:
+
+      **A. RI v2 拆解** — 在现有 RI-1~45 基础上加 RI-46~N。每条 RI 严格 6 字段:
+      - 业务（引用 §X.Y）
+      - 影响表（哪些表 / 新增 / 修改）
+      - 角色（谁能调）
+      - 验收（3-5 条 Given/When/Then，**列具体数**: 几个字段、几条测例、几重加固）
+      - 依赖（跟哪些 RI 关联）
+      - 估算（BE X d / FE Y d / 测试 Z d）
+
+      **B. 并行任务表** — 对应 TASKS.md 新增章节（v1.1 阶段）。每条任务:
+      - 状态（默认"未开发"）
+      - 占用者（空）
+      - 影响文件（**独占清单**，避免多任务撞同一文件）
+      - 工作量
+      - 依赖（哪条 RI 必先完工）
+      - 可并行（✅ / ❌）
+      - 详细 spec（引用 plan-v1.1-extended §X.Y + 现有 RI-N）
+      - 验收（1-2 句，可跑命令 / 浏览器路径）
+      - 关键风险 / 踩坑预警（如果适用）
+
+      **C. 依赖图 + 抢占 SOP**:
+      - ASCII 依赖图（哪些必须串行、哪些可 5 路并行）
+      - "谁先 push 谁占"的抢占规则（沿用 TASKS.md）
+      - 失联 30 分钟接管 SOP（沿用 TASKS.md）
+      - 严禁清单（沿用 TASKS.md）
+
+      硬要求:
+      - 任务粒度 = 1 commit = 1-3 小时工作量
+      - **每条任务都要写回"v1.1 §X.Y"或"RI-N"** 方便接手 agent 不跑偏
+      - 凡是涉及安全（SQL 注入、权限、跨项目偷窥）必须显式列加固项（**用"X 重加固"具体说几重**）
+      - 凡是涉及 Agent 工具改造必须引用 docs/AGENT-FRAMEWORK-DECISION.md §X
+      - 凡是涉及数据库 schema 改动必须给 I-RI-N.sql 文件名建议
+      - 凡是涉及前端新组件必须给 Vue 组件名 + 路由路径建议
+      - 凡是 P0 改造点（T2 产出）必须显式插入到对应 RI 任务里，**不能漏**
+      - 工作时间 ≤ 2 小时
+      - 写完后 git add + commit + push 到 main
+
+      **额外交付**: 写一份 1 页摘要（写到 /workspace/projects-online/.mavis/plans/draft/tasks-v1.1-summary.md），给 PM（投委会档案项目PM）快速过目用。要点:
+      - 总任务数 / 总工时 / 关键路径 / 5 大并行机会
+      - P0 任务清单（不能漏的）
+      - 跟现有 RI-1~45 的差异点
+      - PM 需要拍板的 3-5 个决策点
+    assigned_to: 架构师
+    depends_on: [t2-refactor-fix-list]
+    verified_by: verifier
+    verify_prompt: |
+      重新读 tasks-v1.1.md 和 tasks-v1.1-summary.md。验证 7 件事:
+      1. 每条任务都有"业务"字段引用 §X.Y 或 RI-N（**不能含糊**）
+      2. 每条任务都有独占文件清单
+      3. 每条任务的验收标准**可执行**（不是"做对"而是"mvn test 10 测例过"）
+      4. P0 改造点（来自 T2）全部出现在对应任务里
+      5. 依赖图无环，且关键路径标注清楚
+      6. 任务粒度（1-3 小时工作量）是否合理
+      7. 摘要里的 PM 决策点是否是真问题（不是显而易见的）
+
+      FAIL on: 任务含糊不清、引用缺失、独占文件清单冲突（两个任务改同一文件没说怎么分）、安全加固项漏标、依赖图有环、字面量爆量。
+    timeout_ms: 1800000
