@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { create } from 'jsondiffpatch'
 import * as htmlFormatter from 'jsondiffpatch/formatters/html'
+import DOMPurify from 'dompurify'
 import { getFactEventDiff, type FactEventDiff } from '@/api/archive'
 
 const props = defineProps<{
@@ -26,9 +27,9 @@ watch(() => [props.visible, props.eventId], async ([vis, id]) => {
       const after = diff.value.after ? JSON.parse(diff.value.after) : null
       const instance = create()
       const delta = instance.diff(before, after)
-      htmlDiff.value = delta
+      htmlDiff.value = DOMPurify.sanitize(delta
         ? (htmlFormatter.format(delta, before) ?? '<p>无差异</p>')
-        : '<p>无差异</p>'
+        : '<p>无差异</p>')
     } catch {
       htmlDiff.value = ''
     }

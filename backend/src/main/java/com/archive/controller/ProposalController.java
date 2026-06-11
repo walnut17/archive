@@ -10,7 +10,10 @@ import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import com.archive.security.JwtAuthFilter;
 
 import java.util.Map;
 
@@ -55,8 +58,12 @@ public class ProposalController {
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
-        proposalService.delete(id);
+    @PreAuthorize("hasAnyRole('ADMIN','SECRETARY','PM')")
+    public ApiResponse<Void> delete(
+            @PathVariable Long id,
+            @AuthenticationPrincipal JwtAuthFilter.AuthenticatedUser user) {
+        Long userId = user != null ? user.id() : null;
+        proposalService.softDelete(id, userId);
         return ApiResponse.ok();
     }
 

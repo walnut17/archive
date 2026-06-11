@@ -9,6 +9,7 @@ UPDATE role SET code = 'user', name = '普通用户', description = 'v1.0 兼容
 WHERE code = 'employee';
 
 INSERT IGNORE INTO role (code, name, description, permissions) VALUES
+('committee', '投委会委员', '审议、查看所有项目、查询知识库、查阅议案', JSON_ARRAY('project:read', 'proposal:read', 'qa:ask', 'task:view')),
 ('legal', '法务', '法务审查权限', JSON_ARRAY('project:read', 'legal:review')),
 ('secretary', '投委会秘书', '议案登记与秘书事务', JSON_ARRAY('project:read', 'proposal:write', 'task:write'));
 

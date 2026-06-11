@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -24,6 +25,7 @@ import java.time.LocalDateTime;
         @Index(name = "idx_username", columnList = "username", unique = true),
         @Index(name = "idx_role_id", columnList = "role_id")
 })
+@SQLRestriction("deleted_at IS NULL")
 public class User {
 
     @Id

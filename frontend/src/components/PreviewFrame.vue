@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import mammoth from 'mammoth'
+import DOMPurify from 'dompurify'
 import { getMaterialPreviewUrl } from '@/api/archive'
 
 const props = defineProps<{
@@ -42,7 +43,7 @@ async function loadContent() {
     if (isWord.value) {
       const buf = await res.arrayBuffer()
       const result = await mammoth.convertToHtml({ arrayBuffer: buf })
-      wordHtml.value = result.value
+      wordHtml.value = DOMPurify.sanitize(result.value)
       if (result.messages.length) {
         errorMsg.value = '复杂 Word 格式可能显示不完整,建议下载查看'
       }
@@ -63,7 +64,7 @@ onMounted(loadContent)
 <template>
   <div class="preview-frame" v-loading="loading">
     <el-alert v-if="errorMsg" :title="errorMsg" type="warning" show-icon :closable="false" style="margin-bottom: 8px" />
-    <iframe v-if="isPdf" :src="previewUrl" width="100%" height="600" />
+    <iframe v-if="isPdf" :src="previewUrl" width="100%" height="600" sandbox="" />
     <div v-else-if="isWord" class="word-preview" v-html="wordHtml" />
     <img v-else-if="isImage" :src="previewUrl" style="max-width: 100%" alt="preview" />
     <pre v-else-if="isText" class="text-preview">{{ textContent }}</pre>

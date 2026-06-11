@@ -10,10 +10,11 @@
     "lint": "eslint . --ext .vue,.js,.ts,.jsx,.tsx --fix"
   },
   "dependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
     "axios": "^1.7.7",
     "dayjs": "^1.11.13",
+    "dompurify": "^3.4.9",
     "element-plus": "^2.8.4",
-    "@element-plus/icons-vue": "^2.3.1",
     "jsondiffpatch": "^0.6.0",
     "mammoth": "^1.8.0",
     "pdfjs-dist": "^4.10.38",
@@ -22,6 +23,7 @@
     "vue-router": "^4.4.5"
   },
   "devDependencies": {
+    "@types/dompurify": "^3.0.5",
     "@types/node": "^22.7.5",
     "@vitejs/plugin-vue": "^5.1.4",
     "typescript": "^5.6.2",

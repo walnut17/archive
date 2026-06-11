@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS project_fact_event (
     confidence DECIMAL(3,2),
     created_by BIGINT COMMENT '操作者 user_id',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本',
     INDEX idx_pfe_project_type (project_id, fact_type),
     CONSTRAINT fk_pfe_project FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='关键事实事件流(INSERT-only)';

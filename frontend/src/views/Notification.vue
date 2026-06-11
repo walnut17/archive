@@ -34,7 +34,7 @@ async function onMarkAll() {
 }
 
 function goLink(row: NotificationItem) {
-  if (row.link) router.push(row.link)
+  if (row.link?.startsWith('/')) router.push(row.link)
 }
 
 function formatTime(t: string) {

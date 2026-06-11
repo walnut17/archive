@@ -46,8 +46,7 @@ ALTER TABLE audit_log
 
 ALTER TABLE project_fact_event
     ADD COLUMN deleted_at DATETIME COMMENT '软删时间(逻辑标记, 仍不可物理删)' AFTER resolution_note,
-    ADD COLUMN deleted_by BIGINT COMMENT '软删操作者' AFTER deleted_at,
-    ADD COLUMN version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本' AFTER deleted_by;
+    ADD COLUMN deleted_by BIGINT COMMENT '软删操作者' AFTER deleted_at;
 
 ALTER TABLE user
     ADD COLUMN deleted_at DATETIME COMMENT '软删时间' AFTER updated_at,

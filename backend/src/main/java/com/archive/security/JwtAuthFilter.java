@@ -56,7 +56,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String username = claims.getSubject();
         String legacyRole = (String) claims.get("role");
-        Long uid = ((Number) claims.get("uid")).longValue();
+        Object uidClaim = claims.get("uid");
+        if (!(uidClaim instanceof Number)) {
+            log.debug("JWT 缺少 uid,跳过认证");
+            chain.doFilter(request, response);
+            return;
+        }
+        Long uid = ((Number) uidClaim).longValue();
 
         List<String> roleCodes = rbacService.getRoleCodes(uid);
         if (roleCodes.isEmpty() && legacyRole != null) {
