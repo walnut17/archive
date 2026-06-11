@@ -1,6 +1,6 @@
 # Plan UP-0611-02 — Agent 意图分类 + 离题拒答规则
 
-> **状态**：`DRAFT`（待 Implement 认领）
+> **状态**：`VERIFY`（待 Reviewer 审 / 125 回归）
 > **活跃目录**：`upgrade_to_settle/` · 完工后 → `done/`
 
 ---
@@ -156,8 +156,8 @@
 |------|------|------|
 | `agent/prompt/AgentSystemPrompt.java` | 改 | render() 首段加域约束 + 拒答规则 |
 | `agent/AgentContext.java` | 不改 | 无需新增字段 |
-| `agent/AgentEngine.java` | 不改 | 如果选方案 A 无需改；方案 B 需加 |
-| `agent/prompt/AgentFewShots.java` | 可改 | 第 4 个示例展示拒答场景 |
+| `agent/AgentEngine.java` | 不改 | 方案 A 无需改引擎 |
+| `agent/prompt/AgentFewShots.java` | 不改 | 拒答场景太简单不需 few-shot |
 
 ### 4.2 验收
 
@@ -174,11 +174,18 @@ curl -X POST http://localhost:8080/api/qa/ask \
 
 ## 5. Implement
 
-（Implementer 填写）
+| **Agent** | Sisyphus |
+|---|---|
+| **时间** | 2026-06-11 |
+| **摘要** | 方案 A（prompt 级约束）：AgentSystemPrompt.render() 首段加域约束 + 拒答规则 |
+
+| 项 | Commit | 说明 | 状态 |
+|---|---|---|---|
+| AgentSystemPrompt 域约束 | (当前) | 首段加回答范围 + 拒答规则 + 示例 | `DONE` |
 
 ---
 
-## 6. Review
+## 6. 评审（Reviewer Agent）
 
 | Agent | 时间 | 结论 |
 |---|---|---|
