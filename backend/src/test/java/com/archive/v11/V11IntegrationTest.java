@@ -71,6 +71,8 @@ class V11IntegrationTest {
     @Autowired private RoleRepository roleRepo;
     @Autowired private UserRepository userRepo;
     @Autowired private RbacService rbacService;
+    @Autowired private DictTypeRepository dictTypeRepo;
+    @Autowired private DictItemRepository dictItemRepo;
     @Autowired private PreviewService previewService;
     @Autowired private ImportService importService;
     @Autowired private FailureLogService failureLogService;
@@ -87,10 +89,42 @@ class V11IntegrationTest {
     void setUp() {
         ensureV11JdbcTables();
         seedRolesAndUsers();
+        seedNetworkDictSources();
         seedProject = ensureSeedProject();
 
         when(glmService.chat(anyString(), anyString(), anyDouble(), anyInt()))
                 .thenReturn("{\"action\":\"FINAL_ANSWER\",\"answer\":\"v1.1 集成测试 mock 答案\"}");
+    }
+
+    private void seedNetworkDictSources() {
+        dictTypeRepo.findByTypeCode("network_dict_source").orElseGet(() ->
+                dictTypeRepo.save(DictType.builder()
+                        .typeCode("network_dict_source")
+                        .typeName("网络查源")
+                        .isSystem(true)
+                        .sortOrder(9)
+                        .enabled(true)
+                        .build()));
+        if (dictItemRepo.findByTypeCodeAndItemKey("network_dict_source", "baidu_baike").isEmpty()) {
+            dictItemRepo.save(DictItem.builder()
+                    .typeCode("network_dict_source")
+                    .itemKey("baidu_baike")
+                    .itemValue("{\"baseUrl\":\"https://baike.baidu.com/api/openapi\",\"timeout\":5000}")
+                    .sortOrder(1)
+                    .isSystem(true)
+                    .enabled(true)
+                    .build());
+        }
+        if (dictItemRepo.findByTypeCodeAndItemKey("network_dict_source", "wikipedia_zh").isEmpty()) {
+            dictItemRepo.save(DictItem.builder()
+                    .typeCode("network_dict_source")
+                    .itemKey("wikipedia_zh")
+                    .itemValue("{\"baseUrl\":\"https://zh.wikipedia.org/w/api.php\",\"timeout\":5000}")
+                    .sortOrder(2)
+                    .isSystem(true)
+                    .enabled(true)
+                    .build());
+        }
     }
 
     private void ensureV11JdbcTables() {

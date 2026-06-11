@@ -264,10 +264,6 @@ public class GlmService {
         return s == null ? "" : s.replace("\n", " ").trim();
     }
 
-    private String safe(String s) {
-        return s == null ? "" : s.replace("\n", " ").trim();
-    }
-
     /**
      * LLM 抽字段调用 (RI-30): 分类 5 种 FailureType, 不抛异常.
      */

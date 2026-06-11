@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   getProject, createProject, updateProject,
+  extractProjectFields,
   type Project,
   projectStatusOptions, projectCategoryOptions,
 } from '../api/archive'
@@ -23,6 +24,7 @@ const form = ref<Project>({
   remark: '',
 })
 const loading = ref(false)
+const materialVersionId = ref<number | null>(null)
 const failureType = ref<FailureType | null>(null)
 const failureMessage = ref('')
 const retryable = ref(false)
@@ -46,7 +48,43 @@ function extractFailure(err: any) {
   retryable.value = payload?.retryable ?? false
 }
 
+function applyExtracted(data: Record<string, unknown> | undefined) {
+  if (!data) return
+  if (typeof data.projectName === 'string' && data.projectName) {
+    form.value.name = data.projectName
+  }
+  if (typeof data.amount === 'number') {
+    form.value.amountWan = Math.round(data.amount)
+  }
+  if (typeof data.customerName === 'string' && data.customerName) {
+    form.value.customerName = data.customerName
+  }
+}
+
+async function runExtractPreview() {
+  if (!materialVersionId.value) return
+  failureType.value = null
+  failureMessage.value = ''
+  retryable.value = false
+  loading.value = true
+  try {
+    const result = await extractProjectFields(materialVersionId.value)
+    if (result.data) {
+      applyExtracted(result.data as Record<string, unknown>)
+      ElMessage.success('AI 预填完成, 请核对后保存')
+    }
+  } catch (e: any) {
+    extractFailure(e)
+  } finally {
+    loading.value = false
+  }
+}
+
 onMounted(async () => {
+  const mv = route.query.materialVersionId
+  if (mv) {
+    materialVersionId.value = Number(mv)
+  }
   const id = route.params.id
   if (id) {
     isEdit.value = true
@@ -56,6 +94,8 @@ onMounted(async () => {
     } finally {
       loading.value = false
     }
+  } else if (materialVersionId.value) {
+    await runExtractPreview()
   }
 })
 
@@ -73,7 +113,10 @@ async function onSubmit() {
       await updateProject(form.value.id!, form.value)
       ElMessage.success('更新成功')
     } else {
-      await createProject(form.value)
+      await createProject({
+        ...form.value,
+        materialVersionId: materialVersionId.value ?? undefined,
+      })
       ElMessage.success('创建成功')
     }
     router.push({ name: 'project-list' })
@@ -88,7 +131,11 @@ function retry() {
   failureType.value = null
   failureMessage.value = ''
   retryable.value = false
-  onSubmit()
+  if (materialVersionId.value && !isEdit.value) {
+    runExtractPreview()
+  } else {
+    onSubmit()
+  }
 }
 
 function onCancel() {
@@ -99,6 +146,16 @@ function onCancel() {
 <template>
   <div class="project-form">
     <h2>{{ isEdit ? '编辑项目' : '新建项目' }}</h2>
+
+    <el-alert
+      v-if="materialVersionId && !isEdit"
+      type="info"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 12px"
+      title="已关联上传材料"
+      description="系统已尝试 AI 预填; 可点「重新抽取」或手工修改后保存"
+    />
 
     <el-alert
       v-if="failureType"
@@ -147,6 +204,9 @@ function onCancel() {
       </el-form-item>
       <el-form-item>
         <el-button type="primary" :loading="loading" @click="onSubmit">保存</el-button>
+        <el-button v-if="materialVersionId && !isEdit" :loading="loading" @click="runExtractPreview">
+          重新抽取
+        </el-button>
         <el-button @click="onCancel">取消</el-button>
       </el-form-item>
     </el-form>

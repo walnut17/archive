@@ -442,6 +442,18 @@ CREATE TABLE IF NOT EXISTS dict_item (
     INDEX idx_di_type_enabled (type_code, enabled, sort_order)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='字典项';
 
+-- v1.1 RI-26: 网络查源 (Agent network_dict_lookup)
+INSERT IGNORE INTO dict_type (type_code, type_name, is_system, sort_order, enabled) VALUES
+('network_dict_source', '网络查源', 1, 9, 1);
+
+INSERT IGNORE INTO dict_item (type_code, item_key, item_value, is_default, is_system, sort_order, enabled) VALUES
+('network_dict_source', 'baidu_baike',
+ '{"baseUrl":"https://baike.baidu.com/api/openapi","timeout":5000}',
+ 0, 1, 1, 1),
+('network_dict_source', 'wikipedia_zh',
+ '{"baseUrl":"https://zh.wikipedia.org/w/api.php","timeout":5000}',
+ 0, 1, 2, 1);
+
 CREATE TABLE IF NOT EXISTS audit_log (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     actor VARCHAR(64) NOT NULL,

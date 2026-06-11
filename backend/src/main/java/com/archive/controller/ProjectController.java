@@ -7,14 +7,17 @@ import com.archive.dto.ProjectRequest;
 import com.archive.dto.ProjectResponse;
 import com.archive.entity.Project;
 import com.archive.security.JwtAuthFilter;
-import com.archive.service.AuditLogService;
+import com.archive.engine.ExtractionEngine;
+import com.archive.service.GlmService;
 import com.archive.service.ExportService;
+import com.archive.service.AuditLogService;
 import com.archive.service.NotificationService;
 import com.archive.service.ProjectFactEventService;
 import com.archive.service.ProjectService;
 import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +42,7 @@ public class ProjectController {
     private final ProjectFactEventService factEventService;
     private final NotificationService notificationService;
     private final AuditLogService auditLogService;
+    private final ExtractionEngine extractionEngine;
 
     @GetMapping
     public ApiResponse<PageResponse<ProjectResponse>> list(
@@ -100,16 +104,42 @@ public class ProjectController {
             @AuthenticationPrincipal JwtAuthFilter.AuthenticatedUser user) {
         Long userId = user != null ? user.id() : null;
         String actor = user != null ? user.username() : "anonymous";
-        auditLogService.logSimple(actor, "SENSITIVE_VIEW", "project", id);
+        auditLogService.logSensitiveView(actor, "project", id, "unmask_request");
         notificationService.notifyAdmin("用户申请脱敏查看项目 " + id);
         return ApiResponse.ok(Map.of(
                 "unmaskRequestUrl", "/api/projects/" + id + "?unmask=true&token=stub-" + userId));
     }
 
+    /**
+     * 立项 AI 预填 — 从材料版本同步抽取, 失败返回 failureType (RI-30).
+     */
+    @PostMapping("/extract-preview")
+    public ResponseEntity<ApiResponse<GlmService.ExtractionFailureResponse>> extractPreview(
+            @RequestBody ExtractPreviewRequest body) {
+        if (body.getMaterialVersionId() == null) {
+            throw new IllegalArgumentException("materialVersionId 不能为空");
+        }
+        GlmService.ExtractionFailureResponse result =
+                extractionEngine.extractForPreview(body.getMaterialVersionId());
+        if (!result.isSuccess()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ApiResponse<>(40030, result.getMessage(), result));
+        }
+        return ResponseEntity.ok(ApiResponse.ok(result));
+    }
+
     @PostMapping
-    public ApiResponse<ProjectResponse> create(@Valid @RequestBody ProjectRequest req) {
+    public ResponseEntity<ApiResponse<?>> create(@Valid @RequestBody ProjectRequest req) {
+        if (req.getMaterialVersionId() != null) {
+            GlmService.ExtractionFailureResponse extract =
+                    extractionEngine.extractForPreview(req.getMaterialVersionId());
+            if (!extract.isSuccess()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ApiResponse<>(40030, extract.getMessage(), extract));
+            }
+        }
         Project created = projectService.create(req);
-        return ApiResponse.ok(ProjectResponse.from(created));
+        return ResponseEntity.ok(ApiResponse.ok(ProjectResponse.from(created)));
     }
 
     @PutMapping("/{id:\\d+}")
@@ -142,5 +172,10 @@ public class ProjectController {
     @Data
     public static class RollbackRequest {
         private int targetVersion;
+    }
+
+    @Data
+    public static class ExtractPreviewRequest {
+        private Long materialVersionId;
     }
 }

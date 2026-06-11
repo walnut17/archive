@@ -42,6 +42,7 @@ public class AuditLogService {
         AuditLog auditLog = AuditLog.builder()
                 .actor(actor.trim())
                 .action(action.trim())
+                .type(inferType(action))
                 .entityType(entityType)
                 .entityId(entityId)
                 .oldValue(oldValue)
@@ -52,6 +53,73 @@ public class AuditLogService {
                 .extra(extra)
                 .build();
         return auditLogRepository.save(auditLog);
+    }
+
+    @Transactional
+    public AuditLog logWrite(String actor, String entityType, String action, Long entityId) {
+        return logTyped(actor, action, "WRITE", entityType, null, entityId, null);
+    }
+
+    @Transactional
+    public AuditLog logLogin(String actor, String action) {
+        return logTyped(actor, action, "LOGIN", "user", null, null, null);
+    }
+
+    @Transactional
+    public AuditLog logSensitiveView(String actor, String entityType, Long entityId, String reason) {
+        return logTyped(actor, "SENSITIVE_VIEW", "SENSITIVE_VIEW", entityType, null, entityId, reason);
+    }
+
+    @Transactional
+    public AuditLog logExport(String actor, String exportType, Long entityId) {
+        return logTyped(actor, "EXPORT_" + exportType, "EXPORT", exportType, null, entityId, null);
+    }
+
+    @Transactional
+    public AuditLog logToolCall(String toolName, String args, String result, long durationMs) {
+        String extra = "{\"args\":" + quoteJson(args) + ",\"result\":" + quoteJson(result)
+                + ",\"durationMs\":" + durationMs + "}";
+        return logTyped("system", "LLM_" + toolName, "LLM", "agent_tool", toolName, null, extra);
+    }
+
+    private AuditLog logTyped(String actor, String action, String type, String entityType,
+                              String entitySubtype, Long entityId, String extra) {
+        AuditLog auditLog = AuditLog.builder()
+                .actor(actor != null ? actor.trim() : "system")
+                .action(action)
+                .type(type)
+                .entityType(entityType)
+                .entitySubtype(entitySubtype)
+                .entityId(entityId)
+                .extra(extra)
+                .build();
+        return auditLogRepository.save(auditLog);
+    }
+
+    private static String inferType(String action) {
+        if (action == null) {
+            return "WRITE";
+        }
+        if ("LOGIN".equals(action) || "LOGOUT".equals(action)) {
+            return "LOGIN";
+        }
+        if (action.startsWith("EXPORT")) {
+            return "EXPORT";
+        }
+        if (action.startsWith("LLM")) {
+            return "LLM";
+        }
+        if (action.startsWith("SENSITIVE")) {
+            return "SENSITIVE_VIEW";
+        }
+        return "WRITE";
+    }
+
+    private static String quoteJson(String raw) {
+        if (raw == null) {
+            return "null";
+        }
+        return "\"" + raw.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ") + "\"";
     }
 
     /**

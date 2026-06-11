@@ -48,8 +48,25 @@ export async function getProject(id: number): Promise<Project> {
   return getData<Project>(await http.get<any>(`/projects/${id}`))
 }
 
-export async function createProject(data: Project): Promise<Project> {
+export async function createProject(data: Project & { materialVersionId?: number }): Promise<Project> {
   return getData<Project>(await http.post<any>('/projects', data))
+}
+
+export type ExtractionFailureType = 'API_ERROR' | 'PARSE_ERROR' | 'FIELD_MISSING' | 'VALUE_INVALID' | 'TIMEOUT'
+
+export interface ExtractionPreviewResult {
+  success: boolean
+  failureType?: ExtractionFailureType
+  message?: string
+  retryable?: boolean
+  data?: Record<string, unknown>
+}
+
+/** 立项 AI 预填 — 从材料版本同步抽取 (RI-30) */
+export async function extractProjectFields(materialVersionId: number): Promise<ExtractionPreviewResult> {
+  return getData<ExtractionPreviewResult>(
+    await http.post<any>('/projects/extract-preview', { materialVersionId })
+  )
 }
 
 export async function updateProject(id: number, data: Project): Promise<Project> {

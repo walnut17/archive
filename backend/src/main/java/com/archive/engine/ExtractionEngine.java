@@ -6,6 +6,7 @@ import com.archive.entity.MaterialVersion;
 import com.archive.repository.ExtractionMethodRepository;
 import com.archive.repository.MaterialVersionRepository;
 import com.archive.service.AuditLogService;
+import com.archive.service.GlmService;
 import com.archive.provider.LLMProvider;
 import com.archive.provider.LLMProviderFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -39,6 +40,7 @@ public class ExtractionEngine {
 
     private final ExtractionMethodRepository extractionMethodRepository;
     private final LLMProviderFactory llmProviderFactory;
+    private final GlmService glmService;
     private final AuditLogService auditLogService;
     private final MaterialVersionRepository materialVersionRepository;
 
@@ -141,6 +143,44 @@ public class ExtractionEngine {
     @Async("taskExecutor")
     public Map<String, Object> extract(Long materialVersionId) {
         return extract(materialVersionId, DEFAULT_PROJECT_FIELDS);
+    }
+
+    /**
+     * 同步抽取预览 (RI-30): 返回结构化成功/失败, 供立项表单 AI 预填.
+     */
+    public GlmService.ExtractionFailureResponse extractForPreview(Long materialVersionId) {
+        MaterialVersion mv = materialVersionRepository.findById(materialVersionId).orElse(null);
+        if (mv == null) {
+            return GlmService.ExtractionFailureResponse.of(
+                    FailureType.FIELD_MISSING, "材料版本不存在", false);
+        }
+        if (!"success".equals(mv.getParseStatus())) {
+            return GlmService.ExtractionFailureResponse.of(
+                    FailureType.FIELD_MISSING, "材料解析未完成或失败, 请重传或换文件", true);
+        }
+        String materialContent = mv.getParsedText();
+        if (materialContent == null || materialContent.isBlank()) {
+            return GlmService.ExtractionFailureResponse.of(
+                    FailureType.FIELD_MISSING, "材料解析文本为空", true);
+        }
+
+        ExtractionMethod method = extractionMethodRepository.findByCode(DEFAULT_PROJECT_FIELDS).orElse(null);
+        String title = mv.getOriginalFilename();
+        String prompt;
+        if (method != null && method.getPromptTemplate() != null) {
+            prompt = method.getPromptTemplate()
+                    .replace("${material_title}", title != null ? title : "")
+                    .replace("${material_content}", materialContent);
+        } else {
+            prompt = """
+                    从以下立项/尽调材料中抽取项目字段, 输出 JSON:
+                    {"projectName":"...","amount":1234,"customerName":"..."}
+                    材料标题: %s
+                    材料正文:
+                    %s
+                    """.formatted(title != null ? title : "", materialContent);
+        }
+        return glmService.callWithLog(prompt);
     }
 
     /**

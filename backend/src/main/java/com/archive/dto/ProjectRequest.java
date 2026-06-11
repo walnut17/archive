@@ -44,6 +44,9 @@ public class ProjectRequest {
 
     private LocalDate scheduledMeetingAt;
 
+    /** 可选: 创建前从该材料版本 AI 抽取预填 (失败时返回 failureType). */
+    private Long materialVersionId;
+
     @Size(max = 2000)
     private String remark;
 }
