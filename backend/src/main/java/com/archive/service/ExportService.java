@@ -48,7 +48,7 @@ public class ExportService {
         doc.add(new Paragraph("摘要: " + (p.getSummary() != null ? p.getSummary() : "")));
         doc.close();
 
-        auditLogService.logSimple(currentActor(), "EXPORT", "project_pdf", projectId);
+        auditLogService.logExport(currentActor(), "project_pdf", projectId);
         return baos.toByteArray();
     }
 
@@ -72,7 +72,7 @@ public class ExportService {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         wb.write(baos);
         wb.close();
-        auditLogService.logSimple(currentActor(), "EXPORT", "project_xlsx", projectId);
+        auditLogService.logExport(currentActor(), "project_xlsx", projectId);
         return baos.toByteArray();
     }
 
@@ -140,7 +140,7 @@ public class ExportService {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         wb.write(baos);
         wb.close();
-        auditLogService.logSimple(currentActor(), "EXPORT", type + "_xlsx", null);
+        auditLogService.logExport(currentActor(), type + "_xlsx", null);
         return baos.toByteArray();
     }
 

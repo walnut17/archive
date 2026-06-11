@@ -73,6 +73,7 @@ class V11IntegrationTest {
     @Autowired private RbacService rbacService;
     @Autowired private DictTypeRepository dictTypeRepo;
     @Autowired private DictItemRepository dictItemRepo;
+    @Autowired private AuditLogRepository auditLogRepo;
     @Autowired private PreviewService previewService;
     @Autowired private ImportService importService;
     @Autowired private FailureLogService failureLogService;
@@ -520,6 +521,10 @@ class V11IntegrationTest {
         assertTrue(pdf.length > 0);
         byte[] xlsx = exportService.exportProjectsExcel("materials");
         assertTrue(xlsx.length > 0);
+        var exportLogs = auditLogRepo.findByActionOrderByCreatedAtDesc(
+                "EXPORT_project_pdf", org.springframework.data.domain.PageRequest.of(0, 5));
+        assertFalse(exportLogs.isEmpty());
+        assertEquals("EXPORT", exportLogs.getContent().get(0).getType());
     }
 
     @Test
