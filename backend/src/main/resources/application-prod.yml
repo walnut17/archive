@@ -1,0 +1,15 @@
+# === 生产环境配置（spring.profiles.active=prod 时覆盖开发默认值）===
+# 启动方式: java -jar archive.jar --spring.profiles.active=prod
+# 或在 config.json 中加 "spring.profiles.active": "prod"
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate        # 生产禁止 auto DDL, schema 变更仅通过手工 SQL 迁移
+    show-sql: false              # 生产不打印 SQL
+
+  # 生产推荐加以下配置
+  # servlet:
+  #   multipart:
+  #     max-file-size: 50MB
+  #     max-request-size: 50MB

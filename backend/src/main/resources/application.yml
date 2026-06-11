@@ -19,7 +19,7 @@ spring:
       max-lifetime: 1800000
   jpa:
     hibernate:
-      ddl-auto: update          # 允许 Hibernate 自动加缺失字段 (entity 改了表不用手动改 schema)
+      ddl-auto: update          # 开发期允许 Hibernate 自动加字段；**生产必须改 validate**（见 application-prod.yml）
     show-sql: false
     properties:
       hibernate:

@@ -1,6 +1,6 @@
 # Plan UP-0611-03 — 生产部署 SOP + 发布流程标准化
 
-> **状态**：`DRAFT`（待 Implement 认领）
+> **状态**：`VERIFY`（待 Reviewer 审 / 125 回归）
 > **活跃目录**：`upgrade_to_settle/` · 完工后 → `done/`
 
 ---
@@ -164,15 +164,26 @@ curl http://localhost:8080/api/health
 
 ## 5. Implement
 
-（Implementer 填写）
+| **Agent** | Sisyphus |
+|---|---|
+| **时间** | 2026-06-11 |
+| **摘要** | 完成全部 4 项：I-RI-39 + init.sql is_read 修复；application-prod.yml 创建；v1.1-DEPLOY-GUIDE.md 编写 |
+
+| 项 | Commit | 说明 | 状态 |
+|---|---|---|---|
+| I-RI-39 `read`→`is_read` | (当前) | 源文件 + init.sql 同步修复 | `DONE` |
+| application-prod.yml | (当前) | `ddl-auto: validate` + 注释 | `DONE` |
+| v1.1-DEPLOY-GUIDE.md | (当前) | 升级步骤 + 验收 checklist + 回滚方案 | `DONE` |
 
 ---
 
-## 6. Review
+## 6. 评审（Reviewer Agent）
 
-| Agent | 时间 | 结论 |
-|---|---|---|
-| | | |
+| 字段 | 内容 |
+|---|---|
+| **Agent** | （待 Review） |
+| **时间** | |
+| **摘要** | |
 
 ---
 
