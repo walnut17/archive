@@ -463,3 +463,178 @@
 
 *本表由 Mavis 沙箱维护。接手 AI / 人类程序员看到 `未开发` 任务 = 抢的机会。*
 *谁先 `git commit + push` 谁赢。*
+
+---
+
+## 🆕 v1.1 阶段 — 6 大独立模块划分（基线 `7aa7bae`，零回归）
+
+> **2026-06-11 PM 拍板**: v1.1 增量 24 RI（§13.1~§13.3）按"独立小项目"原则切分为 6 大模块。
+> 每模块 = 1 个接手 agent 能独立 hold 的工作包，**只看自己那一份 spec + 模块内涉及文件 + 已有代码**，不需回到总表看上下文。
+> **详细 spec**: `.mavis/plans/draft/v1.1-modules/MOD-XX-*.md`（6 份独立 spec）
+> **配套索引**: `.mavis/plans/draft/v1.1-modules/README.md`
+> **架构扩展**: `.mavis/plans/draft/architecture-v1.1-extended.md`（T1, da17c92）
+> **重构清单**: `.mavis/plans/draft/refactor-and-fix-list.md`（T2）
+> **原 41 任务详**: `.mavis/plans/draft/tasks-v1.1.md`（T3，已合并到 MOD spec）
+
+### 状态机（沿用上面 🚦）
+
+```
+未开发 ──占用人 commit+push──> 占用-XXX ──完成──> 已完成(XXX / YYYY-MM-DD)
+```
+
+### PM 拍板 5 项（2026-06-11）
+
+| # | 决策 | 拍板 |
+|---|---|---|
+| D-1 | 5 角色命名 | `admin / pm / legal / committee / secretary`（v1.0 `admin / user` 双轨兼容） |
+| D-2 | 网络查字典 | v1.1 实施只配 2 候选（百度百科 + 维基百科），金融/互动留占位 |
+| D-3 | 乐观锁 v1.1 严格度 | `archive.optimistic-lock.strict=false`（冲突仅记日志，v2 多用户切 true） |
+| D-4 | 导出库 | OpenPDF 2.0.2 + Apache POI 5.2.5（jar 增量 < 10MB） |
+| D-5 | 附件预览前端库 | pdfjs-dist ^4.0 + mammoth ^1.7（纯前端，不引 LibreOffice） |
+
+### 模块依赖图
+
+```
+MOD-01 (DB 迁移, 1.7d)
+    ↓
+    ├─→ MOD-02 (核心域, ~7d)     ─┐
+    ├─→ MOD-03 (Agent 工具, ~5d) ─┼─→ MOD-06 (文档+集成测试+验收, ~3.5d)
+    ├─→ MOD-04 (业务功能, ~10d)  ─┤
+    └─→ MOD-05 (前端集成, ~1.5d) ─┘
+```
+
+**关键路径**: MOD-01 → MOD-02 → MOD-06 = 1.7 + 7 + 3.5 = **~12.2d**
+**4 路并行**（MOD-01 完工后）: MOD-02 / MOD-03 / MOD-04 / MOD-05 同时开工 ≈ 10d（最长那条）
+
+### 模块分块清单（直接派单给接手 agent）
+
+#### MOD-01: 数据库迁移 + 7 表 ALTER
+
+- **状态**: 未开发（关键路径第一步，立即开工）
+- **占用者**: 空
+- **影响文件**（独占）: `backend/src/main/resources/db/migration/I-RI-*.sql`（11 新）+ `init.sql`（append）
+- **工作量**: 1.7d
+- **依赖**: 无
+- **可并行**: ❌（关键路径第一步）
+- **详细 spec**: `.mavis/plans/draft/v1.1-modules/MOD-01-db-migrations.md`
+- **验收**: mysql 顺序执行 0 错 + 21 字段（7 表 × 3 字段）+ 7 新表 + 6 role + 2 触发器 + 回填 0 NULL
+- **commit 模板**: `feat(db,v1.1): MOD-01 SQL 迁移 11 文件 + 7 表 ALTER + 触发器`
+
+#### MOD-02: 核心域改造（软删 / RBAC / 乐观锁 / 审计）
+
+- **状态**: 未开发
+- **占用者**: 空
+- **影响文件**（独占 21 文件）: 8 新 + 13 改后端（entity / controller / service / security / common）
+- **工作量**: ~7d
+- **依赖**: MOD-01 完工
+- **可并行**: ✅（MOD-03/04/05 同时）
+- **详细 spec**: `.mavis/plans/draft/v1.1-modules/MOD-02-core-domain.md`
+- **验收**: `mvn compile` 0 错 + `mvn test` ≥ 30 测例过 + RBAC 双轨兼容（**零回归**）
+- **commit 模板**: `feat(be,v1.1): MOD-02 <子项名>（如 "RBAC 5 角色双轨"）`
+
+#### MOD-03: Agent 工具改造（5 级 / 7 重加固 / 网络字典）
+
+- **状态**: 未开发
+- **占用者**: 空
+- **影响文件**（独占 11 文件）: 3 新 + 8 改（agent / tool / prompt / service / entity）
+- **工作量**: ~5d
+- **依赖**: MOD-01 + MOD-02 完工
+- **可并行**: ✅（MOD-04/05 同时）
+- **详细 spec**: `.mavis/plans/draft/v1.1-modules/MOD-03-agent-tools.md`
+- **验收**: `mvn compile` 0 错 + 5 级判定 in-tool（**不算 ReAct 步数**）+ 7 重加固 + NetworkDictLookup 6 层降级
+- **commit 模板**: `feat(agent,v1.1): MOD-03 <子项名>（如 "FindProjectTool 5 级判定"）`
+
+#### MOD-04: 业务功能新增（看板 / 通知 / 导出 / 预览 / 脱敏 / 导入）
+
+- **状态**: 未开发
+- **占用者**: 空
+- **影响文件**（独占 27 文件）: 8 新 + 5 改后端 + 8 新 + 5 改前端 + 1 pom + 1 package.json
+- **工作量**: ~10d
+- **依赖**: MOD-01 + MOD-02 + MOD-03 完工
+- **可并行**: ✅（MOD-05 同时）
+- **详细 spec**: `.mavis/plans/draft/v1.1-modules/MOD-04-business-features.md`
+- **验收**: `mvn compile` 0 错 + `npm run build` 0 错 + `mvn test` ≥ 35 测例过 + 7 大端到端场景
+- **commit 模板**: `feat(v1.1,RI-N): MOD-04 <子项名>（如 "项目看板"）`
+
+#### MOD-05: 前端集成（Knowledge / Dashboard / 路由 / 配置）
+
+- **状态**: 未开发
+- **占用者**: 空
+- **影响文件**（独占 9 文件）: 2 新 + 4 改前端 + 3 配置（application.yml / config.example.json / GLM-KEY-SETUP.md）
+- **工作量**: ~1.5d
+- **依赖**: API 响应体确定（MOD-03 完工即可，**不等** MOD-04）
+- **可并行**: ✅（MOD-04 同时）
+- **详细 spec**: `.mavis/plans/draft/v1.1-modules/MOD-05-frontend-integration.md`
+- **验收**: `npm run build` 0 错 + 7 关键场景（置信度 / 切换 hint / 双模动画 / 失败 banner）
+- **commit 模板**: `feat(fe,v1.1): MOD-05 <子项名>（如 "Knowledge.vue 加置信度徽章"）`
+
+#### MOD-06: 文档 + 集成测试 + 端到端验收
+
+- **状态**: 未开发（最后开工）
+- **占用者**: 空
+- **影响文件**（独占 13 文件）: 2 新 + 11 改（docs/ 同步 + V11IntegrationTest + review）
+- **工作量**: ~3.5d
+- **依赖**: MOD-01 ~ MOD-05 全部完工
+- **可并行**: ❌（最后一道工序）
+- **详细 spec**: `.mavis/plans/draft/v1.1-modules/MOD-06-docs-test-acceptance.md`
+- **验收**: `mvn test V11IntegrationTest` 30+ 测例过 + 7 端到端场景 + 6 份分章架构同步 + review 文件
+- **commit 模板**: `docs(v1.1): MOD-06 文档同步 + 集成测试 + 端到端验收`
+
+### 🟢 实时可抢任务清单（2026-06-11 13:11，PM 维护）
+
+| 任务 | 为什么现在可抢 | 备注 |
+|---|---|---|
+| **MOD-01** | 关键路径第一步，无依赖 | 立即开工，1.7d |
+| ~~MOD-02/03/04/05~~ | 等 MOD-01 完工 | 完工后 4 路同时 |
+| ~~MOD-06~~ | 等 MOD-01~05 全部完工 | 最后一道工序 |
+
+**当前能抢的**:
+- ✅ **MOD-01**（DBA / 后端 agent 立即可抢）
+
+### 抢先 SOP（沿用上面 🚦）
+
+1. **看** `.mavis/plans/draft/v1.1-modules/MOD-XX-*.md`（10-30 分钟）
+2. **改** `状态: 未开发` → `占用-<你的名字>`
+3. **10 秒内** `git add TASKS.md && git commit && git push origin main`
+4. **干完** 按 MOD spec §4 验收 → 改 `状态` → `已完成` + commit + push
+
+### 严禁（沿用上面 🚦）
+
+- ❌ 改 `占用-A` 改回 `未开发`
+- ❌ 改别人 `已完成` 的部分
+- ❌ 一个 commit 改多个任务
+- ❌ 占用了但**没 push** 超过 10 分钟
+- ❌ 直推 `minimax` 分支
+- ❌ 改 `REQUIREMENTS.md`（需求开发人员的活）
+- ❌ 改 `ARCH-DECOMPOSITION.md` RI 拆解（架构师 + MOD-06 的活）
+- ❌ **改 MOD-XX 独占清单之外的文件**（除非接口契约 §6 明确写明）
+
+### 完工 SOP（MOD-XX 完工后必跑）
+
+1. 按 MOD spec §4 验收（编译 / 测试 / 端到端）
+2. 改 `状态: 占用-X` → `状态: 已完成 (X / YYYY-MM-DD)`
+3. `git add <MOD 涉及文件> TASKS.md && git commit && git push origin main`
+4. 通知 PM（投委会档案项目PM）验收
+
+### 总览数字（v1.1）
+
+| 维度 | 数 |
+|---|---|
+| 模块数 | 6 |
+| 涉及 RI | RI-46 ~ RI-69（24 条） |
+| 涉及文件（总） | ~95 个文件 |
+| 新增 SQL 迁移 | 11 个 |
+| 新增 Controller | 5 个 |
+| 新增 Service | 12 个 |
+| 新增 Entity | 7 个 |
+| 新增前端 View | 5 个 |
+| 新增前端 Component | 4 个 |
+| ALTER 表 | 7 张 |
+| 总工时 | ~28.7d（4 路并行 ≈ 5 周） |
+| 关键路径 | ~12.2d |
+| 集成测试 | 30+ 测例 |
+
+---
+
+*本 v1.1 阶段由 PM 维护。6 模块切分（按"独立小项目"原则），每模块 1 份独立 spec。*
+*接手 agent 只看自己那份 spec 即可开工。*
