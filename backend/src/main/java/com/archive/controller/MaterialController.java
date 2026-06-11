@@ -7,8 +7,11 @@ import com.archive.dto.PageResponse;
 import com.archive.entity.Material;
 import com.archive.security.JwtAuthFilter;
 import com.archive.service.MaterialService;
+import com.archive.service.PreviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,6 +31,7 @@ import java.util.List;
 public class MaterialController {
 
     private final MaterialService materialService;
+    private final PreviewService previewService;
 
     @GetMapping
     public ApiResponse<PageResponse<MaterialResponse>> list(
@@ -77,6 +81,18 @@ public class MaterialController {
         Long userId = user != null ? user.id() : null;
         materialService.softDelete(id, userId);
         return ApiResponse.ok();
+    }
+
+    @GetMapping("/{id}/preview")
+    public ResponseEntity<byte[]> preview(
+            @PathVariable Long id,
+            @RequestParam(required = false) Integer version) {
+        PreviewService.PreviewContent content = previewService.getForPreview(id, version);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, content.getMimeType())
+                .header(HttpHeaders.CACHE_CONTROL, "private, max-age=3600")
+                .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(content.getContent().length))
+                .body(content.getContent());
     }
 
     @PostMapping("/batch")

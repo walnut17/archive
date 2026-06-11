@@ -11,8 +11,12 @@
   },
   "dependencies": {
     "axios": "^1.7.7",
+    "dayjs": "^1.11.13",
     "element-plus": "^2.8.4",
     "@element-plus/icons-vue": "^2.3.1",
+    "jsondiffpatch": "^0.6.0",
+    "mammoth": "^1.8.0",
+    "pdfjs-dist": "^4.10.38",
     "pinia": "^2.2.4",
     "vue": "^3.5.12",
     "vue-router": "^4.4.5"

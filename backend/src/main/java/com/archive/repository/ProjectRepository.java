@@ -1,5 +1,6 @@
 package com.archive.repository;
 
+import com.archive.dto.ProjectBoardItem;
 import com.archive.entity.Project;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -52,4 +53,25 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
            " OR (p.customerName IS NOT NULL AND LOWER(p.customerName) LIKE LOWER(CONCAT('%', :keyword, '%')))) " +
            "ORDER BY p.createdAt DESC")
     List<Project> searchByKeywordAsList(@Param("keyword") String keyword, org.springframework.data.domain.Pageable pageable);
+
+    @Query(value = """
+            SELECT new com.archive.dto.ProjectBoardItem(
+                p.id, p.code, p.name, p.category, p.status, p.amountWan,
+                (SELECT COUNT(pr.id) FROM Proposal pr WHERE pr.projectId = p.id),
+                (SELECT COUNT(t.id) FROM Todo t WHERE t.projectId = p.id AND t.status = 'pending'),
+                p.updatedAt, false
+            )
+            FROM Project p
+            WHERE (:region IS NULL OR :region = '' OR p.category = :region)
+              AND (:stage IS NULL OR :stage = '' OR p.status = :stage)
+            """,
+            countQuery = """
+            SELECT COUNT(p) FROM Project p
+            WHERE (:region IS NULL OR :region = '' OR p.category = :region)
+              AND (:stage IS NULL OR :stage = '' OR p.status = :stage)
+            """)
+    Page<ProjectBoardItem> findBoardView(
+            @Param("region") String region,
+            @Param("stage") String stage,
+            Pageable pageable);
 }

@@ -27,6 +27,11 @@ export interface Project {
   updatedAt?: string
   createdBy?: string
   updatedBy?: string
+  customerName?: string
+  masked?: boolean
+  displayName?: string
+  displayAmount?: string
+  unmaskRequestUrl?: string
 }
 
 export const projectStatusOptions = [
@@ -53,6 +58,127 @@ export async function updateProject(id: number, data: Project): Promise<Project>
 
 export async function deleteProject(id: number): Promise<void> {
   await http.delete(`/projects/${id}`)
+}
+
+export async function exportProject(id: number, format: 'pdf' | 'xlsx' = 'pdf'): Promise<Blob> {
+  const res = await http.get(`/projects/${id}/export`, { params: { format }, responseType: 'blob' })
+  return res.data
+}
+
+export async function exportProjectsList(type: string): Promise<Blob> {
+  const res = await http.get('/projects/export', { params: { format: 'xlsx', type }, responseType: 'blob' })
+  return res.data
+}
+
+export async function requestUnmask(id: number): Promise<{ unmaskRequestUrl: string }> {
+  return getData(await http.post<any>(`/projects/${id}/unmask-request`))
+}
+
+export async function rollbackProject(id: number, targetVersion: number): Promise<Project> {
+  return getData<Project>(await http.post<any>(`/projects/${id}/rollback`, { targetVersion }))
+}
+
+// ========== Project Board ==========
+export interface ProjectBoardItem {
+  id: number
+  code: string
+  name: string
+  region?: string
+  stage?: string
+  amount?: number
+  proposalCount?: number
+  todoCount?: number
+  lastUpdated?: string
+  masked?: boolean
+}
+
+export interface BoardResponse {
+  view: string
+  items?: ProjectBoardItem[]
+  kanban?: Record<string, ProjectBoardItem[]>
+  total: number
+}
+
+export async function listProjectBoard(params: {
+  view?: string
+  region?: string
+  stage?: string
+  sort?: string
+  order?: string
+  page?: number
+  size?: number
+}): Promise<BoardResponse> {
+  const res = await http.get<any>('/projects/board', { params })
+  return res.data?.data ?? res.data
+}
+
+// ========== Fact Events ==========
+export interface FactEventDiff {
+  before?: string
+  after?: string
+  evidenceSnippet?: string
+}
+
+export interface ProjectFactEvent {
+  id: number
+  projectId: number
+  factType: string
+  eventType: string
+  factValue?: string
+  evidence?: string
+  createdAt?: string
+}
+
+export async function getFactEventDiff(projectId: number, eventId: number): Promise<FactEventDiff> {
+  return getData<FactEventDiff>(await http.get<any>(`/projects/${projectId}/fact-events/${eventId}/diff`))
+}
+
+// ========== Material Preview ==========
+export function getMaterialPreviewUrl(materialId: number, version?: number): string {
+  const base = `/api/materials/${materialId}/preview`
+  return version != null ? `${base}?version=${version}` : base
+}
+
+// ========== Import ==========
+export interface ImportBatch {
+  id: number
+  type: string
+  total: number
+  success: number
+  failed: number
+  status?: string
+  createdAt?: string
+}
+
+export interface ImportError {
+  id?: number
+  batchId?: number
+  row: number
+  column?: number
+  errorMsg?: string
+}
+
+export async function importExcel(type: string, file: File): Promise<ImportBatch> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await http.post<any>(`/admin/import/${type}`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return res.data?.data ?? res.data
+}
+
+export async function getImportErrors(batchId: number): Promise<ImportError[]> {
+  const res = await http.get<any>(`/admin/import/${batchId}/errors`)
+  return res.data?.data ?? res.data ?? []
+}
+
+// ========== Recycle Bin ==========
+export async function listRecycleBin(entityType: string, limit = 50): Promise<Record<string, unknown>[]> {
+  return getData<Record<string, unknown>[]>(await http.get<any>(`/recycle-bin/${entityType}`, { params: { limit } }))
+}
+
+export async function restoreRecycleBin(entityType: string, id: number): Promise<void> {
+  await http.post(`/recycle-bin/${entityType}/${id}/restore`)
 }
 
 // ========== Proposal ==========

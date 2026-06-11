@@ -93,6 +93,7 @@ onMounted(fetch)
         <el-button type="primary" @click="fetch">查询</el-button>
         <el-button @click="reset">重置</el-button>
         <el-button type="success" @click="goCreate">+ 新建项目</el-button>
+        <el-button @click="router.push('/projects/board')">项目看板</el-button>
       </el-form-item>
     </el-form>
 

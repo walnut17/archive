@@ -34,6 +34,12 @@ public class ProjectResponse {
     private LocalDateTime updatedAt;
     private String createdBy;
     private String updatedBy;
+    private String customerName;
+    /** RI-69 脱敏标记. */
+    private Boolean masked;
+    private String displayName;
+    private String displayAmount;
+    private String unmaskRequestUrl;
 
     public static ProjectResponse from(Project p) {
         return ProjectResponse.builder()
@@ -51,6 +57,8 @@ public class ProjectResponse {
                 .updatedAt(p.getUpdatedAt())
                 .createdBy(p.getCreatedBy())
                 .updatedBy(p.getUpdatedBy())
+                .customerName(p.getCustomerName())
+                .masked(false)
                 .build();
     }
 }

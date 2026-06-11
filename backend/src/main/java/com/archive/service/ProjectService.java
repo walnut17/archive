@@ -3,6 +3,7 @@ package com.archive.service;
 import com.archive.common.OptimisticLockException;
 import com.archive.dto.PageResponse;
 import com.archive.dto.ProjectRequest;
+import com.archive.dto.ProjectResponse;
 import com.archive.entity.Project;
 import com.archive.entity.ProjectFactEvent;
 import com.archive.repository.ProjectRepository;
@@ -33,6 +34,7 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final RecycleBinService recycleBinService;
+    private final MaskingService maskingService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -129,6 +131,10 @@ public class ProjectService {
     public Project getById(Long id) {
         return projectRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("项目不存在: id=" + id));
+    }
+
+    public ProjectResponse getByIdMasked(Long id, Long viewerId) {
+        return maskingService.applyMasking(getById(id), viewerId);
     }
 
     public PageResponse<Project> list(int page, int size, String status, String keyword) {

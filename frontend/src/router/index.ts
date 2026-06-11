@@ -26,6 +26,29 @@ const router = createRouter({
           component: () => import('@/views/ProjectList.vue'),
         },
         {
+          path: 'projects/board',
+          name: 'project-board',
+          component: () => import('@/views/ProjectBoard.vue'),
+        },
+        {
+          path: 'notifications',
+          name: 'notifications',
+          component: () => import('@/views/Notification.vue'),
+          meta: { title: '通知中心' },
+        },
+        {
+          path: 'recycle-bin',
+          name: 'recycle-bin',
+          component: () => import('@/views/RecycleBin.vue'),
+          meta: { title: '回收站', roles: ['ADMIN'] },
+        },
+        {
+          path: 'admin/import',
+          name: 'admin-import',
+          component: () => import('@/views/ImportWizard.vue'),
+          meta: { requiresAdmin: true, title: '数据导入' },
+        },
+        {
           path: 'projects/new',
           name: 'project-form',
           component: () => import('@/views/ProjectForm.vue'),
@@ -100,6 +123,12 @@ router.beforeEach((to, _from, next) => {
   }
   // Admin role check
   if (to.meta.requiresAdmin && auth.user?.role !== 'admin') {
+    next({ name: 'dashboard' })
+    return
+  }
+  // Role meta check (e.g. recycle-bin)
+  const roles = to.meta.roles as string[] | undefined
+  if (roles?.length && !roles.some(r => auth.user?.role?.toUpperCase() === r.toUpperCase())) {
     next({ name: 'dashboard' })
     return
   }

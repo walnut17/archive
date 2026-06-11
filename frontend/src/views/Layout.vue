@@ -3,7 +3,8 @@ import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/store/auth'
-import { DataLine, Folder, Document, AlarmClock, SetUp, Setting, DataAnalysis } from '@element-plus/icons-vue'
+import NotifBell from '@/components/NotifBell.vue'
+import { DataLine, Folder, Document, AlarmClock, SetUp, Setting, DataAnalysis, Grid, Delete } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -28,6 +29,7 @@ function onLogout() {
         <h3>📁 投委会档案管理系统</h3>
       </div>
       <div class="header-right">
+        <NotifBell />
         <el-dropdown @command="(c: string) => c === 'logout' && onLogout()">
           <span class="user-info">
             <el-avatar :size="28">{{ auth.user?.username?.[0]?.toUpperCase() }}</el-avatar>
@@ -64,6 +66,10 @@ function onLogout() {
             <el-icon><Folder /></el-icon>
             <span>项目管理</span>
           </el-menu-item>
+          <el-menu-item index="/projects/board">
+            <el-icon><Grid /></el-icon>
+            <span>项目看板</span>
+          </el-menu-item>
           <el-menu-item index="/knowledge">
             <el-icon><Document /></el-icon>
             <span>知识库问答</span>
@@ -92,7 +98,12 @@ function onLogout() {
             <el-menu-item index="/admin/extraction">抽取方法</el-menu-item>
             <el-menu-item index="/admin/comparison">对比方法</el-menu-item>
             <el-menu-item index="/admin/triggers">触发规则</el-menu-item>
+            <el-menu-item index="/admin/import">数据导入</el-menu-item>
           </el-sub-menu>
+          <el-menu-item v-if="auth.isAdmin" index="/recycle-bin">
+            <el-icon><Delete /></el-icon>
+            <span>回收站</span>
+          </el-menu-item>
         </el-menu>
       </el-aside>
 

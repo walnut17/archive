@@ -3,10 +3,12 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  getProject, listProposals, createProposal, deleteProposal,
+  getProject, listProposals, createProposal, deleteProposal, exportProject,
   type Project, type Proposal,
   proposalStatusOptions, proposalTypeOptions,
 } from '../api/archive'
+import MaskedField from '@/components/MaskedField.vue'
+import DiffViewer from '@/components/DiffViewer.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -16,6 +18,9 @@ const proposals = ref<Proposal[]>([])
 const loading = ref(false)
 const showForm = ref(false)
 const editing = ref<Proposal | null>(null)
+const showDiff = ref(false)
+const diffEventId = ref<number>()
+const exporting = ref(false)
 
 const form = ref<Proposal>({
   code: '',
@@ -68,8 +73,8 @@ async function onSave() {
     }
     showForm.value = false
     fetch()
-  } catch (e) {
-    // 错误已由拦截器弹
+  } catch {
+    // handled by interceptor
   }
 }
 
@@ -88,6 +93,27 @@ function goProposalDetail(p: Proposal) {
   router.push({ name: 'proposal-detail', params: { id: String(p.id) } })
 }
 
+async function onExport(format: 'pdf' | 'xlsx') {
+  exporting.value = true
+  try {
+    const blob = await exportProject(projectId.value, format)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `project-${projectId.value}.${format}`
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } finally {
+    exporting.value = false
+  }
+}
+
+function showFactDiff(eventId: number) {
+  diffEventId.value = eventId
+  showDiff.value = true
+}
+
 onMounted(fetch)
 </script>
 
@@ -96,6 +122,11 @@ onMounted(fetch)
     <el-page-header @back="router.back()">
       <template #content>
         <span style="font-size: 18px">项目详情</span>
+        <el-tag v-if="project.masked" type="warning" size="small" style="margin-left: 8px">脱敏视图</el-tag>
+      </template>
+      <template #extra>
+        <el-button :loading="exporting" @click="onExport('pdf')">导出 PDF</el-button>
+        <el-button :loading="exporting" @click="onExport('xlsx')">导出 Excel</el-button>
       </template>
     </el-page-header>
 
@@ -103,7 +134,24 @@ onMounted(fetch)
       <el-descriptions-item label="编号">{{ project.code }}</el-descriptions-item>
       <el-descriptions-item label="名称">{{ project.name }}</el-descriptions-item>
       <el-descriptions-item label="类别">{{ project.category }}</el-descriptions-item>
-      <el-descriptions-item label="金额(万)">{{ project.amountWan }}</el-descriptions-item>
+      <el-descriptions-item label="金额(万)">
+        <MaskedField
+          label=""
+          :value="project.amountWan"
+          :display-value="project.displayAmount"
+          :masked="project.masked"
+          :project-id="project.id"
+        />
+      </el-descriptions-item>
+      <el-descriptions-item v-if="project.customerName || project.displayName" label="客户">
+        <MaskedField
+          label=""
+          :value="project.customerName"
+          :display-value="project.displayName"
+          :masked="project.masked"
+          :project-id="project.id"
+        />
+      </el-descriptions-item>
       <el-descriptions-item label="状态">
         <el-tag>{{ project.status }}</el-tag>
       </el-descriptions-item>
@@ -127,7 +175,7 @@ onMounted(fetch)
         </template>
       </el-table-column>
       <el-table-column prop="reviewedAt" label="审议日期" width="120" />
-      <el-table-column label="操作" width="200" fixed="right">
+      <el-table-column label="操作" width="260" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="goProposalDetail(row)">详情 / 材料</el-button>
           <el-button link type="primary" @click="goEdit(row)">编辑</el-button>
@@ -166,5 +214,7 @@ onMounted(fetch)
         <el-button type="primary" @click="onSave">保存</el-button>
       </template>
     </el-dialog>
+
+    <DiffViewer v-model:visible="showDiff" :project-id="projectId" :event-id="diffEventId" />
   </div>
 </template>
