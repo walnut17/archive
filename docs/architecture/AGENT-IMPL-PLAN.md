@@ -5,13 +5,13 @@
 > **生产环境 AI Agent**: 接管本文档 §5 执行 12 子项
 > **基线 commit**: `a34f540`(M0~M2 + Plan A~G 完工)
 > **配套文档**(必读):
-> - `docs/AGENT-REQUIREMENTS.md` (业务)
-> - `docs/AGENT-RESEARCH.md` (调研)
-> - `docs/AGENT-FRAMEWORK-DECISION.md` v1.0(决策)
+> - `docs/requirements/AGENT-REQUIREMENTS.md` (业务)
+> - `AGENT-RESEARCH.md` (调研, 本目录)
+> - `AGENT-FRAMEWORK-DECISION.md` v1.0(决策, 本目录)
 > - `.mavis/plans/plan-I-agent-implementation.md` (12 子项 spec)
-> - `docs/DEV-STANDARDS.md`(开发标准)
-> - `docs/LESSONS-LEARNED.md`(踩坑)
-> - `docs/TEAM-ARCHIVE.md`(环境)
+> - `../operations/DEV-STANDARDS.md`(开发标准)
+> - `../reviews/LESSONS-LEARNED.md`(踩坑)
+> - `../operations/TEAM-ARCHIVE.md`(环境)
 
 ---
 
@@ -210,13 +210,13 @@ npm run build
 
 ## §9. 推送清单(本次 commit 给 Gitee)
 
-1. `docs/AGENT-FRAMEWORK-DECISION.md`(决策更新 v1.0:自研 → Spring AI)
-2. `docs/AGENT-IMPL-PLAN.md`(本总方案,**新增**)
+1. `AGENT-FRAMEWORK-DECISION.md`(决策更新 v1.0:自研 → Spring AI)
+2. `AGENT-IMPL-PLAN.md`(本总方案,**新增**)
 3. `.mavis/plans/plan-I-agent-implementation.md`(12 子项 spec,Spring AI 版)
-4. `docs/AGENT-REQUIREMENTS.md`(无改动,引用)
-5. `docs/AGENT-RESEARCH.md`(无改动,引用)
-6. `docs/DEV-STANDARDS.md`(无改动,引用)
-7. `docs/LESSONS-LEARNED.md`(无改动,引用)
+4. `docs/requirements/AGENT-REQUIREMENTS.md`(无改动,引用)
+5. `AGENT-RESEARCH.md`(无改动,引用)
+6. `../operations/DEV-STANDARDS.md`(无改动,引用)
+7. `../reviews/LESSONS-LEARNED.md`(无改动,引用)
 
 **重要**:
 - ✅ **零代码** (.java / .vue / .sql 都**不动**)

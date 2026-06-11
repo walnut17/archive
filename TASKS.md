@@ -1,6 +1,8 @@
 # Plan I 任务分块清单(物理并行开发协调表)
 
 > **本文档是"谁占用了哪个任务"的实时真相表**。每个任务独占 1 个 section,**多人同时开发互不覆盖**。
+> **任务类型**：**开发**（RI / MOD / T-*）与 **自动化测试**（**AT-***，案例在 [`test_task/`](test_task/README.md)）。  
+> **协作架构说明**：[`MULTI-AGENT-REPO-ARCHITECTURE.md`](MULTI-AGENT-REPO-ARCHITECTURE.md)
 
 > **2026-06-09 20:42 Mavis 沙箱 额外同步**: minimax → main 同步 TASKS.md 状态 (Plan I 13/13 完工, P0 fix 已合并), 接手 AI 可拉 main 看最新任务状态.
 > **同步规则**: **状态变更立即 commit + push 到 main 分支**(10 秒内完成)。**push 成功 = 占用成功**。
@@ -590,7 +592,7 @@ MOD-01 (DB 迁移, 1.7d)
 
 **当前能抢的**:
 - 🎉 **v1.1 全部 6 模块 (MOD-01~06) 已完工** — 无剩余 v1.1 模块可抢
-- 下一步: owner 按 `docs/ACCEPTANCE-GUIDE.md` v1.1 段 + `docs/reviews/2026-06-11-v1.1-review.md` 验收
+- 下一步: owner 按 `test/old/ACCEPTANCE-GUIDE.md` v1.1 段 + `docs/reviews/2026-06-11-v1.1-review.md` 验收
 
 ### 抢先 SOP（沿用上面 🚦）
 
@@ -644,7 +646,7 @@ MOD-01 (DB 迁移, 1.7d)
 
 - **状态**: 已完成 (阿根廷 / 2026-06-11)
 - **占用者**: 阿根廷
-- **影响文件**（独占）: `VERIFICATION-REPORT.md`（新建，仓库根）
+- **影响文件**（独占）: `test/old/VERIFICATION-REPORT.md`
 - **工作量**: 0.5d
 - **依赖**: 无
 - **可并行**: ✅
@@ -652,7 +654,16 @@ MOD-01 (DB 迁移, 1.7d)
 - **验收**:
   1. `mvn compile -DskipTests -B` BUILD SUCCESS
   2. `mvn test -Dtest=V11IntegrationTest -B` 45 测例全过
-  3. `VERIFICATION-REPORT.md` 包含环境/compile/test 三段实测数据
-- **commit 模板**: `docs(verify): mvn 验证报告 VERIFICATION-REPORT.md`
+  3. `test/old/VERIFICATION-REPORT.md` 包含环境/compile/test 三段实测数据
+- **commit 模板**: `docs(verify): mvn 验证报告 test/old/VERIFICATION-REPORT.md`
 - **注意**: PM 沙箱无 JDK/cacerts，**必须接手 agent 跑**，不要在 PM 沙箱里尝试
+
+---
+
+## 🤖 自动化测试任务（AT-*）
+
+> **当前：无 AT 任务。** 不要在此占位或写示例；有真实案例时再追加。  
+> 新建流程：[`test_task/README.md`](test_task/README.md) · 复制 [`test_task/case-TEMPLATE.md`](test_task/case-TEMPLATE.md) → 在本节追加一条 **AT-XXX**（按该 README 模板）。
+
+*（本节有任务前保持空白；与开发任务共用占用规则：谁先 push 谁占。）*
 

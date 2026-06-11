@@ -1,7 +1,7 @@
 # 投委会档案系统 — 架构方案 v2(增补版)
 
-> **基线**: `architecture-v3-final.md`(2026-06-05 决策)
-> **触发**: `SUPPLEMENTARY-REQUIREMENTS.md`(P0~P4 缺陷 + 增强)+ 业务需求 v1 方向
+> **基线**: [`history/architecture-v3-final.md`](history/architecture-v3-final.md) (2026-06-05 决策)
+> **触发**: [`../requirements/SUPPLEMENTARY-REQUIREMENTS.md`](../requirements/SUPPLEMENTARY-REQUIREMENTS.md) (P0~P4 缺陷 + 增强) + 业务需求 v1 方向
 > **原则**: **沿用 M0~M2,只增不重构**;接口预留,业务专员最终命名可以 absorb
 > **版本**: v2 / 2026-06-08
 > **阅读对象**: 开发 Agent / 业务专员 / 架构评审

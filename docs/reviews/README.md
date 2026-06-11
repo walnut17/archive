@@ -1,131 +1,160 @@
-# Reviews 目录 — 接手 AI 必读
+# 评审与对线 — `docs/reviews/`
 
-> **本目录是 Mavis 沙箱 (PM 角色) 对接手 AI 完工代码的审核记录。**
-> **接手 AI 第一件事**: **读本目录所有 review 文件** (按日期倒序)。
-> **作用**: 看到"上一个接手 AI 漏了什么", 避免重复同样的 P0 / P1 bug。
+> **本目录是各 Agent 评审、回复、跟进的正式场所**（可以「吵架」，但必须落在文件里）。
+>
+> - **Review Agent**：**新开**一个 review 文件，写评审意见  
+> - **Subject Agent**（被评审方）：在文件**下方**写回复（是否接受、措施、结果）  
+> - **Review Agent**：再看回复 → 续提要求 **或** **宣布评审结束**  
+> - **只有 Review Agent 宣布结束，该 review 才算结束**（状态 `CLOSED`）
 
----
-
-## 📚 阅读顺序
-
-**新接手 AI 开工前必读**:
-1. **本 README**(目录索引)
-2. **最新一份 review 文件**(按日期倒序)
-3. **[../LESSONS-LEARNED.md](../LESSONS-LEARNED.md)**(踩坑大全, 545 行)
-
-**为什么必读**:
-- spec 写得再细, 接手 AI 也会漏
-- 漏的 P0 / P1 已被 Mavis 记录在 review 文件
-- 读 5 分钟 review, 省 4 小时返工
+**踩坑汇总**（只读参考）：[`LESSONS-LEARNED.md`](./LESSONS-LEARNED.md)  
+**Bug 四轮次**（另一套流程）：[`../../test/README.md`](../../test/README.md) — 仅缺陷  
+**自动化测试**（PASS/FAIL 分流）：[`../../test_task/README.md`](../../test_task/README.md)  
+**协作架构总览**：[`../../MULTI-AGENT-REPO-ARCHITECTURE.md`](../../MULTI-AGENT-REPO-ARCHITECTURE.md)
 
 ---
 
-## 📋 Review 文件清单 (按日期倒序)
+## 1. 和 `test/` 的分工
 
-| 日期 | 文件 | 范围 | 严重 bug 数 |
+| 目录 | 场景 | 谁结案 |
+|---|---|---|
+| **`test/round-*.md`** | 部署/验收测出的 **bug**：§1 记 → §2 析 → §3 改 → §4 审 | Reviewer Agent 标 bug `CLOSED` + 轮次 `CLOSED` |
+| **`docs/reviews/`** | **代码/架构/交付物**评审、MOD 完工审、跨 agent 对线 | **仅 Review Agent** 在该文件宣布 `CLOSED` |
+
+一条问题可以**同时**出现在 `test/round`（验收 bug）和 `docs/reviews`（代码审），互相用链接关联即可。
+
+---
+
+## 2. 工作流
+
+```text
+Review Agent 新建 review-*.md（状态 OPEN）
+        ↓
+    写 Round 1 评审意见
+        ↓
+Subject Agent 在下方写 Round 1 回复
+  （是否接受 / 处理措施 / commit / 结果）
+        ↓
+Review Agent 写 Round 2 跟进
+        ├─ CONTINUE → 再一轮回复 …
+        └─ CLOSED   → 宣布「评审结束」（唯一结案方式）
+```
+
+### 2.1 角色
+
+| 角色 | 做什么 | 不能做什么 |
+|---|---|---|
+| **Review Agent** | 新建文件；写/追加评审意见；验证回复；**宣布 CLOSED** | 替 Subject 写回复 |
+| **Subject Agent** | 在文件下方写回复；改代码；填 commit/结果 | **自行**把状态改 CLOSED |
+| **其他 Agent** | 只读；若要插话经 PM 协调 | 擅自改他人 Round 正文 |
+
+### 2.2 留痕（必填）
+
+每个 Round 块必须含：
+
+| 字段 | 说明 |
+|---|---|
+| **Agent** | 名字或代号 |
+| **时间** | `YYYY-MM-DD HH:mm` |
+| **摘要** | 本段做了什么（一两句） |
+
+### 2.3 回复必须包含
+
+Subject Agent 的回复里，对**每条**评审意见说明：
+
+| 项 | 说明 |
+|---|---|
+| **是否接受** | 全部 / 部分 / 不接受 |
+| **处理措施** | 具体改什么、改哪 |
+| **结果** | commit hash、回归结论、或为何不做 |
+
+### 2.4 何时算结束
+
+**必须同时满足**：
+
+1. 文件顶部 **状态 = `CLOSED`**
+2. Review Agent 在最后一轮写了 **「评审结束声明」**（见模板）
+3. 所有 P0/P1 必改项在回复或跟进中已有 **结果** 或 **明确 WONTFIX**（Review Agent 认可）
+
+Subject Agent 写「我改完了」**不算**结束；Review Agent 未宣布 **不算**结束。
+
+---
+
+## 3. 新建 review 文件
+
+```bash
+cp docs/reviews/review-TEMPLATE.md docs/reviews/2026-06-12-MOD-05-knowledge-review.md
+```
+
+**命名建议**：
+
+```text
+YYYY-MM-DD-<范围>-review.md
+sisyphus-review-MOD-NN-YYYY-MM-DD.md   # 已有惯例可沿用
+REV-YYYY-MM-DD-<简述>                  # 写在文件元信息里
+```
+
+**开头状态**：一律 `OPEN`，直到 Review Agent 改 `CLOSED`。
+
+---
+
+## 4. 文件清单
+
+### 4.1 对话式 review（本规范）
+
+| 日期 | 文件 | 状态 | 说明 |
 |---|---|---|---|
-| 2026-06-09 | [2026-06-09-plan-i-p0-review.md](./2026-06-09-plan-i-p0-review.md) | Plan I 智能问答 Agent (13 任务) | 5 P0 + 1 P1 |
+| — | [`review-TEMPLATE.md`](./review-TEMPLATE.md) | 模板 | 新开 review 复制 |
 
-**未来 review 文件命名规范**:
-- `YYYY-MM-DD-<项目代号>-<阶段代号>-review.md`
-- 例: `2026-07-15-plan-J-knowledge-graph-review.md`
+> 2026-06-11 之前的 `sisyphus-review-*.md` 等为**历史静态审阅**，未按 Round 对线格式；新评审请用模板。
 
----
+### 4.2 历史 / 静态记录（只读）
 
-## 🔍 这次审核关键发现 (Plan I)
-
-接手 AI Sisyphus 4 小时干完 12 任务, 架构 95% 对, **安全细节漏 5 P0 + 1 P1**:
-
-| P0 # | 类别 | 教训 |
+| 日期 | 文件 | 类型 |
 |---|---|---|
-| 1 | 聚合函数漏 `group_by` | spec 写"6 个" 接手 AI 自检不能"差不多做了" |
-| 2 | operator 漏 `is_not_null` | 同上 |
-| 3 | IN 长度无上限 | LLM 可能 `IN (1000 个值)` 拖死 DB |
-| 4 | LIKE 没转义 `%` `_` | LLM 输出 `100%` 会变通配符 |
-| 5 | 用了不存在的 Spring AI class | **没真编译过** —— 接手 AI 必修 `mvn compile` |
-
-**P1 列表**:
-| P1 # | 类别 | 教训 |
-|---|---|---|
-| 1 | `application-test.yml` 缺 | `@SpringBootTest` 启动要 GLM key, 测试 100% 挂 |
-
-**完整记录 + 修法**: [2026-06-09-plan-i-p0-review.md](./2026-06-09-plan-i-p0-review.md)
+| 2026-06-09 | [2026-06-09-plan-i-p0-review.md](./2026-06-09-plan-i-p0-review.md) | Plan I P0 静态 review |
+| 2026-06-10 | [sisyphus-code-review-2026-06-10.md](./sisyphus-code-review-2026-06-10.md) | 代码 review |
+| 2026-06-11 | [sisyphus-review-MOD-*.md](./sisyphus-review-MOD-01-2026-06-11.md) | v1.1 MOD 静态 review |
+| 2026-06-11 | [2026-06-11-v1.1-review.md](./2026-06-11-v1.1-review.md) | v1.1 总 review |
+| — | [2026-06-10-prod-deploy-handoff.md](./2026-06-10-prod-deploy-handoff.md) | 部署 handoff |
+| — | [LESSONS-LEARNED.md](./LESSONS-LEARNED.md) | 踩坑大全 |
 
 ---
 
-## 📝 关键教训 (提炼自本目录所有 review)
+## 5. 给 Agent 的一句话
 
-### 1. "快" ≠ "好"
-
-接手 AI 写代码时**最常犯的错**: 速度第一, 安全细节排后面。
-
-- 业务逻辑好懂 → 优先级排前
-- 安全加固 ("IN 长度 ≤ 50") → "反正不会用满" → 优先级排后
-- 结果: **业务对, 但生产环境会被攻击**
-
-**正确做法**: 接任务前先看 spec 验收清单的"数" (10 个 operator / 6 个 aggregate / 3 重加固), 完工自检"我真都做了吗"。
-
-### 2. "写完" ≠ "完工" — 必须真编译
-
-接手 AI 用了 Spring AI 1.1 公开 API **不存在的 class** —— 这意味着 `mvn compile` 必挂。
-
-**正确做法**:
-- 接手 AI 写完代码必须跑 `mvn compile` 或 `mvn test-compile` 验证编译过
-- 不许 "commit + push" 一个没编译过的代码
-- Mavis 沙箱 审核时**第一件事**就是 `mvn compile`, 编译不过直接打回
-
-### 3. "信任 spec" ≠ "验证 spec" — API class 名必查
-
-spec 是 Mavis 写的, **可能错**。这次 spec 写 `JdbcChatMemory` 是错的, 真实 class 是 `JdbcChatMemoryRepository`。
-
-**正确做法**:
-- 接 spec 时, API class 名必查 (Maven Central / Spring AI 官方文档)
-- 不要 "spec 写了就 OK"
-
-### 4. "spec 没写" ≠ "不用做" — 推理该做啥
-
-接手 AI 写测试, 没写配套 `application-test.yml` —— "spec 没说要" 不是不做的理由。
-
-**正确做法**:
-- 写测试时, 先想"测试要哪些 Bean" → 反推需要哪些配置
-- `@SpringBootTest` 必须有 `application-test.yml`
-- 接手 AI 写完测试, 应该 `mvn test` 真的跑一次
-
-### 5. "自查清单" 应该写进 spec
-
-**正确做法**:
-- PM (Mavis) 写 spec 时, 验收清单要列具体的"项" (不是"要安全" 而是"要做 3 重加固")
-- 接手 AI 干完时, 逐项自检 (不是"差不多做了" 而是"项 1 ✅ 项 2 ✅ 项 3 ✅")
-- PM 审完发现漏, 应该把"漏的项"加进 spec 作为下一轮的自检项
+| 你是… | 做什么 |
+|---|---|
+| **Review Agent** | `cp review-TEMPLATE.md` → 写 Round 1 → 等回复 → Round 2 **CLOSED 或 CONTINUE** |
+| **Subject Agent** | **只在文件末尾**追加回复 Round；改代码；**不要**改 OPEN→CLOSED |
+| **接手新人** | 先扫 **OPEN** 的 review + [LESSONS-LEARNED.md](./LESSONS-LEARNED.md) |
 
 ---
 
-## 🎯 给接手 AI 的"开工 4 件事 + 完工 3 件事"
+## 6. 关键教训（历史提炼）
 
-### 开工 4 件事
+<details>
+<summary>Plan I 等历史 review 要点（点击展开）</summary>
 
-1. 拉本目录所有 review 文件 + LESSONS-LEARNED.md
-2. 看 spec 验收清单的"数" (几个 operator / 几个 aggregate / 几重加固)
-3. 写代码时**逐项自检**
-4. 完工前**真编译** (`mvn compile` / `npm run build`)
+- **快 ≠ 好**：安全细节不能排后（IN 上限、LIKE 转义、operator 齐全）
+- **写完 ≠ 完工**：必须 `mvn compile` / `npm run build`
+- **spec 可能错**：API class 名要查官方文档
+- **spec 没写 ≠ 不用做**：测试要有 `application-test.yml` 等配套
 
-### 完工 3 件事
+完整：[2026-06-09-plan-i-p0-review.md](./2026-06-09-plan-i-p0-review.md)
 
-1. 推代码 + 更新 TASKS.md (`状态: 已完成`)
-2. 通知 Mavis 沙箱审
-3. Mavis 审完有意见, **别急着辩, 改**
+</details>
 
 ---
 
-## 🔗 相关文档
+## 7. 相关链接
 
-- [TASKS.md](../../TASKS.md) — 任务分块清单 + 抢占 SOP
-- [README.md](../../README.md) — 项目入口
-- [LESSONS-LEARNED.md](../LESSONS-LEARNED.md) — 踩坑大全
-- [.mavis/plans/plan-I-agent-implementation.md](../../.mavis/plans/plan-I-agent-implementation.md) — Plan I 详细 spec
-- [docs/AGENT-FRAMEWORK-DECISION.md](../AGENT-FRAMEWORK-DECISION.md) — 框架决策记录
+- [`../../MULTI-AGENT-REPO-ARCHITECTURE.md`](../../MULTI-AGENT-REPO-ARCHITECTURE.md) — 多 Agent 架构（可套用）
+- [根 README §1.6](../../README.md#16-评审对线-docsreviews) — Review / Subject Agent
+- [TASKS.md](../../TASKS.md) — 开发 + AT 任务占用
+- [test/complexity.md](../../test/complexity.md) — 验收 bug 升级 PM 拍板
+- [architecture/](../architecture/README.md) — 架构基线
 
-## 📑 文件索引
+---
 
-- [2026-06-09-plan-i-p0-review.md](./2026-06-09-plan-i-p0-review.md) — Plan I 静态 review 详情 (5 P0 + 1 P1)
-- [2026-06-10-plan-i-10of10-achievement.md](./2026-06-10-plan-i-10of10-achievement.md) — Plan I 10/10 测例全过 + 5 P0 复盘 (P0-19~23)
+*2026-06-11 起：review 文件 = 对线线程；仅 Review Agent 可 CLOSED。*

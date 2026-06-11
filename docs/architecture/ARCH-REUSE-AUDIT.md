@@ -216,4 +216,4 @@
 
 **审计员**: Architecture-Researcher
 **日期**: 2026-06-08
-**关联文档**: `SUPPLEMENTARY-REQUIREMENTS.md` / `M1-README.md` / `SIMILAR-PRODUCTS.md`
+**关联文档**: `../requirements/SUPPLEMENTARY-REQUIREMENTS.md` / `../../test/old/M1-README.md` / `../requirements/SIMILAR-PRODUCTS.md`

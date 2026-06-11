@@ -35,10 +35,10 @@
 - **`test.md` / `test.txt` / `test2.md`** — Mavis 调试期间临时记录 (不重要,历史)
 
 ### 验收 / Review
-- **`../docs/reviews/2026-06-09-plan-i-p0-review.md`** — Plan I 静态 review (5 P0 + 1 P1)
-- **`../docs/reviews/2026-06-10-plan-i-10of10-achievement.md`** — Plan I 10/10 测例全过复盘
-- **`../docs/ACCEPTANCE-GUIDE.md`** — 项目方 11 步验收 SOP (Mavis 跟项目方已交互式走完)
-- **`../docs/LESSONS-LEARNED.md`** — 踩坑大全 (P0-19~23 已加)
+- **[2026-06-09-plan-i-p0-review.md](./2026-06-09-plan-i-p0-review.md)** — Plan I 静态 review (5 P0 + 1 P1)
+- **[2026-06-10-plan-i-10of10-achievement.md](./2026-06-10-plan-i-10of10-achievement.md)** — Plan I 10/10 测例全过复盘
+- **[../../test/old/ACCEPTANCE-GUIDE.md](../../test/old/ACCEPTANCE-GUIDE.md)** — 项目方 11 步验收 SOP（历史）
+- **[LESSONS-LEARNED.md](./LESSONS-LEARNED.md)** — 踩坑大全
 
 ---
 
@@ -48,9 +48,9 @@
 
 1. **本 README.md** — 了解当前状态和优先级
 2. **`2026-06-10-prod-deploy-handoff.md`** — 看 Mavis 怎么一步步从 Plan I 完工走到生产部署
-3. **`../README.md`** — 项目入口
-4. **`../TASKS.md`** — 任务分块清单
-5. **`../docs/AGENT-FRAMEWORK-DECISION.md`** — 框架决策记录
-6. **`../docs/GLM-KEY-SETUP.md`** — 智谱 API key 配置手册
+3. **[../../README.md](../../README.md)** — 项目入口
+4. **[../../TASKS.md](../../TASKS.md)** — 任务分块清单
+5. **[../AGENT-FRAMEWORK-DECISION.md](../AGENT-FRAMEWORK-DECISION.md)** — 框架决策记录
+6. **[../operations/GLM-KEY-SETUP.md](../operations/GLM-KEY-SETUP.md)** — 智谱 API key 配置手册
 
 **调试 / 部署期间的原始对话**: 见项目方本地的 Mavis 聊天记录 (Mavis UI 有 React error #185,导致部分上下文丢失,本文件 + 上面列的文档是最权威的记录).

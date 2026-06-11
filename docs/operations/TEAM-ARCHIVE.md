@@ -266,7 +266,7 @@ pwd:  <D:\archive\config\config.json>
 
 ### 5.3 待建表(v2 阶段)
 
-详见 `docs/DB-SCHEMA-v2.md`,包含:
+详见 `../architecture/DB-SCHEMA-v2.md`,包含:
 - `chapter_summary`
 - `timepoint`
 - `todo`
@@ -339,7 +339,7 @@ innodb_buffer_pool_size = 4G        # 32GB 内存可大方
 
 ## 8. 已知问题 / TODO
 
-### 8.1 已修(详见 `docs/LESSONS-LEARNED.md`)
+### 8.1 已修(详见 `../reviews/LESSONS-LEARNED.md`)
 
 - ✅ M0: 5 个 bug
 - ✅ M1: 4 个 bug

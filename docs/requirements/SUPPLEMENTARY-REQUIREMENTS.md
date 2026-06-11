@@ -1,6 +1,6 @@
 # 投委会档案管理系统 — 补充开发需求
 
-> 基线代码: M1 完成（详见 `docs/M1-README.md`）
+> 基线代码: M1 完成（详见 [`test/old/M1-README.md`](../../test/old/M1-README.md)）
 > 目标: 修复审计发现的 P0~P1 缺陷 + 补齐缺失模块 + 增加增强功能
 > 使用对象: 开发 Agent（可读此文档后按 Phase 顺序执行）
 > 关联文档: `REVIEW-REPORT.md`（问题清单）
@@ -197,7 +197,7 @@ public ResponseEntity<ApiResponse<Void>> handleNotFound(NoSuchElementException e
 
 ### P2-1：`chapter_summary` 表 + 实体 + 入库
 
-**架构文档位置**：`architecture-v3-final.md` §3.2
+**架构文档位置**：[`architecture/history/architecture-v3-final.md`](../architecture/history/architecture-v3-final.md) §3.2
 
 **当前状态**：`SectionService.split()` 能切分章节，结果只通过 API 返回前端展示，未入库。架构文档中的 `chapter_summary` 表完全不存在。
 
@@ -583,7 +583,7 @@ Phase 4   → P4-1, P4-2               ← 测试与治理
 
 ## 附录：与原有需求的冲突说明
 
-本补充需求与 `architecture-v3-final.md` 保持一致，不改变原有架构决策：
+本补充需求与 [`architecture/history/architecture-v3-final.md`](../architecture/history/architecture-v3-final.md) 保持一致，不改变原有架构决策：
 - ✅ 不向量化，MySQL FULLTEXT 仍是主力检索
 - ✅ 智谱 GLM-4-Flash + GLM-4V
 - ✅ 仅脱敏证件号 + 人名

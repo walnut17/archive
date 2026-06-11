@@ -1,6 +1,6 @@
 # 数据库 Schema v2
 
-> **基线**: `architecture-v3-final.md §6` + `backend/src/main/resources/db/init.sql`(M0~M1 已建)
+> **基线**: [`history/architecture-v3-final.md`](history/architecture-v3-final.md) §6 + `backend/src/main/resources/db/init.sql`(M0~M1 已建)
 > **配套**: `ARCHITECTURE-v2.md`
 > **原则**: 沿用表不改字段命名;新增表独立可执行;所有 FULLTEXT 索引加 ngram 解析器
 > **可执行性**: 本文 SQL **逐条**在 MySQL 8.0.16 上验证过语法,直接 `mysql -u root -p < v2-*.sql` 可跑

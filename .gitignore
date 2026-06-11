@@ -17,6 +17,10 @@
 NOTES.md
 scratch/
 *.tmp
+# mvn / 构建测试原始日志 → test/logs/（见 test/logs/README.md）
+test/logs/*
+!test/logs/README.md
+mvn-*.log
 backend/tools/jdk17/
 backend/tools/apache-maven-3.9.9/
 backend/tools/certs/

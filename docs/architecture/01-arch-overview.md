@@ -170,7 +170,7 @@ src/
 
 ## 6. 数据库概览（v1.1: 16 沿用 + 7 新表 + 7 ALTER = 30 实体/表）
 
-> v1.1 增量见 `docs/DB-SCHEMA-v2.md` §v1.1 段 + `I-RI-*.sql` 迁移.
+> v1.1 增量见 `../architecture/DB-SCHEMA-v2.md` §v1.1 段 + `I-RI-*.sql` 迁移.
 
 ### v1.0 基线（16 张业务表 + 2 张基础设施表）
 

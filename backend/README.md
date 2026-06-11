@@ -1,7 +1,8 @@
 # 投委会档案管理系统 - 后端
 
 > Spring Boot 3.3 + Java 17 + JPA + Spring Security + JWT
-> 状态:M0 基建完成,可登录 / 跑通健康检查
+
+**项目协作**：根 [`README.md`](../README.md) · 抢任务 [`TASKS.md`](../TASKS.md) · 集成测试案例 [`test_task/`](../test_task/README.md) · 架构说明 [`MULTI-AGENT-REPO-ARCHITECTURE.md`](../MULTI-AGENT-REPO-ARCHITECTURE.md)
 
 ---
 

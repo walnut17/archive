@@ -82,5 +82,5 @@
 
 ## 测试任务
 
-看 `docs/M1-TEST-TASKS.md` —— 明早按步骤验证。
+看 `test/old/M1-TEST-TASKS.md` —— 明早按步骤验证。
 

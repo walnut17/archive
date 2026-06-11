@@ -9,19 +9,26 @@
 > **生产服务器**: 182.168.1.125 (单机, Windows + Caddy + Spring Boot)
 >
 > 🚨 **接手方必读**: 先看下面 **§1 角色导航**, 找到自己是哪类人, 跟着对应章节开工, 5 分钟即可认识项目 + 找到入口.
+> **查 bug 四轮次 Agent** → [§8](#-8-bug-跟踪与修复-test) · **抢自动化测试** → [§9](#-9-自动化测试任务-test_task) · **协作架构（可套用其他项目）** → [§10](#-10-多-agent-协作架构可套用) · [`MULTI-AGENT-REPO-ARCHITECTURE.md`](MULTI-AGENT-REPO-ARCHITECTURE.md)
 
 ---
 
 ## 📑 目录
 
 - [§0. 项目是什么](#-0-项目是什么)
+- [§0.4 快速寻址（30 秒）](#-04-快速寻址30-秒)
 - [§1. 角色导航 (核心)](#-1-角色导航-核心)
-- [§2. 需求文档位置](#-2-需求文档位置)
+- [§2. 文档与文件夹导航](#-2-文档与文件夹导航)
 - [§3. 项目背景与版本路线](#-3-项目背景与版本路线)
 - [§4. 必读文档 (按角色分类)](#-4-必读文档-按角色分类)
 - [§5. 程序员开工: 抢任务 SOP](#-5-程序员开工-抢任务-sop)
 - [§6. 卡住怎么办 / 找谁](#-6-卡住怎么办--找谁)
 - [§7. 仓库结构 + 文档演进](#-7-仓库结构--文档演进)
+- [§8. Bug 跟踪与修复 (`test/`)](#-8-bug-跟踪与修复-test)
+- [§9. 自动化测试任务 (`test_task/`)](#-9-自动化测试任务-test_task)
+- [§10. 多 Agent 协作架构（可套用）](#-10-多-agent-协作架构可套用)
+
+> **文档总索引**: [`docs/README.md`](docs/README.md)（子目录逻辑 + 按场景查找表）
 
 ---
 
@@ -49,18 +56,71 @@
 - **LLM**: 智谱 GLM-4 (主) + OpenAI 兼容接口 (备)
 - **部署**: 单机 (182.168.1.125) + Caddy + WinSW
 
+### 0.4 快速寻址（30 秒）
+
+> 不确定文件在哪？**完整查找表**见 [`docs/README.md`](docs/README.md) §2。
+
+**仓库顶层逻辑** — 根目录只留入口和看板，其余按类型进子目录：
+
+```text
+projects-online/
+├── README.md / TASKS.md / MULTI-AGENT-REPO-ARCHITECTURE.md  ← 入口 + 看板 + 协作框架
+├── test_task/               ← 自动化测试案例 + 通过时的执行历史
+├── docs/                    ← 长期文档（需求/架构/review/运维/交接）
+├── test/                    ← bug：round、test_bug、complexity
+│   ├── round-*.md / test_bug-*.md / complexity.md
+│   ├── old/                 ← 历史验收文档（只读）
+│   └── logs/
+├── backend/ / frontend/     ← 源代码
+└── deploy/                  ← SQL / Caddy / WinSW 配置
+```
+
+| 我想… | 第一站 |
+|---|---|
+| 认项目 / 选角色 | 本文 [§1 角色导航](#-1-角色导航-核心) |
+| 抢 RI / MOD 开发任务 | [`TASKS.md`](TASKS.md) + [`docs/requirements/ARCH-DECOMPOSITION.md`](docs/requirements/ARCH-DECOMPOSITION.md) |
+| 抢自动化测试任务 AT-* | [`TASKS.md`](TASKS.md) AT 节 + [`test_task/`](test_task/README.md) |
+| 跑通案例、记成功 | 在 `test_task/<案例>.md` **§3** 追加执行历史 |
+| 看业务需求 | [`docs/requirements/REQUIREMENTS.md`](docs/requirements/REQUIREMENTS.md) |
+| 看架构 / 表结构 | [`docs/architecture/`](docs/architecture/README.md) |
+| 部署 / 配 key / 运维 | [`docs/operations/`](docs/operations/README.md) |
+| 发现 bug、记 round | [`test/round-*.md`](test/round-2026-06-11-v1.1-deploy.md) · **仅缺陷** |
+| 自动化案例 FAIL | [`test/test_bug-*.md`](test/test_bug-TEMPLATE.md) → 收入 round |
+| 小修闭环（分析/改/审） | 当前 round 的 **§2～§4** |
+| 大改 / 搞不定 | [`test/complexity.md`](test/complexity.md) → PM + 架构 |
+| 踩坑 / 历史 review | [`docs/reviews/LESSONS-LEARNED.md`](docs/reviews/LESSONS-LEARNED.md) |
+| v1.1 上生产步骤 | [`docs/handoff/v1.1-DEPLOY-GUIDE.md`](docs/handoff/v1.1-DEPLOY-GUIDE.md) |
+| 协作架构 / 给其他项目套用 | [§10](#-10-多-agent-协作架构可套用) · [`MULTI-AGENT-REPO-ARCHITECTURE.md`](MULTI-AGENT-REPO-ARCHITECTURE.md) |
+
+**`docs/` 内五层**（详见 [`docs/README.md`](docs/README.md) §1）：
+
+| 目录 | 一句话 |
+|---|---|
+| `docs/requirements/` | **做什么** — 需求、RI 拆解 |
+| `docs/architecture/` | **怎么建** — 架构、schema、Agent 设计 |
+| `docs/reviews/` | **评审对线** — Review/Subject 多轮 thread + LESSONS-LEARNED |
+| `docs/operations/` | **怎么跑** — 部署、运维、环境、开发规范 |
+| `docs/handoff/` | **怎么交** — 版本交付与部署指南 |
+
 ---
 
 ## 👥 1. 角色导航 (核心)
 
-> **本文档核心目的**: 4 类角色, 各 5 行说清楚你是谁 / 读什么 / 写什么 / 怎么开工 / 不能干什么.
+> **本文档核心目的**: 按角色找入口 — 开发见 §1.4 / §5；**bug 四轮次**见 §1.5 + [§8](#-8-bug-跟踪与修复-test)；**代码/架构评审对线**见 [§1.6](#16-评审对线-docsreviews)。
 
 | 角色 | 你是谁 | 你要读 | 你要写 | 你怎么开工 | 边界 |
 |---|---|---|---|---|---|
 | **[需求开发人员](#11-需求开发人员)** (产品/业务分析师) | 把业务方嘴里"我们希望 XX"翻译成结构化需求 §X.Y | `docs/requirements/REQUIREMENTS.md` (现有) + 业务方访谈 | 在 `docs/requirements/REQUIREMENTS.md` 加 §X.Y 新章节, 含 5 字段 (业务/数据/角色/验收/依赖) | [§1.1](#11-需求开发人员) | ❌ 不写代码, 不写 RI 拆解 |
 | **[需求审核人员](#12-需求审核人员)** (PM/业务方代表) | 审新需求 / 拍板模糊点 / 维护术语 | `docs/requirements/REQUIREMENTS.md` + 业务背景资料 | 在 PR 评审里批 +/- 反馈, 维护 `docs/requirements/REQUIREMENTS.md` §13 决策记录 | [§1.2](#12-需求审核人员) | ❌ 不写代码, 不审 RI 拆解 |
-| **[架构师](#13-架构师)** (技术 Lead) | 把需求 §X.Y 拆成可落地的 RI (Requirement Item) | `docs/requirements/REQUIREMENTS.md` + 现有 `docs/ARCHITECTURE-v2.md` + `docs/DB-SCHEMA-v2.md` | 在 `docs/requirements/ARCH-DECOMPOSITION.md` 加 RI-N: 业务/影响表/角色/验收/依赖/估算 | [§1.3](#13-架构师) | ❌ 不直接写代码 (除非示范) |
+| **[架构师](#13-架构师)** (技术 Lead) | 把需求 §X.Y 拆成可落地的 RI (Requirement Item) | `docs/requirements/REQUIREMENTS.md` + 现有 `docs/architecture/ARCHITECTURE-v2.md` + `docs/architecture/DB-SCHEMA-v2.md` | 在 `docs/requirements/ARCH-DECOMPOSITION.md` 加 RI-N: 业务/影响表/角色/验收/依赖/估算 | [§1.3](#13-架构师) | ❌ 不直接写代码 (除非示范) |
 | **[程序员](#14-程序员)** (接手 AI / 后端 / 前端 / DBA) | 按 RI 抢任务 + 写代码 + 跑测试 + 提 PR | 必读 [§4.1](#41-程序员必读基线包) + 抢到的 RI 节 | 代码 + 单元测试 + 1 commit / 任务, push 到 main | [§5 抢任务 SOP](#-5-程序员开工-抢任务-sop) | ❌ 不擅自改需求, 不擅自拆别人的 RI |
+| **[测试 Agent](#19-测试-agenttest_task)** | 抢 **AT-*** 自动化测试任务 | [`TASKS.md`](TASKS.md) AT 节 + [`test_task/`](test_task/README.md) | 执行案例；PASS 写 §3 历史；FAIL 建 `test_bug` | [§9](#-9-自动化测试任务-test_task) | ❌ FAIL 时不擅自改业务代码 |
+| **[Recorder Agent](#15-recorder-agent)** | 发现 bug 并记入 round | 当前 `test/round-*.md` | **§1** 现象、复现、ID、**来源** | 名字 + 时间 + 摘要 | [§8.2](#82-四轮次-agent-工作流) | ❌ 不写根因、不改代码；**无 bug 不记** |
+| **[Analyst Agent](#15-analyst-agent)** | 根因分析 + 修改建议 | round **§1** 的 `RECORDED` 项 | **§2** 建议；大改写 [`complexity.md`](test/complexity.md) | 留痕 | [§8.2](#82-四轮次-agent-工作流) | ❌ 默认不改代码 |
+| **[Fix Agent](#15-fix-agent)** | 按 §2 小修代码 | round **§2** 的 `SMALL_FIX` 项 | **§3** + commit | 留痕 | [§8.2](#82-四轮次-agent-工作流) | ❌ 大改应升级 complexity |
+| **[Reviewer Agent](#15-reviewer-agent)** | 评审 §3 改动（**仅** `test/round`） | round **§3** 的 `FIXED` 项 | **§4** 通过/打回 | 留痕 | [§8.2](#82-四轮次-agent-工作流) | ❌ 应打回 Fix，不偷偷改 |
+| **[Review Agent](#16-review-agent)** | 代码/架构评审，**新开** review 文件 | [`docs/reviews/`](docs/reviews/README.md) | Round 1 意见 → 跟进 → **宣布 CLOSED** | 留痕 | [§1.6](#16-评审对线-docsreviews) | ❌ 替 Subject 写回复 |
+| **[Subject Agent](#16-subject-agent)** | 被评审方 | 对应 `review-*.md` | 文件下方写回复（接受/措施/结果） | 留痕 | [§1.6](#16-评审对线-docsreviews) | ❌ **不得**自行 CLOSED |
 
 ### 1.1 需求开发人员
 
@@ -68,8 +128,8 @@
 
 **你要读** (按顺序):
 1. `docs/requirements/REQUIREMENTS.md` (1342 行, 业务全貌) — **5 分钟扫目录, 1 小时精读**
-2. 业务方 4 轮访谈纪要 (在 `docs/AGENT-REQUIREMENTS.md` + git history) — 看"原话"vs"结构化"的差距
-3. `docs/LESSONS-LEARNED.md` (15+ 踩坑) — 避免重复别人错过的需求
+2. 业务方 4 轮访谈纪要 (在 `docs/requirements/AGENT-REQUIREMENTS.md` + git history) — 看"原话"vs"结构化"的差距
+3. `docs/reviews/LESSONS-LEARNED.md` (15+ 踩坑) — 避免重复别人错过的需求
 
 **你要写** (4 件事):
 - **新需求 §X.Y 章节** (在 `docs/requirements/REQUIREMENTS.md` 末尾 `## 14. <标题>` 之后, 1 节 1 个业务功能) — 含 5 字段:
@@ -102,7 +162,7 @@
 **你要读** (按顺序):
 1. `docs/requirements/REQUIREMENTS.md` (全) — 跟需求开发人员**同一份**, 你是审
 2. `docs/requirements/ARCH-DECOMPOSITION.md` (RI-1~45) — 审架构师拆的 RI 是否落地
-3. 业务背景资料 (`docs/SIMILAR-PRODUCTS.md` + 内部 wiki)
+3. 业务背景资料 (`docs/requirements/SIMILAR-PRODUCTS.md` + 内部 wiki)
 
 **你要写** (3 件事):
 - **PR 评审 +/- 反馈** — 业务逻辑通不通 / 验收标准清不清楚 / 术语准不准确
@@ -126,10 +186,10 @@
 
 **你要读** (按顺序):
 1. `docs/requirements/REQUIREMENTS.md` (全) — 跟需求开发/审核**同一份**, 你是拆
-2. `docs/ARCHITECTURE-v2.md` (685 行) — 现有架构基线
-3. `docs/DB-SCHEMA-v2.md` (1060 行) — 现有 schema (你要加表/字段看这里)
+2. `docs/architecture/ARCHITECTURE-v2.md` (685 行) — 现有架构基线
+3. `docs/architecture/DB-SCHEMA-v2.md` (1060 行) — 现有 schema (你要加表/字段看这里)
 4. `docs/architecture/01~06-arch-*.md` (另一个 AI 写的分章架构) — 现代化拆解参考
-5. `docs/AGENT-FRAMEWORK-DECISION.md` (885 行) — 关键决策 (Spring AI 1.1 + 不引 spring-ai-alibaba)
+5. `docs/architecture/AGENT-FRAMEWORK-DECISION.md` (885 行) — 关键决策 (Spring AI 1.1 + 不引 spring-ai-alibaba)
 
 **你要写** (在 `docs/requirements/ARCH-DECOMPOSITION.md` 加 RI):
 - **RI-N: <标题> (§X.Y 引用)** — 每节 6 字段:
@@ -158,10 +218,10 @@
 **你是谁**: 后端 / 前端 / DBA / 测试 / 接手 AI. 你的**唯一任务** = 抢 RI + 写代码 + 提 PR. **不写需求, 不拆 RI** (那是需求开发/架构师).
 
 **你要读** (按角色细分, 见 [§4.1 必读基线包](#41-程序员必读基线包)):
-- **后端 / 接手 AI** — `docs/AGENT-IMPL-PLAN.md` + `docs/DB-SCHEMA-v2.md` + `docs/ARCHITECTURE-v2.md` + 抢到的 RI
-- **前端** — `frontend/README.md` + `docs/AGENT-IMPL-PLAN.md` §I-12 + 抢到的 RI
-- **DBA** — `docs/DB-SCHEMA-v2.md` + 抢到的 RI
-- **测试** — `docs/M1-TEST-TASKS.md` + `docs/V2-TEST-TASKS.md` + 抢到的 RI
+- **后端 / 接手 AI** — `docs/architecture/AGENT-IMPL-PLAN.md` + `docs/architecture/DB-SCHEMA-v2.md` + `docs/architecture/ARCHITECTURE-v2.md` + 抢到的 RI
+- **前端** — `frontend/README.md` + `docs/architecture/AGENT-IMPL-PLAN.md` §I-12 + 抢到的 RI
+- **DBA** — `docs/architecture/DB-SCHEMA-v2.md` + 抢到的 RI
+- **测试** — [`test_task/`](test_task/README.md) 抢 AT-*；历史清单见 [`test/old/`](test/old/README.md)
 
 **你要写**:
 - **代码** (后端 Java / 前端 Vue / SQL 迁移 / 单元测试)
@@ -182,36 +242,179 @@
 - ❌ 推 `minimax` 分支 (那是沙箱的活)
 - ❌ 多个 RI 写 1 个 commit (1 commit = 1 RI, 拆不开才能合)
 
+### 1.5 测试轮次四 Agent（`test/round-*.md`）
+
+> **`test/` 只记 bug** — 交互式 deploy 发现，或 Agent 自主跑用例发现。**测过无缺陷不要开 round 行。**
+> **一轮一文件**；§1～§4 各由不同 agent 接手，**每段必填：Agent 名 + 时间 + 摘要**。  
+> 全部 bug **CLOSED** 或已升级 [`test/complexity.md`](test/complexity.md) 后，轮次标 **`CLOSED`**。  
+> 细节：[§8](#-8-bug-跟踪与修复-test) · [`test/README.md`](test/README.md) · 模板 [`test/round-TEMPLATE.md`](test/round-TEMPLATE.md)
+
+| Agent | 改 round 哪一节 | 做什么 |
+|---|---|---|
+| **Recorder** | §1 | **只记 bug**（来源 DEPLOY/AUTO）、复现步骤 |
+| **Analyst** | §2 | 根因、修改建议；搞不定 → complexity |
+| **Fix** | §3 | 小修、commit |
+| **Reviewer** | §4 | 审 diff、CLOSED 或打回 |
+
+#### 1.5.1 Recorder Agent
+
+**你要读**：[`test/round-TEMPLATE.md`](test/round-TEMPLATE.md) · [`test_task/README.md`](test_task/README.md) · [`docs/handoff/v1.1-DEPLOY-GUIDE.md`](docs/handoff/v1.1-DEPLOY-GUIDE.md)
+
+**你要写**：§1 Agent 留痕 + Bug 表（`T-MMDD-NN`，状态 `RECORDED`，**来源** `DEPLOY` / `AUTO`）
+
+**Bug 从哪来**：交互式 deploy 联调；或自主跑 [`test_task/`](test_task/README.md) 案例 / `mvn test` / `npm run build` 失败。
+
+**你不能**：写根因方案、改代码；**没有 bug 不要往 round 里加行**
+
+#### 1.5.2 Analyst Agent
+
+**你要读**：round **§1** 全部 `RECORDED` 行
+
+**你要写**：§2 逐条分析；标 `SMALL_FIX` 或 `ESCALATED`；升级项写入 [`test/complexity.md`](test/complexity.md)（`C-MMDD-NN`）
+
+**你不能**：默认直接改代码（除非用户明确授权 hotfix）
+
+#### 1.5.3 Fix Agent
+
+**你要读**：round **§2** 中 `SMALL_FIX` 项
+
+**你要写**：§3 改动 + commit；状态 `FIXED`
+
+**你不能**：擅自做大改；搞不定 → 升级 complexity，等 PM/架构
+
+#### 1.5.4 Reviewer Agent
+
+**你要读**：round **§3** + git diff
+
+**你要写**：§4 `APPROVED`/`REJECTED`；通过则 bug **`CLOSED`**
+
+**你不能**：自己改代码代替评审（应 `REOPEN` 给 Fix）
+
+> **注意**：此 **Reviewer Agent** 只管 `test/round-*.md` §4 的验收 bug 评审，与 [§1.6](#16-评审对线-docsreviews) 的 **Review Agent**（`docs/reviews/`）不是同一套流程。
+
+### 1.6 评审对线（`docs/reviews/`）
+
+> **一轮 review 一个文件**；Review Agent 与 Subject Agent **在文件里对线**；**只有 Review Agent 宣布 `CLOSED`，该 review 才算结束**。
+> 细节：[`docs/reviews/README.md`](docs/reviews/README.md) · 模板 [`docs/reviews/review-TEMPLATE.md`](docs/reviews/review-TEMPLATE.md)
+
+```text
+Review Agent 新建 review-*.md（OPEN）→ Round 1 意见
+        ↓
+Subject Agent 下方写 Round 1 回复（是否接受 / 措施 / commit / 结果）
+        ↓
+Review Agent Round 2：CONTINUE 续提要求 或 CLOSED 宣布评审结束
+```
+
+| Agent | 做什么 | 不能做什么 |
+|---|---|---|
+| **Review Agent** | `cp review-TEMPLATE.md` 新建文件；写/追加评审；验证后 **宣布 CLOSED** | 替 Subject 写回复 |
+| **Subject Agent** | 在文件**末尾**追加回复；改代码；填 commit/结果 | 把状态改 **CLOSED** |
+
+与 **§1.5 Reviewer Agent**（`test/round` §4）分工：round 审 **bug 的小修**；`docs/reviews/` 审 **代码/架构/MOD 交付** 等，可多轮对线。
+
+#### 1.6.1 Review Agent
+
+**你要读**：Subject 的 commit / diff · 相关 `architecture/` · 可选关联 `test/round-*.md`
+
+**你要写**：Round 1 意见表（P0/P1/P2）；跟进 Round；结案时改顶部状态 **`CLOSED`** + 评审结束声明
+
+**你不能**：自己改被审代码（应打回 Subject）
+
+#### 1.6.2 Subject Agent
+
+**你要读**：review 文件最新 Round 的评审意见
+
+**你要写**：对应 Round 回复块 — 总体态度（全部/部分/不接受）+ 逐项表（措施、commit、结果）
+
+**你不能**：改 Review Agent 上文；**不能**自行宣布评审结束
+
+### 1.9 测试 Agent（`test_task/` + TASKS **AT-***）
+
+> **抢任务、跑案例、记结果** — 与 §5 程序员抢 RI 同一套占用规则（TASKS.md push 占坑）。
+
+**你要读**：[`test_task/README.md`](test_task/README.md) · [`TASKS.md`](TASKS.md) **AT-*** 节 · 对应案例文件
+
+**你要写**：
+- **PASS**：案例文件 **§3 执行历史** 追加（Agent、时间、基线、**已成功**）+ TASKS 标 `已完成`
+- **FAIL**：[`test/test_bug-TEMPLATE.md`](test/test_bug-TEMPLATE.md) → `test_bug-*.md`；案例 §3 记 FAIL；**不要**自己修 bug
+
+**你不能**：FAIL 时擅自改业务代码（交给 round §2～§4）；通过结果写进 `test/` round（那是 bug 专用）
+
+详情：[§9](#-9-自动化测试任务-test_task)
+
 ---
 
-## 📂 2. 需求文档位置
+## 📂 2. 文档与文件夹导航
 
-> **2026-06-10 业务方决策**: 把需求文档**单独放一个文件夹**, 方便识别. 业务方明确要求"放在哪都要在根 README 说明".
+> **2026-06-11 整理原则**: 长期文档不进根目录；**需求 / 架构 / 评审 / 运维 / 测试** 各归其位。
+> 详细逻辑与子目录文件列表 → **[`docs/README.md`](docs/README.md)**
 
-**位置**: `docs/requirements/`
+### 2.1 根目录 Markdown
 
-**当前文件**:
+| 文件 | 为何留根 | 链接 |
+|---|---|---|
+| **`README.md`** | 项目入口，角色导航 | 本文 |
+| **`TASKS.md`** | 开发 + AT 任务占用看板 | [TASKS.md](TASKS.md) |
+| **`MULTI-AGENT-REPO-ARCHITECTURE.md`** | 多 Agent 协作框架（可套用） | [协作架构](MULTI-AGENT-REPO-ARCHITECTURE.md) |
 
-| 文件 | 行数 | 内容 | 给谁看 |
-|---|---|---|---|
-| **`docs/requirements/REQUIREMENTS.md`** | 1342 | 业务需求 v1.1 (含 §13 Mavis 拓展) | 业务方 / 全员 |
-| **`docs/requirements/ARCH-DECOMPOSITION.md`** | ~24KB | 需求拆解工作底稿 (RI-1~45) | 架构师 / 后端 / 前端 / DBA / 测试 |
+其它 markdown **不应**出现在根目录（历史文件已迁入 `docs/` / `test/`）。
 
-**结构** (简单扁平, 业务方拍"简单"方案):
+### 2.2 四大工作区
+
+| 区域 | 路径 | 放什么 |
+|---|---|---|
+| **长期文档** | [`docs/`](docs/README.md) | 需求、架构、review、运维、交接 |
+| **自动化测试案例** | [`test_task/`](test_task/README.md) | 案例步骤 + **PASS** 执行历史 |
+| **Bug 跟踪** | [`test/`](test/README.md) | `round-*.md`、`test_bug-*.md`、`complexity.md` |
+| **任务占用** | [`TASKS.md`](TASKS.md) | MOD/RI **开发** + **AT-*** 测试任务占用 |
+
+### 2.3 需求文档 — `docs/requirements/`
+
+| 文件 | 内容 | 给谁 |
+|---|---|---|
+| [`REQUIREMENTS.md`](docs/requirements/REQUIREMENTS.md) | 业务需求 v1.1 主文档 | 业务方 / 全员 |
+| [`ARCH-DECOMPOSITION.md`](docs/requirements/ARCH-DECOMPOSITION.md) | RI-1~45 拆解 | 架构师 / 程序员 |
+| [`AGENT-REQUIREMENTS.md`](docs/requirements/AGENT-REQUIREMENTS.md) | Agent 业务访谈 | 架构师 / 后端 |
+| [`SUPPLEMENTARY-REQUIREMENTS.md`](docs/requirements/SUPPLEMENTARY-REQUIREMENTS.md) | 审计补充需求 | 程序员 |
+| [`SIMILAR-PRODUCTS.md`](docs/requirements/SIMILAR-PRODUCTS.md) | 行业参考 | 需求 / 产品 |
+
 ```
 docs/requirements/
-├── REQUIREMENTS.md                # 业务需求 v1.1
-└── ARCH-DECOMPOSITION.md          # 拆解工作底稿 RI-1~45
+├── README.md                  ← 本子目录索引
+├── REQUIREMENTS.md
+├── ARCH-DECOMPOSITION.md
+├── AGENT-REQUIREMENTS.md
+├── SUPPLEMENTARY-REQUIREMENTS.md
+└── SIMILAR-PRODUCTS.md
 ```
 
-**历史**:
-- 2026-06-10 前: `docs/REQUIREMENTS-v1.md` (扁平)
-- 2026-06-10 起: `docs/requirements/` (独立目录, 2 文件扁平)
-- 老引用 (`docs/REQUIREMENTS-v1.md`) 已 git-rename 保留历史, 实际路径请用新位置
+### 2.4 架构文档 — `docs/architecture/`
 
-**重命名映射**:
-- `docs/REQUIREMENTS-v1.md` → `docs/requirements/REQUIREMENTS.md` (业务需求, 874→1342 行, 内容未删)
-- `docs/REQUIREMENTS-ARCH-DECOMPOSITION.md` → `docs/requirements/ARCH-DECOMPOSITION.md` (拆解底稿, RI-1~45)
+| 首读 | 文件 |
+|---|---|
+| 架构基线 | [`ARCHITECTURE-v2.md`](docs/architecture/ARCHITECTURE-v2.md) |
+| 数据库 | [`DB-SCHEMA-v2.md`](docs/architecture/DB-SCHEMA-v2.md) |
+| Agent | [`AGENT-IMPL-PLAN.md`](docs/architecture/AGENT-IMPL-PLAN.md) · [`AGENT-FRAMEWORK-DECISION.md`](docs/architecture/AGENT-FRAMEWORK-DECISION.md) |
+| 分章 | [`01-arch-overview.md`](docs/architecture/01-arch-overview.md) ~ `06-*.md` |
+| 历史 | [`history/`](docs/architecture/history/) |
+
+完整列表 → [`docs/architecture/README.md`](docs/architecture/README.md)
+
+### 2.5 其它 `docs/` 子目录
+
+| 目录 | 索引 | 用途 |
+|---|---|---|
+| [`reviews/`](docs/reviews/README.md) | README + `review-TEMPLATE.md` + `LESSONS-LEARNED.md` | 评审对线（OPEN→CLOSED）、踩坑 |
+| [`operations/`](docs/operations/README.md) | README | 部署、运维、GLM、DEV-STANDARDS |
+| [`handoff/`](docs/handoff/) | — | v1.1 交付报告与部署指南 |
+
+### 2.6 历史路径（旧链接对照）
+
+| 旧位置 | 现位置 |
+|---|---|
+| 根 `architecture-v*.md` / `DEPLOYMENT.md` | `docs/architecture/history/` · `docs/operations/` |
+| 根 `VERIFICATION-REPORT.md` | `test/old/` |
+| `docs/` 根下的 `*.md`（除 README） | 已迁入对应子目录，见 [`docs/README.md` §5](docs/README.md#5-路径迁移备忘-2026-06-11) |
 
 ---
 
@@ -267,24 +470,24 @@ docs/requirements/
 |---|---|---|---|
 | ① | `TASKS.md` (仓库根) | ~300 | **任务分块清单** — 找能抢的 RI, 看 [§5](#-5-程序员开工-抢任务-sop) |
 | ② | `docs/requirements/ARCH-DECOMPOSITION.md` | ~24KB | **RI-1~45 拆解底稿** — 找要抢的 RI 详细描述 |
-| ③ | `docs/AGENT-IMPL-PLAN.md` | 252 | Plan I 总览 (Spring AI 1.1 + 5 步 ReAct 循环) |
-| ④ | `docs/AGENT-FRAMEWORK-DECISION.md` | 885 | 决策:Spring AI 1.1 + **不引** spring-ai-alibaba (踩坑预警 §1.2.1.1 第 6 点) |
-| ⑤ | `docs/LESSONS-LEARNED.md` | 19KB | 15+ 踩坑, **避免重蹈覆辙** |
+| ③ | `docs/architecture/AGENT-IMPL-PLAN.md` | 252 | Plan I 总览 (Spring AI 1.1 + 5 步 ReAct 循环) |
+| ④ | `docs/architecture/AGENT-FRAMEWORK-DECISION.md` | 885 | 决策:Spring AI 1.1 + **不引** spring-ai-alibaba (踩坑预警 §1.2.1.1 第 6 点) |
+| ⑤ | `docs/reviews/LESSONS-LEARNED.md` | 19KB | 15+ 踩坑, **避免重蹈覆辙** |
 
 **按技术栈**额外读:
-- **后端** — `docs/ARCHITECTURE-v2.md` (685) + `docs/DB-SCHEMA-v2.md` (1060)
-- **前端** — `frontend/README.md` + `docs/AGENT-IMPL-PLAN.md` §I-12
-- **DBA** — `docs/DB-SCHEMA-v2.md` (1060) + `docs/ENVIRONMENT-DEPENDENCIES.md` (330)
-- **测试** — `docs/M1-TEST-TASKS.md` + `docs/V2-TEST-TASKS.md` + `docs/ACCEPTANCE-GUIDE.md`
+- **后端** — `docs/architecture/ARCHITECTURE-v2.md` (685) + `docs/architecture/DB-SCHEMA-v2.md` (1060)
+- **前端** — `frontend/README.md` + `docs/architecture/AGENT-IMPL-PLAN.md` §I-12
+- **DBA** — `docs/architecture/DB-SCHEMA-v2.md` (1060) + `docs/operations/ENVIRONMENT-DEPENDENCIES.md` (330)
+- **测试** — [`test_task/`](test_task/README.md) + [`test/old/ACCEPTANCE-GUIDE.md`](test/old/ACCEPTANCE-GUIDE.md)（历史参考）
 
 ### 4.2 需求开发人员必读包
 
 | 序 | 文件 | 行数 | 必读理由 |
 |---|---|---|---|
 | ① | `docs/requirements/REQUIREMENTS.md` | 1342 | **业务全貌** — 5 分钟扫目录, 1 小时精读, 2 小时做笔记 |
-| ② | `docs/AGENT-REQUIREMENTS.md` | 257 | 业务访谈原始记录 (15 真实问题 + 7 场景) |
-| ③ | `docs/SIMILAR-PRODUCTS.md` | 16KB | 行业参考 (DeepSeek / 豆包 / 类似档案系统) |
-| ④ | `docs/AGENT-IMPL-PLAN.md` | 252 | 理解需求怎么落地到代码 (反向理解技术边界) |
+| ② | `docs/requirements/AGENT-REQUIREMENTS.md` | 257 | 业务访谈原始记录 (15 真实问题 + 7 场景) |
+| ③ | `docs/requirements/SIMILAR-PRODUCTS.md` | 16KB | 行业参考 (DeepSeek / 豆包 / 类似档案系统) |
+| ④ | `docs/architecture/AGENT-IMPL-PLAN.md` | 252 | 理解需求怎么落地到代码 (反向理解技术边界) |
 
 ### 4.3 需求审核人员必读包
 
@@ -292,7 +495,7 @@ docs/requirements/
 |---|---|---|---|
 | ① | `docs/requirements/REQUIREMENTS.md` | 1342 | 同 4.2 — 你跟需求开发**一起读**, 你是审 |
 | ② | `docs/requirements/ARCH-DECOMPOSITION.md` | ~24KB | 审架构师拆的 RI 落地 |
-| ③ | `docs/LESSONS-LEARNED.md` | 19KB | 看业务方之前踩的坑 (避免重复) |
+| ③ | `docs/reviews/LESSONS-LEARNED.md` | 19KB | 看业务方之前踩的坑 (避免重复) |
 
 ### 4.4 架构师必读包
 
@@ -300,23 +503,33 @@ docs/requirements/
 |---|---|---|---|
 | ① | `docs/requirements/REQUIREMENTS.md` | 1342 | 业务全貌 |
 | ② | `docs/requirements/ARCH-DECOMPOSITION.md` | ~24KB | RI 拆解样例 (RI-1~45), 你要按这个格式加 RI-N |
-| ③ | `docs/ARCHITECTURE-v2.md` | 685 | 现有架构基线 |
-| ④ | `docs/DB-SCHEMA-v2.md` | 1060 | 现有 schema |
+| ③ | `docs/architecture/ARCHITECTURE-v2.md` | 685 | 现有架构基线 |
+| ④ | `docs/architecture/DB-SCHEMA-v2.md` | 1060 | 现有 schema |
 | ⑤ | `docs/architecture/01~05-arch-*.md` (6 文件) | ~50KB | 另一个 AI 写的现代化分章架构 (在 `docs/architecture/`) |
-| ⑥ | `docs/AGENT-FRAMEWORK-DECISION.md` | 885 | 决策 (Spring AI 1.1 + 不引 spring-ai-alibaba) |
-| ⑦ | `docs/AGENT-IMPL-PLAN.md` | 252 | Plan I 总览 (理解技术决策) |
+| ⑥ | `docs/architecture/AGENT-FRAMEWORK-DECISION.md` | 885 | 决策 (Spring AI 1.1 + 不引 spring-ai-alibaba) |
+| ⑦ | `docs/architecture/AGENT-IMPL-PLAN.md` | 252 | Plan I 总览 (理解技术决策) |
 
-### 4.5 通用参考 (按需查)
+### 4.5 测试轮次 Agent 必读包
+
+| 序 | 文件 | 必读理由 |
+|---|---|---|
+| ① | [§8](#-8-bug-跟踪与修复-test) + [`test/README.md`](test/README.md) | 四 Agent 分工 + 留痕规则 |
+| ② | [`test/round-TEMPLATE.md`](test/round-TEMPLATE.md) | 新开一轮复制 |
+| ③ | 当前 [`test/round-*.md`](test/round-2026-06-11-v1.1-deploy.md) | 只改你负责的那一节 |
+| ④ | [`test/complexity.md`](test/complexity.md) | 升级 / PM 架构拍板 |
+| ⑤ | [`docs/operations/deployment_log.md`](docs/operations/deployment_log.md) | 部署操作时间线 |
+
+### 4.6 通用参考 (按需查)
 
 | 文件 | 行数 | 何时读 |
 |---|---|---|
-| `docs/ENVIRONMENT-DEPENDENCIES.md` | 330 | 部署/排错 |
-| `docs/TEAM-ARCHIVE.md` | 12KB | 沙箱 SSH / 环境 |
-| `docs/DEPLOYMENT-LOG.md` | 13KB | 部署历史 (出问题翻这里) |
-| `docs/GLM-KEY-SETUP.md` | 5KB | 配 GLM API key |
-| `docs/DEV-STANDARDS.md` | 466 | 开发标准 (提交前看 §7.2) |
-| `docs/ARCH-REUSE-AUDIT.md` | 12KB | 现有可复用模块审计 |
-| `docs/M1-README.md` / `docs/M1-TEST-TASKS.md` | - | M1 阶段档案 CRUD + 测试 (历史) |
+| `docs/operations/ENVIRONMENT-DEPENDENCIES.md` | 330 | 部署/排错 |
+| `docs/operations/TEAM-ARCHIVE.md` | 12KB | 沙箱 SSH / 环境 |
+| `docs/operations/DEPLOYMENT-LOG.md` | 13KB | 部署历史 (出问题翻这里) |
+| `docs/operations/GLM-KEY-SETUP.md` | 5KB | 配 GLM API key |
+| `docs/operations/DEV-STANDARDS.md` | 466 | 开发标准 (提交前看 §7.2) |
+| `docs/architecture/ARCH-REUSE-AUDIT.md` | 12KB | 现有可复用模块审计 |
+| `test/old/M1-README.md` / `test/old/M1-TEST-TASKS.md` | - | M1 阶段档案 CRUD + 测试 (历史) |
 | `docs/reviews/README.md` | - | 上个接手 AI 的 review 报告 (避坑) |
 
 ---
@@ -341,7 +554,7 @@ mvn compile -DskipTests -B -o
 # 期望: BUILD SUCCESS (零回归)
 ```
 
-**基线不对** → 找 [§6 卡住怎么办](#-6-卡住怎么办--找谁). **编译挂** → 看 `docs/LESSONS-LEARNED.md` 15+ 坑.
+**基线不对** → 找 [§6 卡住怎么办](#-6-卡住怎么办--找谁). **编译挂** → 看 `docs/reviews/LESSONS-LEARNED.md` 15+ 坑.
 
 ### 5.2 Step 1: 找可抢任务 (2 分钟)
 
@@ -350,10 +563,13 @@ mvn compile -DskipTests -B -o
 cat TASKS.md | less
 ```
 
-**找满足 3 条件的 RI**:
+**找满足 3 条件的任务**（**RI/MOD/T-*** 或 **AT-***）:
 1. `可并行: ✅` (或非依赖项, 你能自己干)
 2. `状态: 未开发` (没人占)
-3. 跟你的技术栈匹配 (后端/前端/DBA/测试)
+3. 跟你的角色匹配 (开发 / 自动化测试)
+
+- **开发**：见 `ARCH-DECOMPOSITION.md` 对应 RI  
+- **自动化测试**：见 [`test_task/README.md`](test_task/README.md) + TASKS **AT-*** 节 → [§9](#-9-自动化测试任务-test_task)
 
 **找不到?** — 新需求 (§X.Y) 里**还没拆 RI** 的, 你可以**自己拆**(按 `ARCH-DECOMPOSITION.md` 已有 RI-1~45 的格式), 提 PR 给架构师审.
 
@@ -421,18 +637,18 @@ cat TASKS.md | less
 | 问题 | 怎么办 |
 |---|---|
 | **基线 commit 拉不对** | 找项目方 frisker, 给 SSH key / 重置 |
-| **编译失败** | `mvn clean compile -DskipTests -B`, 看 `docs/LESSONS-LEARNED.md` (15+ 坑) |
+| **编译失败** | `mvn clean compile -DskipTests -B`, 看 `docs/reviews/LESSONS-LEARNED.md` (15+ 坑) |
 | **LLM 框架装不上** | **不要死磕**, 在 PR 描述里报告"卡住:XXX", Mavis 会接管 |
 | **接手 AI 没遇到但 PM 漏写的** | **不要猜**, 在 PR 描述里报告"问题:XXX, 需要 PM 决策" |
 | **业务方有新需求** | 转给需求开发人员, 不自己拍板 |
 | **RI 拆解不清** | 转给架构师, 不自己拆 (除非占用了 1 个 RI, 可以自己细化子任务) |
 | **跟另一个人冲突** | 看 [§5.7 多人抢同一任务 SOP](#57-多人抢同一任务-sop) |
-| **Spring AI 1.1 API 找不到 `ReactAgent`** | 看 `docs/AGENT-FRAMEWORK-DECISION.md` §1.2.1.1 第 6 点 + `AGENT-RESEARCH.md` §3.1 |
+| **Spring AI 1.1 API 找不到 `ReactAgent`** | 看 `docs/architecture/AGENT-FRAMEWORK-DECISION.md` §1.2.1.1 第 6 点 + `docs/architecture/AGENT-RESEARCH.md` §3.1 |
 | **智谱 GLM 4xx 错** | `application.yml` 加 `spring.ai.openai.chat.options.model=glm-4-flash` 显式指定 |
 | **多轮对话 LLM 不带上下文** | 确认 `MessageChatMemoryAdvisor` bean 注入 ChatClient, `conversationId` 从 Controller 传 |
-| **后端崩了** | `docs/TEAM-ARCHIVE.md` §11 |
-| **数据库连不上** | `docs/TEAM-ARCHIVE.md` §11.3 |
-| **推不上去** | `docs/TEAM-ARCHIVE.md` §11.5 (SSH key 检查) |
+| **后端崩了** | `docs/operations/TEAM-ARCHIVE.md` §11 |
+| **数据库连不上** | `docs/operations/TEAM-ARCHIVE.md` §11.3 |
+| **推不上去** | `docs/operations/TEAM-ARCHIVE.md` §11.5 (SSH key 检查) |
 
 ### 找谁
 
@@ -447,61 +663,38 @@ cat TASKS.md | less
 
 ## 📂 7. 仓库结构 + 文档演进
 
-### 7.1 仓库结构 (2026-06-10)
+### 7.1 仓库结构 (2026-06-11)
+
+> **导航**: [§0.4 快速寻址](#-04-快速寻址30-秒) · 详细文档逻辑 [`docs/README.md`](docs/README.md)
 
 ```
 projects-online/
-├── README.md                                # 本文件 (根入口)
-├── TASKS.md                                 # 任务分块清单 (谁占用了哪个 RI)
-├── .gitignore
+├── README.md              ← 项目入口（本文件）
+├── TASKS.md               ← 开发任务 + AT 占用
+├── MULTI-AGENT-REPO-ARCHITECTURE.md  ← 多 Agent 协作框架
 │
-├── backend/                                 # Spring Boot 3.3 + JPA + Spring AI 1.1
-│   ├── pom.xml
-│   ├── startup.ps1
-│   └── src/main/java/com/archive/
-│       ├── agent/                           # Plan I: Agent 核心 (14 文件)
-│       │   ├── AgentConfig.java / AgentEngine.java
-│       │   ├── AgentRequest.java / AgentResponse.java / AgentStep.java
-│       │   ├── ChatMemoryConfig.java        # I-13 多轮对话
-│       │   ├── MultiTurnController.java     # I-13
-│       │   ├── MultiTurnService.java        # I-13
-│       │   ├── prompt/ (AgentSystemPrompt + AgentFewShots)
-│       │   ├── tool/ (SearchFulltext / FindProject / QueryMysql / LlmSummarize / AskClarification / GetProjectBusinessData)
-│       │   └── listener/ (LlmCallListener + ToolCallListener)
-│       ├── controller/QaController.java     # I-10 改造
-│       ├── service/GlmService.java          # 降级路径
-│       ├── provider/LLMProvider.java        # LLM 抽象层
-│       └── ... (现有 M0~M2 + Plan A~G 代码)
+├── test_task/             ← 自动化测试案例 + PASS 执行历史
+│   └── README.md
 │
-├── frontend/
-│   ├── src/views/Knowledge.vue              # I-12 改造
-│   └── src/components/AgentStepsPanel.vue  # I-12 新增
+├── docs/                  ← 长期文档（docs 根仅 docs/README.md）
+│   ├── README.md          ← 文档总索引 + 按场景查找表
+│   ├── requirements/      ← 做什么：需求、RI、访谈
+│   ├── architecture/      ← 怎么建：架构、schema、Agent
+│   ├── reviews/           ← 评审对线：review-*.md、LESSONS-LEARNED
+│   ├── operations/        ← 怎么跑：部署、运维、规范
+│   └── handoff/           ← 怎么交：版本交付指南
 │
-├── docs/                                    # ⭐ 17+ 份核心文档
-│   ├── requirements/                        # 🆕 v1.1 需求文档独立目录 (2026-06-10)
-│   │   ├── REQUIREMENTS.md                  #    业务需求 v1.1 (1342 行)
-│   │   └── ARCH-DECOMPOSITION.md            #    v1.1 需求拆解工作底稿 (RI-1~45)
-│   ├── architecture/                        # ⏳ 另一个 AI 正在写 (6 份分章架构)
-│   │   ├── 01-arch-overview.md
-│   │   ├── 02-backend-layer-architecture.md
-│   │   ├── 03-frontend-component-architecture.md
-│   │   ├── 04-database-schema.md
-│   │   ├── 05-deployment-and-environment.md
-│   │   └── 06-requirements-gap-analysis.md  # (待补)
-│   ├── ARCHITECTURE-v2.md                   # 现有架构基线 (685 行)
-│   ├── DB-SCHEMA-v2.md                      # 现有 schema (1060 行)
-│   ├── AGENT-IMPL-PLAN.md / AGENT-REQUIREMENTS.md / AGENT-RESEARCH.md / AGENT-FRAMEWORK-DECISION.md  # Plan I 4 份
-│   ├── ACCEPTANCE-GUIDE.md / DEV-STANDARDS.md / ENVIRONMENT-DEPENDENCIES.md / GLM-KEY-SETUP.md
-│   ├── LESSONS-LEARNED.md                   # 15+ 踩坑
-│   ├── TEAM-ARCHIVE.md                      # 沙箱 SSH + 环境
-│   ├── DEPLOYMENT-LOG.md / ARCH-REUSE-AUDIT.md / SIMILAR-PRODUCTS.md
-│   ├── M1-README.md / M1-TEST-TASKS.md / V2-TEST-TASKS.md
-│   └── reviews/                             # 上个接手 AI 的 review 报告
+├── test/                  ← bug：round、test_bug、complexity
+│   ├── README.md
+│   ├── round-*.md / test_bug-*.md / complexity.md
+│   ├── old/               ← 历史 ACCEPTANCE-GUIDE、M1/V2、VERIFICATION
+│   └── logs/
 │
-├── .mavis/plans/                            # 8 个 plan (A~I, Plan I 完工)
-├── config/                                  # 模板 (用户复制填真实值)
-├── deploy/                                  # Caddy / WinSW / SQL
-└── scripts/                                 # 部署/诊断脚本
+├── backend/               ← Spring Boot 源码 + src/test/ 测试代码
+├── frontend/              ← Vue 3 源码
+├── deploy/                ← SQL 迁移、Caddy、WinSW
+├── config/                ← 配置模板
+└── scripts/               ← 诊断脚本
 ```
 
 ### 7.2 文档演进 (基线 0c6325f 之前)
@@ -522,6 +715,7 @@ projects-online/
 | 2026-06-10 下午 | 业务需求 v1.1 §5.6 + 死循环/LLM 兜底配置可配 |
 | 2026-06-10 晚 | **Mavis 拓展**: 业务规则细化 10 处 + 隐含规则 6 类 + 新功能 8 项 (§13) + 需求拆解 RI-1~45 |
 | 2026-06-10 深夜 | **README 重构**: 角色导航 (§1) + 需求文档位置 (§2) + 程序员开工 SOP (§5) |
+| 2026-06-11 | **文档整理**: 长期文档迁入 `docs/` 子目录; 测试文档迁入 `test/`; `docs/` 根只留 README |
 
 ### 7.3 文档维护规则 (Mavis 必守)
 
@@ -534,6 +728,129 @@ projects-online/
 
 ---
 
-*本文档由 Mavis (沙箱 PM) 维护. 4 类角色 (需求开发/审核/架构师/程序员) 各看 [§1 角色导航](#-1-角色导航-核心) 即可 5 分钟开工.*
+## 🧪 8. Bug 跟踪与修复 (`test/`)
+
+> **`test/` 只记 bug。** 发现途径：**(1) 交互式 deploy 联调** **(2) Agent 自主跑测试用例**。测过无缺陷、纯部署步骤 → 不进 `round-*.md`。
+>
+> **一轮一文件** `round-YYYY-MM-DD-*.md`：**§1 记 bug → §2 分析 → §3 改代码 → §4 评审**，各由不同 Agent 接手，**每段留痕（名字 + 时间 + 摘要）**。  
+> **小修**在 round 内闭环；**大改 / 搞不定** → [`test/complexity.md`](test/complexity.md) 交 PM + 架构。  
+> **细节以 [`test/README.md`](test/README.md) 为准**。
+
+### 8.1 四轮次 Agent 工作流
+
+```text
+Recorder (§1)  →  Analyst (§2)  →  Fix (§3)  →  Reviewer (§4)  →  §5 CLOSED
+                      ↘ ESCALATED → complexity.md → PM/架构
+```
+
+| § | Agent | 做什么 | 留痕 |
+|---|---|---|---|
+| **§1** | Recorder | **只记 bug**（来源、复现、ID） | Agent + 时间 + 摘要 |
+| **§2** | Analyst | 根因、修改建议；大改标 ESCALATED | 同上 |
+| **§3** | Fix | 按建议小修、commit | 同上 |
+| **§4** | Reviewer | 审 diff、CLOSED 或打回 | 同上 |
+
+**轮次 `CLOSED` 条件**：§1～§4 留痕齐全；每条 bug 为 **`CLOSED`** 或已在 **`complexity.md`** 登记。
+
+### 8.2 目录与文件
+
+| 路径 | 用途 |
+|---|---|
+| [`test/README.md`](test/README.md) | 工作流、状态机、Agent 一句话指引 |
+| [`test/round-TEMPLATE.md`](test/round-TEMPLATE.md) | **新开一轮**时复制 |
+| [`test/round-*.md`](test/round-2026-06-11-v1.1-deploy.md) | 当轮主文件（§1～§5） |
+| [`test/complexity.md`](test/complexity.md) | 当轮解决不了、需拍板 |
+| [`docs/operations/deployment_log.md`](docs/operations/deployment_log.md) | 部署**操作**时间线（不是 bug 清单） |
+
+**Bug ID**：`T-MMDD-NN` · **Complexity ID**：`C-MMDD-NN` · **Commit**：`fix(<scope>,T-0611-XX): …`
+
+### 8.3 各 Agent 只改哪一节
+
+| 你是… | 打开 | 只编辑 |
+|---|---|---|
+| Recorder | 当前 `round-*.md` | **§1** |
+| Analyst | 同上 | **§2**（升级写 `complexity.md`） |
+| Fix | 同上 | **§3** + 代码 |
+| Reviewer | 同上 + git diff | **§4** |
+| PM / 架构 | `complexity.md` | 决策列 |
+
+### 8.4 当前轮次
+
+| 轮次 | 文件 | 轮次状态 |
+|---|---|---|
+| v1.1 / 0611 | [`round-2026-06-11-v1.1-deploy.md`](test/round-2026-06-11-v1.1-deploy.md) | `IN_PROGRESS`（§2 Analyst / §4 Reviewer 待留痕） |
+
+### 8.5 与 `TASKS.md` 的关系
+
+| 目录 | 何时用 |
+|---|---|
+| **`TASKS.md`** | RI / MOD **开发** + **AT-*** 自动化测试占用 |
+| **`test_task/`** | 测试案例；**PASS** 写 §3 执行历史 |
+| **`test/test_bug-*.md`** | 案例 **FAIL** 入口 → 收入 round §1 |
+| **`test/round-*.md`** | bug 四轮次闭环（DEPLOY / AUTO） |
+| **`test/complexity.md`** | 需 PM/架构拍板后再进 TASKS 或新 RI |
+
+---
+
+## 🤖 9. 自动化测试任务 (`test_task/`)
+
+> **案例在 `test_task/`**（有案例才有文件；模板 [`case-TEMPLATE.md`](test_task/case-TEMPLATE.md)）。**占用**：有案例时在 `TASKS.md` AT 节追加，**当前无 AT 任务**。
+> **细节以 [`test_task/README.md`](test_task/README.md) 为准。**
+
+### 9.1 三分工
+
+| 位置 | 内容 |
+|---|---|
+| **`test_task/*.md`** | 步骤、预期、**通过**时的执行历史 |
+| **`TASKS.md` AT-*** | 谁占用 / 谁完工 |
+| **`test/test_bug-*.md`** | **失败** bug 单 → 进 `round-*.md` 四轮次 |
+
+### 9.2 工作流
+
+```text
+抢 AT-*（TASKS.md push 占坑）
+        ↓
+执行 test_task/<案例>.md
+        ├─ PASS → 案例 §3 追加「已成功」+ TASKS 已完成 + push
+        └─ FAIL → test/test_bug-*.md → Recorder 收入 round §1 → 其他 Agent 处理
+```
+
+### 9.3 抢任务 SOP（与 §5 相同）
+
+1. 确认 `TASKS.md` AT 节已有真实 **AT-XXX**（无则先按 [`test_task/README.md`](test_task/README.md) 建案例 + 条目）
+2. `占用-<名字>` → 10 秒内 push
+3. 跑案例 → 按结果写 **test_task** 或 **test_bug**
+4. PASS 时：`已完成` + push
+
+### 9.4 文件
+
+| 路径 | 用途 |
+|---|---|
+| [`test_task/README.md`](test_task/README.md) | 完整规范 |
+| [`test_task/case-TEMPLATE.md`](test_task/case-TEMPLATE.md) | 新建案例 |
+| [`test/test_bug-TEMPLATE.md`](test/test_bug-TEMPLATE.md) | FAIL 时复制 |
+
+---
+
+## 📐 10. 多 Agent 协作架构（可套用）
+
+> **完整说明**（给其他项目复制时用）：[`MULTI-AGENT-REPO-ARCHITECTURE.md`](MULTI-AGENT-REPO-ARCHITECTURE.md)
+
+本仓库用 **文件 + Git 占用** 协调多 Agent，核心分层：
+
+| 层 | 目录 | 职责 |
+|---|---|---|
+| 入口 | `README.md` | 角色导航、SOP |
+| 任务 | `TASKS.md` | 开发 RI/MOD + 测试 **AT-*** 占用 |
+| 文档 | `docs/` | 需求 / 架构 / 评审 / 运维 / 交接 |
+| 自动化测试 | `test_task/` | 案例 + **PASS** 执行历史 |
+| Bug | `test/` | `round` 四轮次、`test_bug` 入口、`complexity` 升级 |
+| 评审 | `docs/reviews/` | Review ↔ Subject 对线，**仅 Review Agent CLOSED** |
+
+各层 README 均指向上述架构文档。新项目套用见该文档 **§11 检查清单**。
+
+---
+
+*本文档由 Mavis (沙箱 PM) 维护. 角色导航 [§1](#-1-角色导航-核心)；bug [§8](#-8-bug-跟踪与修复-test)；自动化测试 [§9](#-9-自动化测试任务-test_task)；架构 [§10](#-10-多-agent-协作架构可套用).*
 
 *Mavis 在此待命审完工 + 答疑.*

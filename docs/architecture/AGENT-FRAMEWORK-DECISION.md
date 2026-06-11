@@ -3,8 +3,8 @@
 > **作者**: 架构师
 > **版本**: v1.0 (初版,基于现有代码 + 业务约束)
 > **配套文档**:
-> - 业务需求(待 `docs/AGENT-REQUIREMENTS.md` 完成后回填)
-> - 框架调研(待 `docs/AGENT-RESEARCH.md` 完成后回填 / 对比)
+> - 业务需求(待 `docs/requirements/AGENT-REQUIREMENTS.md` 完成后回填)
+> - 框架调研(待 `AGENT-RESEARCH.md` 完成后回填 / 对比)
 > - 实施 plan: `.mavis/plans/plan-I-agent-implementation.md`
 >
 > **本文件定位**: 综合决策 + 集成方案,**初版拍板**。业务专员 / 架构研究员的产出可在 Round 2 修订。
@@ -77,7 +77,7 @@
 - 项目方核心诉求:**"自己写的 agent 框架生产风险 = 自己背,Spring AI 背书 = 社区背书"**。这个判断是对的。
 - 自研保留为**回退方案**:Spring AI 跑不起来时,AgentEngine 自研版(~300 行手写 ReAct 循环)作为 plan B 顶上。
 
-**评分矩阵与对比表**已在 `docs/AGENT-RESEARCH.md` §2 / §3 / §4 中给出(§2 评分矩阵 / §3 Top 3 详细对比 / §4 关键决策),Top 3 推荐:**Spring AI > LangChain4j > 自研**(回填完成)。
+**评分矩阵与对比表**已在 `AGENT-RESEARCH.md` §2 / §3 / §4 中给出(§2 评分矩阵 / §3 Top 3 详细对比 / §4 关键决策),Top 3 推荐:**Spring AI > LangChain4j > 自研**(回填完成)。
 
 **项目方 v1.0 关键约束**(必须满足):
 - **不采购硬件或云服务**:单机 Windows Server 2012 R2 + 32GB 内存,本机 Java 进程已用 < 1GB,内存富余 30GB
@@ -884,7 +884,7 @@ FLUSH PRIVILEGES;
 - 加 `archive_agent_app` 用户 + GRANT
 - 写 Flyway 迁移(无 schema 变更,只 INSERT 字典)
 - `application.yml` 加 agent datasource
-- 文档:`docs/DEPLOYMENT-LOG.md` 加 1 条
+- 文档:`docs/operations/DEPLOYMENT-LOG.md` 加 1 条
 
 ### 10.4 总时间
 
@@ -904,7 +904,7 @@ FLUSH PRIVILEGES;
 ## 11. 验收清单(本阶段交付)
 
 - [ ] `docs/AGENT-FRAMEWORK-DECISION.md` 200-500 行 ✅ (本文件)
-- [ ] `docs/AGENT-REQUIREMENTS.md` 业务专员产出
+- [ ] `docs/requirements/AGENT-REQUIREMENTS.md` 业务专员产出
 - [ ] `docs/AGENT-RESEARCH.md` 架构研究员产出 + 评分矩阵
 - [ ] `.mavis/plans/plan-I-agent-implementation.md` 实施 plan
 - [ ] Round 2 修订:把业务需求 / 框架调研结论回填到本文件
@@ -915,8 +915,8 @@ FLUSH PRIVILEGES;
 
 | 待回填 | 来源 | 优先级 |
 |---|---|---|
-| 业务需求 10-15 个真实问题 | `docs/AGENT-REQUIREMENTS.md` §2 | 高 |
-| 业务验收 10 条 | `docs/AGENT-REQUIREMENTS.md` §6 | 高 |
+| 业务需求 10-15 个真实问题 | `docs/requirements/AGENT-REQUIREMENTS.md` §2 | 高 |
+| 业务验收 10 条 | `docs/requirements/AGENT-REQUIREMENTS.md` §6 | 高 |
 | ~~框架评分矩阵(替换 §1.2 简表)~~ | ~~`docs/AGENT-RESEARCH.md` §3~~ | ✅ 已回填到 §2 |
 | ~~框架 Top 3 推荐(补 §1.2)~~ | ~~`docs/AGENT-RESEARCH.md` §7~~ | ✅ 已回填到 §3 |
 | ~~ReAct vs Plan-Execute 实测数据~~ | ~~`docs/AGENT-RESEARCH.md` §4 + 实测~~ | ❌ 放弃(本期不实测) |

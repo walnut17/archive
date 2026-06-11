@@ -2,6 +2,8 @@
 
 > 投委会档案管理系统 — 敏感配置(API key、密码、连接信息)不进 Git。
 
+**项目协作**：根 [`README.md`](../README.md) · 环境依赖 [`docs/operations/ENVIRONMENT-DEPENDENCIES.md`](../docs/operations/ENVIRONMENT-DEPENDENCIES.md) · GLM 配置 [`docs/operations/GLM-KEY-SETUP.md`](../docs/operations/GLM-KEY-SETUP.md)
+
 ---
 
 ## 快速上手(3 步)

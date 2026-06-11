@@ -5,10 +5,10 @@
 > **阅读对象**: 接手 AI、运维、审计、合规
 > **维护**: 环境变更时**必**更新本档案,标日期和原因
 > **互补文档**:
-> - `docs/TEAM-ARCHIVE.md` — 项目基本信息 + 团队约定 + 踩坑
-> - `docs/ARCHITECTURE-v2.md` — 架构基线
-> - `docs/DEPLOYMENT-LOG.md` — 部署日志(每次部署的版本/时间/操作)
-> - `docs/DB-SCHEMA-v2.md` — 数据库 schema(不重复,只列连接信息)
+> - `docs/operations/TEAM-ARCHIVE.md` — 项目基本信息 + 团队约定 + 踩坑
+> - `../architecture/ARCHITECTURE-v2.md` — 架构基线
+> - `docs/operations/DEPLOYMENT-LOG.md` — 部署日志(每次部署的版本/时间/操作)
+> - `../architecture/DB-SCHEMA-v2.md` — 数据库 schema(不重复,只列连接信息)
 
 ---
 
@@ -340,6 +340,6 @@
 | `app.network-dict.baidu.api-key` | (空) | 百度百科 API (D-2) | MOD-03 |
 | `app.network-dict.wikipedia.enabled` | `true` | 维基百科启用 | MOD-03 |
 
-详见 `application.yml` + `docs/GLM-KEY-SETUP.md` §v1.1 网络查字典.
+详见 `application.yml` + `docs/operations/GLM-KEY-SETUP.md` §v1.1 网络查字典.
 
 *本档案与 `TEAM-ARCHIVE.md` 互补。本档案侧重"对外依赖"和"环境约束",`TEAM-ARCHIVE.md` 侧重"团队约定"和"踩坑"。*

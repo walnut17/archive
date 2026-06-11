@@ -177,7 +177,7 @@
 
 ## 7. 评估场景
 
-基于 `AGENT-REQUIREMENTS.md` §6 的 15 个真实问题,逐类评估:
+基于 `../requirements/AGENT-REQUIREMENTS.md` §6 的 15 个真实问题,逐类评估:
 
 | 问题类 | Spring AI 1.1 适配 | 关键工具 |
 |---|---|---|

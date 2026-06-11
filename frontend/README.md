@@ -1,7 +1,8 @@
 # 投委会档案管理系统 - 前端
 
 > Vue 3 + Vite 5 + TypeScript + Element Plus + Pinia
-> 状态:M0 基建完成,登录页 + 空框架 + 路线图
+
+**项目协作**：根 [`README.md`](../README.md) · 抢任务 [`TASKS.md`](../TASKS.md) · 自动化案例 [`test_task/`](../test_task/README.md) · 架构说明 [`MULTI-AGENT-REPO-ARCHITECTURE.md`](../MULTI-AGENT-REPO-ARCHITECTURE.md)
 
 ---
 

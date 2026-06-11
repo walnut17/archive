@@ -381,7 +381,7 @@ Thumbs.db
 3. **测试报告**(通过的测试用例 + 覆盖率)
 4. **自测结果**(在浏览器/curl 上跑过,贴输出)
 5. **文档更新**(如改了 API 端点,同步更新 API 文档)
-6. **踩坑记录**(踩了填到 `docs/LESSONS-LEARNED.md`)
+6. **踩坑记录**(踩了填到 `../reviews/LESSONS-LEARNED.md`)
 7. **截图**(UI 改动必带,前后对比)
 8. **已知问题 / 留给后人的 TODO**
 
@@ -427,14 +427,14 @@ Thumbs.db
 
 ### 9.2 跨会话交接
 
-- 重要决策写到 `docs/LESSONS-LEARNED.md` 或 agent memory
+- 重要决策写到 `../reviews/LESSONS-LEARNED.md` 或 agent memory
 - 任何 Agent 启动前**先读**:
   1. `README.md`(接手必读)
-  2. `docs/LESSONS-LEARNED.md`(踩坑列表)
-  3. `docs/TEAM-ARCHIVE.md`(团队档案)
-  4. `docs/REQUIREMENTS-v1.md`(业务背景)
-  5. `docs/ARCHITECTURE-v2.md`(架构)
-  6. `docs/DB-SCHEMA-v2.md`(DB)
+  2. `../reviews/LESSONS-LEARNED.md`(踩坑列表)
+  3. `../operations/TEAM-ARCHIVE.md`(团队档案)
+  4. `../requirements/REQUIREMENTS.md`(业务背景)
+  5. `../architecture/ARCHITECTURE-v2.md`(架构)
+  6. `../architecture/DB-SCHEMA-v2.md`(DB)
 
 ---
 

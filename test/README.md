@@ -1,71 +1,112 @@
-# 部署测试问题汇总 — test/
+# Bug 跟踪与修复 — `test/`
 
-> **用途**：每一轮「部署 + 手工验收」期间，**先记问题、不急着改代码**；一轮结束后把汇总交给**架构**统一评审，再批量改。
+> **`test/` 只记 bug。** 没有缺陷、只是「测过了没问题」或「部署步骤」——**不要**写进 `round-*.md`。
+>
+> **Bug 从哪来**（二选一或兼有，记入 round §1）：
+> 1. **交互式 deploy** — 上环境、点页面、走验收时**发现**的异常
+> 2. **Agent 自主跑用例** — 按 [`test_task/`](../test_task/README.md) 案例、`mvn test` 等**失败**
+>
+> **导航**：根 [`README.md` §8`](../README.md#-8-bug-跟踪与修复-test) · [`test_task/`](../test_task/README.md) · [`MULTI-AGENT-REPO-ARCHITECTURE.md`](../MULTI-AGENT-REPO-ARCHITECTURE.md)
 
 ---
 
-## 工作流（部署测试轮次）
+## 1. 目录结构（2026-06-11 整理后）
 
 ```text
-部署测试开始
-    ↓
-发现问题 → 记进 test/round-YYYY-MM-DD-*.md（本文件夹）
-    ↓
-继续测，能绕过的先绕过，不单独 hotfix（除非 P0 全站不可用）
-    ↓
-本轮测完 → 汇总 status=OPEN 条目
-    ↓
-交给架构 review → 排期 / 一次性修复 → 下一轮回归
+test/
+├── README.md                 ← 本文件
+├── round-TEMPLATE.md         ← 新开 bug 轮次（复制）
+├── round-YYYY-MM-DD-*.md     ← 当轮 bug 主文件（§1～§5）
+├── test_bug-TEMPLATE.md      ← 自动化案例 FAIL 入口（复制）
+├── test_bug-YYYY-MM-DD-*.md  ← FAIL 实例（收入 round §1）
+├── complexity.md             ← 大改 / PM 拍板升级
+├── logs/                     ← mvn 原始日志（gitignore）
+└── old/                      ← 历史验收文档（只读，见 old/README.md）
 ```
 
-### 记录人
-
-- **部署操作**：用户（125 等环境）
-- **问题整理**：阿根廷（或当轮接手 agent）
-- **评审 / 改代码**：架构师（批量处理 OPEN 项）
-
-### 与 `docs/deployment_log.md` 的分工
-
-| 文件 | 记什么 |
+| 路径 | 用途 |
 |---|---|
-| `docs/deployment_log.md` | **做了什么**（步骤、命令、环境、时间线） |
-| `test/round-*.md` | **出了什么问题**（现象、根因、建议、是否 OPEN） |
+| **`round-*.md`** | **有 bug 才记** — 四轮次 Agent 主文件 |
+| [`test_bug-TEMPLATE.md`](test_bug-TEMPLATE.md) | 案例 FAIL → 复制为 `test_bug-*.md` |
+| [`complexity.md`](complexity.md) | 当轮搞不定、需 PM/架构决策 |
+| [`logs/`](logs/README.md) | `mvn-*.log`（gitignore） |
+| [`old/`](old/README.md) | 旧版 ACCEPTANCE-GUIDE、M1/V2、VERIFICATION-REPORT |
 
 ---
 
-## 文件命名
+## 2. 什么进 `test/`，什么不进
+
+| 进 `round-*.md` §1 | 不进 round（去别处） |
+|---|---|
+| 复现步骤明确的 **缺陷** | 纯部署操作 → [`docs/operations/deployment_log.md`](../docs/operations/deployment_log.md) |
+| 交互式 deploy 发现的 bug | 功能需求 → [`TASKS.md`](../TASKS.md) |
+| `test_task` / 用例失败 | 代码评审 → [`docs/reviews/`](../docs/reviews/README.md) |
+| | **测过且通过** → [`test_task/`](../test_task/README.md) §3 |
+| | 历史验收清单 → [`old/ACCEPTANCE-GUIDE.md`](old/ACCEPTANCE-GUIDE.md)（只读） |
+
+**来源**（round §1 Bug 表 **`来源`** 列）：`DEPLOY` | `AUTO`
+
+**来自 `test_task/` 的失败**：`cp test_bug-TEMPLATE.md test_bug-…` → Recorder 收入 round §1。
+
+---
+
+## 3. 四轮次 Agent（`round-*.md`）
 
 ```text
-test/round-2026-06-11-v1.1-deploy.md   # 第一轮 v1.1 生产部署验收
-test/round-2026-06-XX-*.md             # 后续轮次
+§1 Recorder → §2 Analyst → §3 Fix → §4 Reviewer → §5 轮次 CLOSED
+                  ↘ ESCALATED → complexity.md
 ```
 
-每轮文件建议包含：
+| 环节 | Agent | 只改 |
+|---|---|---|
+| §1 | Recorder | 记 bug（无 bug 不建行） |
+| §2 | Analyst | 根因 + 建议 |
+| §3 | Fix | 小修 + commit |
+| §4 | Reviewer | 审 diff → CLOSED / REOPEN |
 
-1. 轮次元信息（版本、commit、环境）
-2. 测试范围（测了 / 没测）
-3. **问题清单表**（ID、严重度、模块、现象、根因、建议、状态）
-4. 架构待决项（需拍板的设计问题）
-5. 本轮结论（能否继续验收 / 是否阻塞上线）
+**留痕必填**：Agent · 时间 · 摘要
 
-### 状态字段
-
-| 状态 | 含义 |
-|---|---|
-| `OPEN` | 待架构 review 后改 |
-| `FIXED-IN-ROUND` | 本轮测试中为解阻塞已改（仍建议架构过目） |
-| `WORKAROUND` | 有临时绕过，未改代码 |
-| `WONTFIX` | 已知接受 / 延 v2 |
-| `VERIFY` | 已改或未改，待下轮回归确认 |
+**与 `docs/reviews/` 区别**：round §4 审 **运行缺陷小修**；reviews 审 **代码/架构对线**（仅 Review Agent 可 CLOSED）。
 
 ---
 
-## 当前轮次
+## 4. 小修 vs complexity
+
+| 类型 | 位置 |
+|---|---|
+| 小修 | round §2～§4 |
+| 大改 / 搞不定 | [`complexity.md`](complexity.md)（`C-MMDD-NN`） |
+
+---
+
+## 5. 新开一轮
+
+```bash
+cp test/round-TEMPLATE.md test/round-2026-06-12-v1.1-regression.md
+```
+
+**Bug ID**：`T-MMDD-NN` · **Complexity ID**：`C-MMDD-NN`
+
+---
+
+## 6. 当前轮次
 
 | 轮次 | 文件 | 状态 |
 |---|---|---|
-| v1.1 / 0611 生产部署 | [round-2026-06-11-v1.1-deploy.md](./round-2026-06-11-v1.1-deploy.md) | 🟡 测试中 |
+| v1.1 / 0611 部署 | [round-2026-06-11-v1.1-deploy.md](round-2026-06-11-v1.1-deploy.md) | `IN_PROGRESS` |
 
 ---
 
-*2026-06-11 起按用户要求：部署测试阶段优先汇总到本目录，架构统一改。*
+## 7. 给 Agent 一句话
+
+| 你是… | 打开… | 只改… |
+|---|---|---|
+| Recorder | 当前 `round-*.md` | **§1** |
+| Analyst | 同上 | **§2** |
+| Fix | 同上 | **§3** + 代码 |
+| Reviewer | 同上 + diff | **§4** |
+| PM / 架构 | `complexity.md` | 决策列 |
+
+---
+
+*2026-06-11：根目录仅保留 round / test_bug / complexity 新标准；历史文档在 [`old/`](old/README.md)。*

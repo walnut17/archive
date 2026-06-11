@@ -1,7 +1,7 @@
 # 部署日志 — deployment_log
 
 > 按**真实操作时间线**记录，方便下次 session 快速对齐。  
-> 老文档 `docs/DEPLOYMENT-LOG.md` 保留 2026-06-07 以前 M0 阶段记录；**本文件从 v1.1 (0611) 起记**。
+> 老文档 [`DEPLOYMENT-LOG.md`](DEPLOYMENT-LOG.md) 保留 2026-06-07 以前 M0 阶段记录；**本文件从 v1.1 (0611) 起记**。
 
 ---
 
@@ -29,8 +29,8 @@
 
 - 官方指引：`docs/handoff/v1.1-DEPLOY-GUIDE.md`
 - 一次性 SQL：`deploy/sql/migrate_260611_01.sql`（**推荐**）
-- mvn 验证报告：根目录 `VERIFICATION-REPORT.md`
-- 老部署记录：`docs/DEPLOYMENT-LOG.md`（2026-06-07 前）
+- mvn 验证报告（历史）：[`test/old/VERIFICATION-REPORT.md`](../../test/old/VERIFICATION-REPORT.md) · 新 PASS 写 [`test_task/`](../../test_task/README.md)
+- 老部署记录：[`DEPLOYMENT-LOG.md`](DEPLOYMENT-LOG.md)（2026-06-07 前）
 - **部署测试问题汇总**：`test/round-2026-06-11-v1.1-deploy.md`（交架构 review，**测试轮次先记问题、不急着改代码**）
 
 ---

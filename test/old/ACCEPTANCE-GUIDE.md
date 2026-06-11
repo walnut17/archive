@@ -158,18 +158,18 @@ cat TASKS.md | grep -A 12 "完工清单"
 ```bash
 ls -la docs/
 ls -la docs/reviews/
-wc -l docs/LESSONS-LEARNED.md docs/reviews/*.md docs/GLM-KEY-SETUP.md
+wc -l docs/reviews/LESSONS-LEARNED.md docs/reviews/*.md docs/operations/GLM-KEY-SETUP.md
 ```
 
 **期望文档**:
-- `docs/AGENT-FRAMEWORK-DECISION.md` (框架决策)
-- `docs/ENVIRONMENT-DEPENDENCIES.md` (环境档案)
-- `docs/GLM-KEY-SETUP.md` (智谱 key 配置手册)
-- `docs/LESSONS-LEARNED.md` (踩坑大全)
+- `docs/architecture/AGENT-FRAMEWORK-DECISION.md` (框架决策)
+- `docs/operations/ENVIRONMENT-DEPENDENCIES.md` (环境档案)
+- `docs/operations/GLM-KEY-SETUP.md` (智谱 key 配置手册)
+- `docs/reviews/LESSONS-LEARNED.md` (踩坑大全)
 - `docs/reviews/README.md` (reviews 索引)
 - `docs/reviews/2026-06-09-plan-i-p0-review.md` (静态 review 详情)
 - `docs/reviews/2026-06-10-plan-i-10of10-achievement.md` (10/10 复盘)
-- `docs/ACCEPTANCE-GUIDE.md` (本文档)
+- `test/old/ACCEPTANCE-GUIDE.md` (本文档，历史目录)
 - `README.md` (项目入口)
 - `TASKS.md` (任务分块清单)
 
