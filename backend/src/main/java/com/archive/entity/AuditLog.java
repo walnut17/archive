@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -51,10 +53,12 @@ public class AuditLog {
     @Column(name = "entity_id")
     private Long entityId;
 
-    @Column(name = "old_value", columnDefinition = "JSON")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "old_value")
     private String oldValue;
 
-    @Column(name = "new_value", columnDefinition = "JSON")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "new_value")
     private String newValue;
 
     @Column(name = "ip_address", length = 45)
@@ -66,7 +70,8 @@ public class AuditLog {
     @Column(name = "request_id", length = 64)
     private String requestId;
 
-    @Column(name = "extra", columnDefinition = "JSON")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "extra")
     private String extra;
 
     @Column(name = "deleted_at")

@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -61,7 +60,6 @@ public class KnowledgeSearchService {
      * @param topN     返回前 N 条
      * @return 检索结果列表(按相关性倒序)
      */
-    @Transactional(readOnly = true)
     public List<SearchResult> search(String question, int topN) {
         if (question == null || question.isBlank()) {
             return List.of();
@@ -74,30 +72,10 @@ public class KnowledgeSearchService {
         // 简单做法:用 question 全文 + 转义特殊字符
         String escaped = question.replace("\"", "\\\"").replace("+", "\\+").replace("-", "\\-");
 
-        // SQL:
-        //   SELECT id, material_id, version_no, original_filename,
-        //          MATCH(parsed_text) AGAINST(? IN BOOLEAN MODE) AS score,
-        //          SUBSTRING(parsed_text, ?, ?) AS snippet
-        //   FROM material_version
-        //   WHERE parse_status = 'success' AND MATCH(parsed_text) AGAINST(? IN BOOLEAN MODE)
-        //   ORDER BY score DESC
-        //   LIMIT ?
-        String sql = "SELECT v.id, v.material_id, v.version_no, v.original_filename, " +
-                     "       v.parsed_text, " +
-                     "       MATCH(v.parsed_text) AGAINST(:q IN BOOLEAN MODE) AS score " +
-                     "FROM material_version v " +
-                     "WHERE v.parse_status = 'success' " +
-                     "  AND v.parsed_text IS NOT NULL " +
-                     "  AND MATCH(v.parsed_text) AGAINST(:q IN BOOLEAN MODE) " +
-                     "ORDER BY score DESC " +
-                     "LIMIT :n";
-
-        Query query = em.createNativeQuery(sql);
-        query.setParameter("q", escaped);
-        query.setParameter("n", topN);
-
-        @SuppressWarnings("unchecked")
-        List<Object[]> rows = query.getResultList();
+        List<Object[]> rows = runFulltextQuery(escaped, topN);
+        if (rows.isEmpty()) {
+            return List.of();
+        }
 
         List<SearchResult> results = new ArrayList<>();
         for (Object[] row : rows) {
@@ -134,6 +112,34 @@ public class KnowledgeSearchService {
                     .build());
         }
         return results;
+    }
+
+    /**
+     * 执行 FULLTEXT 查询；H2 等不支持 MATCH 时返回空列表.
+     */
+    private List<Object[]> runFulltextQuery(String escaped, int topN) {
+        String sql = "SELECT v.id, v.material_id, v.version_no, v.original_filename, " +
+                     "       v.parsed_text, " +
+                     "       MATCH(v.parsed_text) AGAINST(:q IN BOOLEAN MODE) AS score " +
+                     "FROM material_version v " +
+                     "WHERE v.parse_status = 'success' " +
+                     "  AND v.parsed_text IS NOT NULL " +
+                     "  AND MATCH(v.parsed_text) AGAINST(:q IN BOOLEAN MODE) " +
+                     "ORDER BY score DESC " +
+                     "LIMIT :n";
+
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("q", escaped);
+        query.setParameter("n", topN);
+
+        try {
+            @SuppressWarnings("unchecked")
+            List<Object[]> result = query.getResultList();
+            return result;
+        } catch (Exception ex) {
+            log.debug("FULLTEXT unavailable (non-MySQL?), return empty: {}", ex.getMessage());
+            return List.of();
+        }
     }
 
     /**

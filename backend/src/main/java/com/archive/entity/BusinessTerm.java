@@ -6,8 +6,10 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -45,16 +47,19 @@ public class BusinessTerm {
     @Column(name = "category", length = 64)
     private String category;
 
-    @Column(name = "definition", columnDefinition = "TEXT")
+    @Lob
+    @Column(name = "definition")
     private String definition;
 
-    @Column(name = "standard_definition", columnDefinition = "TEXT")
+    @Lob
+    @Column(name = "standard_definition")
     private String standardDefinition;
 
     @Column(name = "source_url", length = 512)
     private String sourceUrl;
 
-    @Column(name = "data_mapping", columnDefinition = "JSON")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "data_mapping")
     private String dataMapping;
 
     @Column(name = "status", nullable = false, length = 32)

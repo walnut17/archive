@@ -97,7 +97,7 @@ public class RecycleBinService {
     /**
      * 每天凌晨 2 点扫描超过 30 天的软删项目,标记为 purged.
      */
-    @Scheduled(cron = "0 2 * * *")
+    @Scheduled(cron = "0 0 2 * * *")
     @Transactional
     public void scanExpired() {
         LocalDateTime cutoff = LocalDateTime.now().minusDays(30);

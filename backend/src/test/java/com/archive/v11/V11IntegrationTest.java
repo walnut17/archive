@@ -131,9 +131,10 @@ class V11IntegrationTest {
     private void ensureV11JdbcTables() {
         jdbcTemplate.execute("""
             CREATE TABLE IF NOT EXISTS user_role (
-                id BIGINT AUTO_INCREMENT PRIMARY KEY,
                 user_id BIGINT NOT NULL,
-                role_id BIGINT NOT NULL
+                role_id BIGINT NOT NULL,
+                assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, role_id)
             )
             """);
         jdbcTemplate.execute("""
@@ -142,6 +143,18 @@ class V11IntegrationTest {
                 project_id BIGINT NOT NULL,
                 user_id BIGINT NOT NULL,
                 role_in_project VARCHAR(32)
+            )
+            """);
+        jdbcTemplate.execute("""
+            CREATE TABLE IF NOT EXISTS failure_log (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                path VARCHAR(512),
+                failure_type VARCHAR(64),
+                error_msg CLOB,
+                stack_trace CLOB,
+                resolved BOOLEAN DEFAULT FALSE,
+                occurred_at TIMESTAMP,
+                resolved_at TIMESTAMP
             )
             """);
     }
@@ -294,7 +307,7 @@ class V11IntegrationTest {
     void mod03_findProjectExactMatchByCode() {
         AgentContext ctx = new AgentContext("PRJ-V11-001");
         var args = new FindProjectTool.FindProjectArgs();
-        args.query = "PRJ-V11-001";
+        args.setQuery("PRJ-V11-001");
         ToolResult tr = findProjectTool.execute(args, ctx);
         assertTrue(tr.isOk());
         assertEquals("PRJ-V11-001", ctx.getProjectCode());
@@ -311,8 +324,8 @@ class V11IntegrationTest {
     @Test
     void mod03_queryMysqlRejectsDisallowedTable() {
         var args = new QueryMysqlTool.QueryMysqlArgs();
-        args.table = "secret_table";
-        args.columns = List.of("id");
+        args.setTable("secret_table");
+        args.setColumns(List.of("id"));
         ToolResult tr = queryMysqlTool.execute(args, new AgentContext("test"));
         assertFalse(tr.isOk());
     }
@@ -320,9 +333,9 @@ class V11IntegrationTest {
     @Test
     void mod03_queryMysqlAllowsProjectTable() {
         var args = new QueryMysqlTool.QueryMysqlArgs();
-        args.table = "project";
-        args.columns = List.of("code", "name");
-        args.limit = 5;
+        args.setTable("project");
+        args.setColumns(List.of("code", "name"));
+        args.setLimit(5);
         ToolResult tr = queryMysqlTool.execute(args, new AgentContext("test"));
         assertTrue(tr.isOk());
     }
@@ -346,7 +359,7 @@ class V11IntegrationTest {
     @Test
     void mod03_networkDictLookupToolNeverThrows() {
         var args = new NetworkDictLookupTool.NetworkDictLookupArgs();
-        args.query = "测试术语";
+        args.setQuery("测试术语");
         ToolResult tr = networkDictLookupTool.execute(args, new AgentContext("test"));
         assertNotNull(tr);
         assertTrue(tr.isOk() || tr.getError() != null);
@@ -430,16 +443,16 @@ class V11IntegrationTest {
 
     @Test
     void mod04_maskingCommitteeView() {
+        Role committeeRole = roleRepo.findByCode("committee").orElseGet(() ->
+                roleRepo.save(Role.builder().code("committee").name("委员").build()));
         User committee = userRepo.save(User.builder()
                 .username("committee_" + System.nanoTime())
                 .displayName("委员甲")
                 .passwordHash("$2a$10$dummy")
-                .roleId(adminRole.getId())
+                .roleId(committeeRole.getId())
                 .sensitiveViewEnabled(false)
                 .status("在岗")
                 .build());
-        Role committeeRole = roleRepo.findByCode("committee").orElseGet(() ->
-                roleRepo.save(Role.builder().code("committee").name("委员").build()));
         jdbcTemplate.update("INSERT INTO user_role (user_id, role_id) VALUES (?, ?)",
                 committee.getId(), committeeRole.getId());
 
@@ -551,7 +564,7 @@ class V11IntegrationTest {
         AgentContext ctx = new AgentContext("PRJ-V11-001 怎么样");
         ctx.setProjectCode("PRJ-V11-001");
         var args = new FindProjectTool.FindProjectArgs();
-        args.query = "它的剩余金额";
+        args.setQuery("它的剩余金额");
         ToolResult tr = findProjectTool.execute(args, ctx);
         assertTrue(tr.isOk());
         assertEquals("PRJ-V11-001", ctx.getProjectCode());

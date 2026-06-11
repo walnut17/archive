@@ -72,8 +72,13 @@ public class FindProjectTool implements AgentTool {
             return finalizeWithSwitchRule(List.of(match), ctx, "EXACT");
         }
 
-        // 2) FULLTEXT 模糊 (name / customer_name)
-        List<Object[]> fulltextRows = projectRepo.searchByNameOrCustomerFulltext(q, topN);
+        // 2) FULLTEXT 模糊 (name / customer_name) — H2 无 MATCH, 失败时降级 LIKE
+        List<Object[]> fulltextRows = List.of();
+        try {
+            fulltextRows = projectRepo.searchByNameOrCustomerFulltext(q, topN);
+        } catch (Exception ex) {
+            log.debug("[find_project] FULLTEXT unavailable, fallback LIKE: {}", ex.getMessage());
+        }
         if (!fulltextRows.isEmpty()) {
             return finalizeMatches(fulltextRows, ctx, "FULLTEXT");
         }

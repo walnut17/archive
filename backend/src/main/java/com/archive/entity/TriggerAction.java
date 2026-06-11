@@ -6,6 +6,8 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * 触发动作实体 — 规则的动作(1:N).
@@ -41,7 +43,8 @@ public class TriggerAction extends BaseEntity {
     private String actionType;
 
     /** 动作模板 JSON:{"todo_name":"...","due_days":3,"owner_role":"finance"}. */
-    @Column(name = "action_template", nullable = false, columnDefinition = "JSON")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "action_template", nullable = false)
     private String actionTemplate;
 
     /** 执行顺序. */

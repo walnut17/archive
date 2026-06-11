@@ -24,8 +24,7 @@ import lombok.Builder;
 @Entity
 @Table(name = "chapter_summary", indexes = {
         @Index(name = "idx_material_version", columnList = "material_version_id"),
-        @Index(name = "idx_chapter_no", columnList = "chapter_no"),
-        @Index(name = "ft_content_summary", columnList = "content, summary", unique = false)
+        @Index(name = "idx_chapter_no", columnList = "chapter_no")
 })
 public class ChapterSummary extends BaseEntity {
 
@@ -47,12 +46,12 @@ public class ChapterSummary extends BaseEntity {
 
     /** 章节原文. */
     @Lob
-    @Column(name = "content", columnDefinition = "MEDIUMTEXT")
+    @Column(name = "content")
     private String content;
 
     /** LLM 生成的 200 字摘要. */
     @Lob
-    @Column(name = "summary", columnDefinition = "TEXT")
+    @Column(name = "summary")
     private String summary;
 
     /** LLM 抽取的关键词(逗号分隔). */

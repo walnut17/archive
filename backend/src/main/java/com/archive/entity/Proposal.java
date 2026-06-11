@@ -58,7 +58,8 @@ public class Proposal extends BaseEntity {
     @Column(name = "decision", length = 2000)
     private String decision;
 
-    @Column(name = "condition_text", columnDefinition = "TEXT")
+    @Lob
+    @Column(name = "condition_text")
     private String conditionText;
 
     @Column(name = "condition_status", nullable = false, length = 16)

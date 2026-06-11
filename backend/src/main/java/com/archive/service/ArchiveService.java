@@ -28,7 +28,7 @@ public class ArchiveService {
     /**
      * 每月 1 号凌晨 3 点执行长期归档扫描.
      */
-    @Scheduled(cron = "0 3 1 * *")
+    @Scheduled(cron = "0 0 3 1 * *")
     @Transactional
     public void scanLongTerm() {
         LocalDateTime oneYearAgo = LocalDateTime.now().minusYears(1);

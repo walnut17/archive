@@ -82,7 +82,8 @@ public class MaterialVersion extends BaseEntity {
     private String parseStatus = "pending";
 
     /** 解析后的纯文本内容(M2 知识库问答用,FULLTEXT 索引字段). */
-    @Column(name = "parsed_text", columnDefinition = "LONGTEXT")
+    @Lob
+    @Column(name = "parsed_text")
     private String parsedText;
 
     /** 解析完成时间. */

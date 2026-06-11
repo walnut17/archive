@@ -6,6 +6,8 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * 字段抽取方法实体 — 用户可自定义的 LLM 抽取配置.
@@ -52,11 +54,11 @@ public class ExtractionMethod extends BaseEntity {
 
     /** LLM Prompt 模板,${material_title} ${material_content} 等变量. */
     @Lob
-    @Column(name = "prompt_template", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "prompt_template", nullable = false)
     private String promptTemplate;
 
-    /** 期望输出 JSON Schema. */
-    @Column(name = "output_schema", nullable = false, columnDefinition = "JSON")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "output_schema", nullable = false)
     private String outputSchema;
 
     /** 是否系统内置. */

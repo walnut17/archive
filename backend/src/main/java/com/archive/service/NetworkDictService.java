@@ -166,11 +166,11 @@ public class NetworkDictService {
         }
         try {
             JsonNode root = objectMapper.readTree(body);
-            JsonNode summary = root.path("summary").asText(null);
+            String summary = root.path("summary").asText(null);
             if (summary != null && !summary.isBlank()) return summary;
-            JsonNode desc = root.path("description").asText(null);
+            String desc = root.path("description").asText(null);
             if (desc != null && !desc.isBlank()) return desc;
-            JsonNode lemma = root.path("lemmaDesc").asText(null);
+            String lemma = root.path("lemmaDesc").asText(null);
             if (lemma != null && !lemma.isBlank()) return lemma;
         } catch (Exception ignored) {
             // plain text fallback

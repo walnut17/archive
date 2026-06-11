@@ -71,7 +71,7 @@ public class Timepoint extends BaseEntity {
 
     /** 原文出处(句子级). */
     @Lob
-    @Column(name = "source_text", columnDefinition = "TEXT")
+    @Column(name = "source_text")
     private String sourceText;
 
     /** 原文页码. */

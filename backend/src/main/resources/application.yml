@@ -154,7 +154,7 @@ archive:
     recycle-days: 30
     archive-years: 1
     long-archive-years: 5
-    scan-cron: "0 2 * * *"
+    scan-cron: "0 0 2 * * *"
   # RI-35/59 审计加强
   audit:
     enabled-types: WRITE,LOGIN,SENSITIVE_VIEW,EXPORT,LLM

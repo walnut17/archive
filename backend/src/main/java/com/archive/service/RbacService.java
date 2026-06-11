@@ -67,16 +67,17 @@ public class RbacService {
             return List.of();
         }
 
-        jdbcTemplate.query(
+        List<String> fromUserRole = jdbcTemplate.query(
                 """
                 SELECT LOWER(r.code) FROM user_role ur
                 JOIN role r ON r.id = ur.role_id
                 WHERE ur.user_id = ?
                 ORDER BY ur.assigned_at
                 """,
-                rs -> roles.add(rs.getString(1)),
+                (rs, rowNum) -> rs.getString(1),
                 userId
         );
+        roles.addAll(fromUserRole);
 
         if (roles.isEmpty()) {
             userRepository.findById(userId).ifPresent(user -> {
