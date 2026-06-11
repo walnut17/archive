@@ -28,7 +28,7 @@
 | 业务需求 | [`../requirements/`](../requirements/README.md) |
 | MOD/RI **开发占用** | 根 [`TASKS.md`](../../TASKS.md) |
 | 架构/MOD **代码评审** | [`../reviews/`](../reviews/README.md) |
-| 实现 **缺陷** | [`../../test/`](../../test/README.md) |
+| 实现 **缺陷** | [`../../test-to-settle/`](../../test-to-settle/README.md) |
 | 集成测试案例 | [`../../test_task/`](../../test_task/README.md) |
 
 ---

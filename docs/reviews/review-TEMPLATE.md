@@ -13,7 +13,7 @@
 | **评审对象** | 例：MOD-05 前端 / commit `abc1234` / PR #N |
 | **Review Agent** | *填写你的名字* |
 | **Subject Agent** | *被评审方名字* |
-| **关联** | 例：`test/round-*.md` T-0611-XX · `TASKS.md` RI-N |
+| **关联** | 例：`test-to-settle/round-*.md` T-0611-XX · `TASKS.md` RI-N |
 | **Opened** | YYYY-MM-DD HH:mm |
 
 ---

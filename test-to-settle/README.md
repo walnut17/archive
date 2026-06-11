@@ -1,6 +1,6 @@
-# Bug 跟踪与修复 — `test/`
+# Bug 跟踪与修复 — `test-to-settle/`
 
-> **`test/` 只记 bug。** 没有缺陷、只是「测过了没问题」或「部署步骤」——**不要**写进 `round-*.md`。
+> **`test-to-settle/` 只记 bug。** 没有缺陷、只是「测过了没问题」或「部署步骤」——**不要**写进 `round-*.md`。
 >
 > **Bug 从哪来**（二选一或兼有，记入 round §1）：
 > 1. **交互式 deploy** — 上环境、点页面、走验收时**发现**的异常
@@ -13,7 +13,7 @@
 ## 1. 目录结构（2026-06-11 整理后）
 
 ```text
-test/
+test-to-settle/
 ├── README.md                 ← 本文件
 ├── round-TEMPLATE.md         ← 新开 bug 轮次（复制）
 ├── round-YYYY-MM-DD-*.md     ← 当轮 bug 主文件（§1～§5）
@@ -34,7 +34,7 @@ test/
 
 ---
 
-## 2. 什么进 `test/`，什么不进
+## 2. 什么进 `test-to-settle/`，什么不进
 
 | 进 `round-*.md` §1 | 不进 round（去别处） |
 |---|---|
@@ -82,7 +82,7 @@ test/
 ## 5. 新开一轮
 
 ```bash
-cp test/round-TEMPLATE.md test/round-2026-06-12-v1.1-regression.md
+cp test-to-settle/round-TEMPLATE.md test-to-settle/round-2026-06-12-v1.1-regression.md
 ```
 
 **Bug ID**：`T-MMDD-NN` · **Complexity ID**：`C-MMDD-NN`

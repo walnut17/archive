@@ -1,6 +1,6 @@
 # 投委会档案管理系统 — 补充开发需求
 
-> 基线代码: M1 完成（详见 [`test/old/M1-README.md`](../../test/old/M1-README.md)）
+> 基线代码: M1 完成（详见 [`test-to-settle/old/M1-README.md`](../../test-to-settle/old/M1-README.md)）
 > 目标: 修复审计发现的 P0~P1 缺陷 + 补齐缺失模块 + 增加增强功能
 > 使用对象: 开发 Agent（可读此文档后按 Phase 顺序执行）
 > 关联文档: `REVIEW-REPORT.md`（问题清单）

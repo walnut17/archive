@@ -8,20 +8,20 @@
 > - **只有 Review Agent 宣布结束，该 review 才算结束**（状态 `CLOSED`）
 
 **踩坑汇总**（只读参考）：[`LESSONS-LEARNED.md`](./LESSONS-LEARNED.md)  
-**Bug 四轮次**（另一套流程）：[`../../test/README.md`](../../test/README.md) — 仅缺陷  
+**Bug 四轮次**（另一套流程）：[`../../test-to-settle/README.md`](../../test-to-settle/README.md) — 仅缺陷  
 **自动化测试**（PASS/FAIL 分流）：[`../../test_task/README.md`](../../test_task/README.md)  
 **协作架构总览**：[`../../MULTI-AGENT-REPO-ARCHITECTURE.md`](../../MULTI-AGENT-REPO-ARCHITECTURE.md)
 
 ---
 
-## 1. 和 `test/` 的分工
+## 1. 和 `test-to-settle/` 的分工
 
 | 目录 | 场景 | 谁结案 |
 |---|---|---|
-| **`test/round-*.md`** | 部署/验收测出的 **bug**：§1 记 → §2 析 → §3 改 → §4 审 | Reviewer Agent 标 bug `CLOSED` + 轮次 `CLOSED` |
+| **`test-to-settle/round-*.md`** | 部署/验收测出的 **bug**：§1 记 → §2 析 → §3 改 → §4 审 | Reviewer Agent 标 bug `CLOSED` + 轮次 `CLOSED` |
 | **`docs/reviews/`** | **代码/架构/交付物**评审、MOD 完工审、跨 agent 对线 | **仅 Review Agent** 在该文件宣布 `CLOSED` |
 
-一条问题可以**同时**出现在 `test/round`（验收 bug）和 `docs/reviews`（代码审），互相用链接关联即可。
+一条问题可以**同时**出现在 `test-to-settle/round`（验收 bug）和 `docs/reviews`（代码审），互相用链接关联即可。
 
 ---
 
@@ -152,7 +152,7 @@ REV-YYYY-MM-DD-<简述>                  # 写在文件元信息里
 - [`../../MULTI-AGENT-REPO-ARCHITECTURE.md`](../../MULTI-AGENT-REPO-ARCHITECTURE.md) — 多 Agent 架构（可套用）
 - [根 README §1.6](../../README.md#16-评审对线-docsreviews) — Review / Subject Agent
 - [TASKS.md](../../TASKS.md) — 开发 + AT 任务占用
-- [test/complexity.md](../../test/complexity.md) — 验收 bug 升级 PM 拍板
+- [test-to-settle/complexity.md](../../test-to-settle/complexity.md) — 验收 bug 升级 PM 拍板
 - [architecture/](../architecture/README.md) — 架构基线
 
 ---

@@ -16,8 +16,8 @@
 | **一处一责** | 每类信息只有一个「真相目录」，避免重复维护 |
 | **占坑靠 push** | `TASKS.md` 改状态后 10 秒内 push，谁先 push 谁占 |
 | **留痕必填** | 每个 Agent 段落：名字 + 时间 + 摘要 |
-| **bug 与通过分离** | 缺陷进 `test/`；测试通过进 `test_task/` |
-| **评审与 bug 分离** | 代码/架构对线在 `docs/reviews/`；运行缺陷在 `test/` |
+| **bug 与通过分离** | 缺陷进 `test-to-settle/`；测试通过进 `test_task/` |
+| **评审与 bug 分离** | 代码/架构对线在 `docs/reviews/`；运行缺陷在 `test-to-settle/` |
 | **根目录极简** | 根留 `README.md` + `TASKS.md` + **本文**（+ 代码目录） |
 
 ---
@@ -32,7 +32,7 @@
 │
 ├── docs/                  ← 长期文档（需求/架构/评审/运维/交接）
 ├── test_task/             ← 自动化测试案例 + PASS 执行历史
-├── test/                  ← 仅 bug：round、test_bug、complexity
+├── test-to-settle/                  ← 仅 bug：round、test_bug、complexity
 │   ├── round-*.md / test_bug-*.md / complexity.md
 │   ├── old/               ← 历史验收文档（只读）
 │   └── logs/
@@ -46,14 +46,14 @@
 
 | 我要记录… | 写哪里 | 不要写哪里 |
 |---|---|---|
-| 业务需求、RI 拆解 | `docs/requirements/` | 根目录（除本文/TASKS）、`test/` |
+| 业务需求、RI 拆解 | `docs/requirements/` | 根目录（除本文/TASKS）、`test-to-settle/` |
 | 架构、表结构 | `docs/architecture/` | `TASKS.md` |
-| 代码/MOD 评审、对线 | `docs/reviews/review-*.md` | `test/round` |
-| 部署**操作**步骤 | `docs/operations/deployment_log.md` | `test/round` |
-| 自动化测试**案例** | `test_task/*.md` | `test/round` |
-| 测试**通过**结果 | `test_task/*.md` §执行历史 | `test/round` |
-| **缺陷** | `test/round-*.md` 或 `test/test_bug-*.md` | `test_task/` |
-| 大改需 PM 拍板 | `test/complexity.md` | round 里硬改 |
+| 代码/MOD 评审、对线 | `docs/reviews/review-*.md` | `test-to-settle/round` |
+| 部署**操作**步骤 | `docs/operations/deployment_log.md` | `test-to-settle/round` |
+| 自动化测试**案例** | `test_task/*.md` | `test-to-settle/round` |
+| 测试**通过**结果 | `test_task/*.md` §执行历史 | `test-to-settle/round` |
+| **缺陷** | `test-to-settle/round-*.md` 或 `test-to-settle/test_bug-*.md` | `test_task/` |
+| 大改需 PM 拍板 | `test-to-settle/complexity.md` | round 里硬改 |
 | 谁在做哪个任务 | `TASKS.md` | 各案例文件里自拟状态 |
 
 ---
@@ -105,15 +105,15 @@ handoff/        → 怎么交（版本交付指南）
 | **内容** | 步骤、预期、关联 RI/MOD |
 | **占用** | 有案例时在 `TASKS.md` 追加 **AT-*** |
 | **PASS** | 案例文件 **§3 执行历史** 末尾追加：时间、Agent、环境、基线、**已成功** |
-| **FAIL** | 新建 `test/test_bug-*.md`，**不在此目录修 bug** |
+| **FAIL** | 新建 `test-to-settle/test_bug-*.md`，**不在此目录修 bug** |
 
 详见 [`test_task/README.md`](test_task/README.md)。
 
 ---
 
-## 6. Bug 层 — `test/`
+## 6. Bug 层 — `test-to-settle/`
 
-**`test/` 只记 bug。** 测过没问题、纯部署记录 → 不进 round。
+**`test-to-settle/` 只记 bug。** 测过没问题、纯部署记录 → 不进 round。
 
 ### 6.1 Bug 来源
 
@@ -132,13 +132,15 @@ handoff/        → 怎么交（版本交付指南）
          ↘ 大改 → complexity.md → PM/架构
 ```
 
-**轮次 CLOSED 条件**：§1 每条 bug 为 `CLOSED` 或已 `ESCALATED` 且在 `complexity.md` 登记；§1～§4 留痕齐全。
+**轮次 CLOSED 条件**：§1 每条 bug 都 `CLOSED`（修完+审完）或 `ESCALATED → complexity`（已转交）；两条都没完成的 = 还不能关。
 
 ### 6.3 `test_bug-*.md`（自动化 FAIL 入口）
 
-`test_task` FAIL → 复制 [`test/test_bug-TEMPLATE.md`](test/test_bug-TEMPLATE.md) → Recorder 收入 round §1（`T-MMDD-NN`）。
+`test_task` FAIL → 复制 [`test-to-settle/test_bug-TEMPLATE.md`](test-to-settle/test_bug-TEMPLATE.md) → Recorder 收入 round §1（`T-MMDD-NN`）。
 
-详见 [`test/README.md`](test/README.md)。
+详见 [`test-to-settle/README.md`](test-to-settle/README.md)。
+
+**上手索引**：bug 状态变 → 同步 [`test-to-settle/STATUS.md`](test-to-settle/STATUS.md)，方便接手 agent 快速找到自己要处理的文件。
 
 ---
 
@@ -165,10 +167,10 @@ Review Agent 新建 review-*.md（OPEN）
 | 需求开发 / 审核 / 架构师 | `docs/requirements/` | 不写代码（架构师示范除外） |
 | 程序员 | 代码 + `TASKS.md` 开发任务 | 不擅自改需求 |
 | **测试 Agent** | `test_task/` + `TASKS.md` AT-* | FAIL 时不擅自改业务代码 |
-| **Recorder** | `test/round` §1 | 只记 bug |
-| **Analyst** | `test/round` §2 | 默认不改代码 |
-| **Fix** | `test/round` §3 + 代码 | 大改 → complexity |
-| **Reviewer**（round） | `test/round` §4 | 不偷偷改代码 |
+| **Recorder** | `test-to-settle/round` §1 | 只记 bug |
+| **Analyst** | `test-to-settle/round` §2 | 默认不改代码 |
+| **Fix** | `test-to-settle/round` §3 + 代码 | 大改 → complexity |
+| **Reviewer**（round） | `test-to-settle/round` §4 | 不偷偷改代码 |
 | **Review Agent**（reviews） | `docs/reviews/` | 唯一可 CLOSED 评审 |
 | **Subject Agent** | reviews 回复块 | 不可自行 CLOSED |
 
@@ -192,8 +194,8 @@ Review Agent 新建 review-*.md（OPEN）
 | 模板 | 路径 |
 |---|---|
 | 协作框架 | `MULTI-AGENT-REPO-ARCHITECTURE.md`（根，即本文） |
-| Bug 轮次 | `test/round-TEMPLATE.md` |
-| test_bug 入口 | `test/test_bug-TEMPLATE.md` |
+| Bug 轮次 | `test-to-settle/round-TEMPLATE.md` |
+| test_bug 入口 | `test-to-settle/test_bug-TEMPLATE.md` |
 | 自动化案例 | `test_task/case-TEMPLATE.md` |
 | 评审对线 | `docs/reviews/review-TEMPLATE.md` |
 | AT 任务条目 | 见 [`test_task/README.md`](test_task/README.md) |
@@ -209,7 +211,7 @@ Review Agent 新建 review-*.md（OPEN）
 - [ ] 根 **`MULTI-AGENT-REPO-ARCHITECTURE.md`**（本文）
 - [ ] `docs/` 五子目录 + `docs/README.md`
 - [ ] `test_task/` + `README.md` + `case-TEMPLATE.md`
-- [ ] `test/` + `README.md` + `round-TEMPLATE.md` + `test_bug-TEMPLATE.md` + `complexity.md`
+- [ ] `test-to-settle/` + `README.md` + `round-TEMPLATE.md` + `test_bug-TEMPLATE.md` + `complexity.md`
 - [ ] `docs/reviews/` + `README.md` + `review-TEMPLATE.md`
 
 ### 11.2 规则（写入根 README）
@@ -221,10 +223,10 @@ Review Agent 新建 review-*.md（OPEN）
 
 ### 11.3 可选增强
 
-- [ ] `test/logs/` + gitignore（mvn 原始日志）
+- [ ] `test-to-settle/logs/` + gitignore（mvn 原始日志）
 - [ ] `docs/operations/deployment_log.md`（部署操作时间线）
 - [ ] `docs/reviews/LESSONS-LEARNED.md`（踩坑汇总）
-- [ ] `test/old/`（历史验收文档归档）
+- [ ] `test-to-settle/old/`（历史验收文档归档）
 
 ---
 
@@ -254,7 +256,7 @@ Review Agent 新建 review-*.md（OPEN）
                            └──────────┬──────────┘
                                       ▼
                               ┌──────────────┐
-                              │ test/round   │
+                              │ test-to-settle/round   │
                               │ complexity   │
                               └──────────────┘
 
@@ -276,7 +278,7 @@ Review Agent 新建 review-*.md（OPEN）
 | 运维 | [`docs/operations/README.md`](docs/operations/README.md) |
 | 交接 | [`docs/handoff/README.md`](docs/handoff/README.md) |
 | 自动化测试 | [`test_task/README.md`](test_task/README.md) |
-| Bug | [`test/README.md`](test/README.md) |
+| Bug | [`test-to-settle/README.md`](test-to-settle/README.md) |
 
 ---
 

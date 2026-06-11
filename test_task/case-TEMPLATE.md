@@ -2,7 +2,7 @@
 
 > **TASKS.md**：`AT-XXX`  
 > **案例状态**：`未执行` / `已通过` / `失败-已报 bug`  
-> **关联**：RI-N / MOD-XX / 可选 [`test/old/ACCEPTANCE-GUIDE`](../test/old/ACCEPTANCE-GUIDE.md)
+> **关联**：RI-N / MOD-XX / 可选 [`test-to-settle/old/ACCEPTANCE-GUIDE`](../test-to-settle/old/ACCEPTANCE-GUIDE.md)
 
 ---
 
@@ -44,7 +44,7 @@ cd backend && mvn test -Dtest=… -B
 ## 3. 执行历史
 
 > **通过**：在表末**追加**一行，结果写 `PASS` / **已成功**。  
-> **失败**：追加 `FAIL`，并新建 [`test/test_bug-*.md`](../test/test_bug-TEMPLATE.md)。
+> **失败**：追加 `FAIL`，并新建 [`test-to-settle/test_bug-*.md`](../test-to-settle/test_bug-TEMPLATE.md)。
 
 | 时间 | Agent | 环境 | 代码基线 | 结果 | 备注 / 链接 |
 |---|---|---|---|---|---|

@@ -326,8 +326,8 @@
 - **状态**: 已完成(Sisyphus / 2026-06-09)
 - **占用者**: Sisyphus
 - **影响文件**:
-  - `backend/src/test/java/com/archive/agent/AgentIntegrationTest.java`(新,大文件 ~400 行)
-  - `backend/src/test/resources/application-test.yml`(可能加)
+  - `backend/src/test-to-settle/java/com/archive/agent/AgentIntegrationTest.java`(新,大文件 ~400 行)
+  - `backend/src/test-to-settle/resources/application-test.yml`(可能加)
 - **工作量**: 1 天(6-8 小时)
 - **依赖**: **T-I-10**(QaController) **+ T-I-4 ~ T-I-8**(5 工具全部已完成) **+ T-I-13**(chat_memory 表)
 - **可并行**: ✅ 是(可跟 T-I-12 同时,但**不能跟 T-I-13 同时** —— I-11 依赖 I-13)
@@ -592,7 +592,7 @@ MOD-01 (DB 迁移, 1.7d)
 
 **当前能抢的**:
 - 🎉 **v1.1 全部 6 模块 (MOD-01~06) 已完工** — 无剩余 v1.1 模块可抢
-- 下一步: owner 按 `test/old/ACCEPTANCE-GUIDE.md` v1.1 段 + `docs/reviews/2026-06-11-v1.1-review.md` 验收
+- 下一步: owner 按 `test-to-settle/old/ACCEPTANCE-GUIDE.md` v1.1 段 + `docs/reviews/2026-06-11-v1.1-review.md` 验收
 
 ### 抢先 SOP（沿用上面 🚦）
 
@@ -646,7 +646,7 @@ MOD-01 (DB 迁移, 1.7d)
 
 - **状态**: 已完成 (阿根廷 / 2026-06-11)
 - **占用者**: 阿根廷
-- **影响文件**（独占）: `test/old/VERIFICATION-REPORT.md`
+- **影响文件**（独占）: `test-to-settle/old/VERIFICATION-REPORT.md`
 - **工作量**: 0.5d
 - **依赖**: 无
 - **可并行**: ✅
@@ -654,8 +654,8 @@ MOD-01 (DB 迁移, 1.7d)
 - **验收**:
   1. `mvn compile -DskipTests -B` BUILD SUCCESS
   2. `mvn test -Dtest=V11IntegrationTest -B` 45 测例全过
-  3. `test/old/VERIFICATION-REPORT.md` 包含环境/compile/test 三段实测数据
-- **commit 模板**: `docs(verify): mvn 验证报告 test/old/VERIFICATION-REPORT.md`
+  3. `test-to-settle/old/VERIFICATION-REPORT.md` 包含环境/compile/test 三段实测数据
+- **commit 模板**: `docs(verify): mvn 验证报告 test-to-settle/old/VERIFICATION-REPORT.md`
 - **注意**: PM 沙箱无 JDK/cacerts，**必须接手 agent 跑**，不要在 PM 沙箱里尝试
 
 ---

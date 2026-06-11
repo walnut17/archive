@@ -1,10 +1,10 @@
-# 复杂问题升级 — `test/complexity.md`
+# 复杂问题升级 — `test-to-settle/complexity.md`
 
 > **用途**：本轮 `round-*.md` 里**小修小补搞不定**、或**需要大改 / 架构拍板**的问题，升级到此文件，由 **PM + 架构** 决策后再排期。
 >
 > **不进 complexity**：能在当轮 round 文件内走完「记录 → 分析 → 改代码 → 评审」闭环的 bug — 留在 round 里解决。
 
-**工作流入口**：[`test/README.md`](README.md) · 当前轮次见 [`round-*.md`](round-2026-06-11-v1.1-deploy.md)
+**工作流入口**：[`test-to-settle/README.md`](README.md) · 当前轮次见 [`round-*.md`](round-2026-06-11-v1.1-deploy.md)
 
 ---
 

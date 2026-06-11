@@ -4,7 +4,7 @@
 >
 > **任务占用**：有案例后，在根 [`TASKS.md`](../TASKS.md) **「自动化测试任务 AT-*」** 节追加对应 **AT-XXX**（无任务前该节保持空白）。
 >
-> **PASS** → 案例 **§3 执行历史** 追加 · **FAIL** → [`test/test_bug-*.md`](../test/README.md)
+> **PASS** → 案例 **§3 执行历史** 追加 · **FAIL** → [`test-to-settle/test_bug-*.md`](../test-to-settle/README.md)
 
 **导航**：根 [`README.md` §9`](../README.md#-9-自动化测试任务-test_task) · [`MULTI-AGENT-REPO-ARCHITECTURE.md`](../MULTI-AGENT-REPO-ARCHITECTURE.md)
 
@@ -16,12 +16,12 @@
 |---|---|
 | **`test_task/*.md`** | 测试案例 + PASS 执行历史（**有案例才有文件**） |
 | **`TASKS.md` AT-*** | 仅在有案例时追加占用条目 |
-| **`test/test_bug-*.md`** | 案例 FAIL 入口 → `round-*.md` |
+| **`test-to-settle/test_bug-*.md`** | 案例 FAIL 入口 → `round-*.md` |
 
 ```text
 （有案例后）TASKS 追加 AT-XXX → 执行 test_task/<案例>.md
         ├─ PASS → §3 历史 + TASKS 已完成
-        └─ FAIL → test/test_bug-*.md → round §1
+        └─ FAIL → test-to-settle/test_bug-*.md → round §1
 ```
 
 ---
@@ -58,7 +58,7 @@ cp test_task/case-TEMPLATE.md test_task/AT-XXX-<简述>.md
 | 结果 | 动作 |
 |---|---|
 | **PASS** | 案例 §3 追加（Agent、时间、基线、已成功）+ TASKS 标 `已完成` + push |
-| **FAIL** | `cp test/test_bug-TEMPLATE.md test/test_bug-…` → 案例 §3 记 FAIL → 不擅自改业务代码 |
+| **FAIL** | `cp test-to-settle/test_bug-TEMPLATE.md test-to-settle/test_bug-…` → 案例 §3 记 FAIL → 不擅自改业务代码 |
 
 ---
 

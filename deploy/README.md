@@ -2,7 +2,7 @@
 
 > Windows Server 2019/2022 单机部署
 
-**项目协作**：部署指南 [`docs/operations/DEPLOYMENT.md`](../docs/operations/DEPLOYMENT.md) · 操作日志 [`docs/operations/deployment_log.md`](../docs/operations/deployment_log.md) · 联调 bug [`test/`](../test/README.md) · 架构说明 [`MULTI-AGENT-REPO-ARCHITECTURE.md`](../MULTI-AGENT-REPO-ARCHITECTURE.md)
+**项目协作**：部署指南 [`docs/operations/DEPLOYMENT.md`](../docs/operations/DEPLOYMENT.md) · 操作日志 [`docs/operations/deployment_log.md`](../docs/operations/deployment_log.md) · 联调 bug [`test-to-settle/`](../test-to-settle/README.md) · 架构说明 [`MULTI-AGENT-REPO-ARCHITECTURE.md`](../MULTI-AGENT-REPO-ARCHITECTURE.md)
 
 ---
 

@@ -29,9 +29,9 @@
 
 - 官方指引：`docs/handoff/v1.1-DEPLOY-GUIDE.md`
 - 一次性 SQL：`deploy/sql/migrate_260611_01.sql`（**推荐**）
-- mvn 验证报告（历史）：[`test/old/VERIFICATION-REPORT.md`](../../test/old/VERIFICATION-REPORT.md) · 新 PASS 写 [`test_task/`](../../test_task/README.md)
+- mvn 验证报告（历史）：[`test-to-settle/old/VERIFICATION-REPORT.md`](../../test-to-settle/old/VERIFICATION-REPORT.md) · 新 PASS 写 [`test_task/`](../../test_task/README.md)
 - 老部署记录：[`DEPLOYMENT-LOG.md`](DEPLOYMENT-LOG.md)（2026-06-07 前）
-- **部署测试问题汇总**：`test/round-2026-06-11-v1.1-deploy.md`（交架构 review，**测试轮次先记问题、不急着改代码**）
+- **部署测试问题汇总**：`test-to-settle/round-2026-06-11-v1.1-deploy.md`（交架构 review，**测试轮次先记问题、不急着改代码**）
 
 ---
 

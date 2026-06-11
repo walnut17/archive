@@ -24,7 +24,7 @@
 - [§5. 程序员开工: 抢任务 SOP](#-5-程序员开工-抢任务-sop)
 - [§6. 卡住怎么办 / 找谁](#-6-卡住怎么办--找谁)
 - [§7. 仓库结构 + 文档演进](#-7-仓库结构--文档演进)
-- [§8. Bug 跟踪与修复 (`test/`)](#-8-bug-跟踪与修复-test)
+- [§8. Bug 跟踪与修复 (`test-to-settle/`)](#-8-bug-跟踪与修复-test)
 - [§9. 自动化测试任务 (`test_task/`)](#-9-自动化测试任务-test_task)
 - [§10. 多 Agent 协作架构（可套用）](#-10-多-agent-协作架构可套用)
 
@@ -67,7 +67,7 @@ projects-online/
 ├── README.md / TASKS.md / MULTI-AGENT-REPO-ARCHITECTURE.md  ← 入口 + 看板 + 协作框架
 ├── test_task/               ← 自动化测试案例 + 通过时的执行历史
 ├── docs/                    ← 长期文档（需求/架构/review/运维/交接）
-├── test/                    ← bug：round、test_bug、complexity
+├── test-to-settle/                    ← bug：round、test_bug、complexity
 │   ├── round-*.md / test_bug-*.md / complexity.md
 │   ├── old/                 ← 历史验收文档（只读）
 │   └── logs/
@@ -84,10 +84,10 @@ projects-online/
 | 看业务需求 | [`docs/requirements/REQUIREMENTS.md`](docs/requirements/REQUIREMENTS.md) |
 | 看架构 / 表结构 | [`docs/architecture/`](docs/architecture/README.md) |
 | 部署 / 配 key / 运维 | [`docs/operations/`](docs/operations/README.md) |
-| 发现 bug、记 round | [`test/round-*.md`](test/round-2026-06-11-v1.1-deploy.md) · **仅缺陷** |
-| 自动化案例 FAIL | [`test/test_bug-*.md`](test/test_bug-TEMPLATE.md) → 收入 round |
+| 发现 bug、记 round | [`test-to-settle/round-*.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) · **仅缺陷** |
+| 自动化案例 FAIL | [`test-to-settle/test_bug-*.md`](test-to-settle/test_bug-TEMPLATE.md) → 收入 round |
 | 小修闭环（分析/改/审） | 当前 round 的 **§2～§4** |
-| 大改 / 搞不定 | [`test/complexity.md`](test/complexity.md) → PM + 架构 |
+| 大改 / 搞不定 | [`test-to-settle/complexity.md`](test-to-settle/complexity.md) → PM + 架构 |
 | 踩坑 / 历史 review | [`docs/reviews/LESSONS-LEARNED.md`](docs/reviews/LESSONS-LEARNED.md) |
 | v1.1 上生产步骤 | [`docs/handoff/v1.1-DEPLOY-GUIDE.md`](docs/handoff/v1.1-DEPLOY-GUIDE.md) |
 | 协作架构 / 给其他项目套用 | [§10](#-10-多-agent-协作架构可套用) · [`MULTI-AGENT-REPO-ARCHITECTURE.md`](MULTI-AGENT-REPO-ARCHITECTURE.md) |
@@ -115,10 +115,10 @@ projects-online/
 | **[架构师](#13-架构师)** (技术 Lead) | 把需求 §X.Y 拆成可落地的 RI (Requirement Item) | `docs/requirements/REQUIREMENTS.md` + 现有 `docs/architecture/ARCHITECTURE-v2.md` + `docs/architecture/DB-SCHEMA-v2.md` | 在 `docs/requirements/ARCH-DECOMPOSITION.md` 加 RI-N: 业务/影响表/角色/验收/依赖/估算 | [§1.3](#13-架构师) | ❌ 不直接写代码 (除非示范) |
 | **[程序员](#14-程序员)** (接手 AI / 后端 / 前端 / DBA) | 按 RI 抢任务 + 写代码 + 跑测试 + 提 PR | 必读 [§4.1](#41-程序员必读基线包) + 抢到的 RI 节 | 代码 + 单元测试 + 1 commit / 任务, push 到 main | [§5 抢任务 SOP](#-5-程序员开工-抢任务-sop) | ❌ 不擅自改需求, 不擅自拆别人的 RI |
 | **[测试 Agent](#19-测试-agenttest_task)** | 抢 **AT-*** 自动化测试任务 | [`TASKS.md`](TASKS.md) AT 节 + [`test_task/`](test_task/README.md) | 执行案例；PASS 写 §3 历史；FAIL 建 `test_bug` | [§9](#-9-自动化测试任务-test_task) | ❌ FAIL 时不擅自改业务代码 |
-| **[Recorder Agent](#15-recorder-agent)** | 发现 bug 并记入 round | 当前 `test/round-*.md` | **§1** 现象、复现、ID、**来源** | 名字 + 时间 + 摘要 | [§8.2](#82-四轮次-agent-工作流) | ❌ 不写根因、不改代码；**无 bug 不记** |
-| **[Analyst Agent](#15-analyst-agent)** | 根因分析 + 修改建议 | round **§1** 的 `RECORDED` 项 | **§2** 建议；大改写 [`complexity.md`](test/complexity.md) | 留痕 | [§8.2](#82-四轮次-agent-工作流) | ❌ 默认不改代码 |
+| **[Recorder Agent](#15-recorder-agent)** | 发现 bug 并记入 round | 当前 `test-to-settle/round-*.md` | **§1** 现象、复现、ID、**来源** | 名字 + 时间 + 摘要 | [§8.2](#82-四轮次-agent-工作流) | ❌ 不写根因、不改代码；**无 bug 不记** |
+| **[Analyst Agent](#15-analyst-agent)** | 根因分析 + 修改建议 | round **§1** 的 `RECORDED` 项 | **§2** 建议；大改写 [`complexity.md`](test-to-settle/complexity.md) | 留痕 | [§8.2](#82-四轮次-agent-工作流) | ❌ 默认不改代码 |
 | **[Fix Agent](#15-fix-agent)** | 按 §2 小修代码 | round **§2** 的 `SMALL_FIX` 项 | **§3** + commit | 留痕 | [§8.2](#82-四轮次-agent-工作流) | ❌ 大改应升级 complexity |
-| **[Reviewer Agent](#15-reviewer-agent)** | 评审 §3 改动（**仅** `test/round`） | round **§3** 的 `FIXED` 项 | **§4** 通过/打回 | 留痕 | [§8.2](#82-四轮次-agent-工作流) | ❌ 应打回 Fix，不偷偷改 |
+| **[Reviewer Agent](#15-reviewer-agent)** | 评审 §3 改动（**仅** `test-to-settle/round`） | round **§3** 的 `FIXED` 项 | **§4** 通过/打回 | 留痕 | [§8.2](#82-四轮次-agent-工作流) | ❌ 应打回 Fix，不偷偷改 |
 | **[Review Agent](#16-review-agent)** | 代码/架构评审，**新开** review 文件 | [`docs/reviews/`](docs/reviews/README.md) | Round 1 意见 → 跟进 → **宣布 CLOSED** | 留痕 | [§1.6](#16-评审对线-docsreviews) | ❌ 替 Subject 写回复 |
 | **[Subject Agent](#16-subject-agent)** | 被评审方 | 对应 `review-*.md` | 文件下方写回复（接受/措施/结果） | 留痕 | [§1.6](#16-评审对线-docsreviews) | ❌ **不得**自行 CLOSED |
 
@@ -221,7 +221,7 @@ projects-online/
 - **后端 / 接手 AI** — `docs/architecture/AGENT-IMPL-PLAN.md` + `docs/architecture/DB-SCHEMA-v2.md` + `docs/architecture/ARCHITECTURE-v2.md` + 抢到的 RI
 - **前端** — `frontend/README.md` + `docs/architecture/AGENT-IMPL-PLAN.md` §I-12 + 抢到的 RI
 - **DBA** — `docs/architecture/DB-SCHEMA-v2.md` + 抢到的 RI
-- **测试** — [`test_task/`](test_task/README.md) 抢 AT-*；历史清单见 [`test/old/`](test/old/README.md)
+- **测试** — [`test_task/`](test_task/README.md) 抢 AT-*；历史清单见 [`test-to-settle/old/`](test-to-settle/old/README.md)
 
 **你要写**:
 - **代码** (后端 Java / 前端 Vue / SQL 迁移 / 单元测试)
@@ -242,12 +242,12 @@ projects-online/
 - ❌ 推 `minimax` 分支 (那是沙箱的活)
 - ❌ 多个 RI 写 1 个 commit (1 commit = 1 RI, 拆不开才能合)
 
-### 1.5 测试轮次四 Agent（`test/round-*.md`）
+### 1.5 测试轮次四 Agent（`test-to-settle/round-*.md`）
 
-> **`test/` 只记 bug** — 交互式 deploy 发现，或 Agent 自主跑用例发现。**测过无缺陷不要开 round 行。**
+> **`test-to-settle/` 只记 bug** — 交互式 deploy 发现，或 Agent 自主跑用例发现。**测过无缺陷不要开 round 行。**
 > **一轮一文件**；§1～§4 各由不同 agent 接手，**每段必填：Agent 名 + 时间 + 摘要**。  
-> 全部 bug **CLOSED** 或已升级 [`test/complexity.md`](test/complexity.md) 后，轮次标 **`CLOSED`**。  
-> 细节：[§8](#-8-bug-跟踪与修复-test) · [`test/README.md`](test/README.md) · 模板 [`test/round-TEMPLATE.md`](test/round-TEMPLATE.md)
+> 全部 bug **CLOSED** 或已升级 [`test-to-settle/complexity.md`](test-to-settle/complexity.md) 后，轮次标 **`CLOSED`**。  
+> 细节：[§8](#-8-bug-跟踪与修复-test) · [`test-to-settle/README.md`](test-to-settle/README.md) · 模板 [`test-to-settle/round-TEMPLATE.md`](test-to-settle/round-TEMPLATE.md)
 
 | Agent | 改 round 哪一节 | 做什么 |
 |---|---|---|
@@ -258,7 +258,7 @@ projects-online/
 
 #### 1.5.1 Recorder Agent
 
-**你要读**：[`test/round-TEMPLATE.md`](test/round-TEMPLATE.md) · [`test_task/README.md`](test_task/README.md) · [`docs/handoff/v1.1-DEPLOY-GUIDE.md`](docs/handoff/v1.1-DEPLOY-GUIDE.md)
+**你要读**：[`test-to-settle/round-TEMPLATE.md`](test-to-settle/round-TEMPLATE.md) · [`test_task/README.md`](test_task/README.md) · [`docs/handoff/v1.1-DEPLOY-GUIDE.md`](docs/handoff/v1.1-DEPLOY-GUIDE.md)
 
 **你要写**：§1 Agent 留痕 + Bug 表（`T-MMDD-NN`，状态 `RECORDED`，**来源** `DEPLOY` / `AUTO`）
 
@@ -270,7 +270,7 @@ projects-online/
 
 **你要读**：round **§1** 全部 `RECORDED` 行
 
-**你要写**：§2 逐条分析；标 `SMALL_FIX` 或 `ESCALATED`；升级项写入 [`test/complexity.md`](test/complexity.md)（`C-MMDD-NN`）
+**你要写**：§2 逐条分析；标 `SMALL_FIX` 或 `ESCALATED`；升级项写入 [`test-to-settle/complexity.md`](test-to-settle/complexity.md)（`C-MMDD-NN`）
 
 **你不能**：默认直接改代码（除非用户明确授权 hotfix）
 
@@ -290,7 +290,7 @@ projects-online/
 
 **你不能**：自己改代码代替评审（应 `REOPEN` 给 Fix）
 
-> **注意**：此 **Reviewer Agent** 只管 `test/round-*.md` §4 的验收 bug 评审，与 [§1.6](#16-评审对线-docsreviews) 的 **Review Agent**（`docs/reviews/`）不是同一套流程。
+> **注意**：此 **Reviewer Agent** 只管 `test-to-settle/round-*.md` §4 的验收 bug 评审，与 [§1.6](#16-评审对线-docsreviews) 的 **Review Agent**（`docs/reviews/`）不是同一套流程。
 
 ### 1.6 评审对线（`docs/reviews/`）
 
@@ -310,11 +310,11 @@ Review Agent Round 2：CONTINUE 续提要求 或 CLOSED 宣布评审结束
 | **Review Agent** | `cp review-TEMPLATE.md` 新建文件；写/追加评审；验证后 **宣布 CLOSED** | 替 Subject 写回复 |
 | **Subject Agent** | 在文件**末尾**追加回复；改代码；填 commit/结果 | 把状态改 **CLOSED** |
 
-与 **§1.5 Reviewer Agent**（`test/round` §4）分工：round 审 **bug 的小修**；`docs/reviews/` 审 **代码/架构/MOD 交付** 等，可多轮对线。
+与 **§1.5 Reviewer Agent**（`test-to-settle/round` §4）分工：round 审 **bug 的小修**；`docs/reviews/` 审 **代码/架构/MOD 交付** 等，可多轮对线。
 
 #### 1.6.1 Review Agent
 
-**你要读**：Subject 的 commit / diff · 相关 `architecture/` · 可选关联 `test/round-*.md`
+**你要读**：Subject 的 commit / diff · 相关 `architecture/` · 可选关联 `test-to-settle/round-*.md`
 
 **你要写**：Round 1 意见表（P0/P1/P2）；跟进 Round；结案时改顶部状态 **`CLOSED`** + 评审结束声明
 
@@ -336,9 +336,9 @@ Review Agent Round 2：CONTINUE 续提要求 或 CLOSED 宣布评审结束
 
 **你要写**：
 - **PASS**：案例文件 **§3 执行历史** 追加（Agent、时间、基线、**已成功**）+ TASKS 标 `已完成`
-- **FAIL**：[`test/test_bug-TEMPLATE.md`](test/test_bug-TEMPLATE.md) → `test_bug-*.md`；案例 §3 记 FAIL；**不要**自己修 bug
+- **FAIL**：[`test-to-settle/test_bug-TEMPLATE.md`](test-to-settle/test_bug-TEMPLATE.md) → `test_bug-*.md`；案例 §3 记 FAIL；**不要**自己修 bug
 
-**你不能**：FAIL 时擅自改业务代码（交给 round §2～§4）；通过结果写进 `test/` round（那是 bug 专用）
+**你不能**：FAIL 时擅自改业务代码（交给 round §2～§4）；通过结果写进 `test-to-settle/` round（那是 bug 专用）
 
 详情：[§9](#-9-自动化测试任务-test_task)
 
@@ -357,7 +357,7 @@ Review Agent Round 2：CONTINUE 续提要求 或 CLOSED 宣布评审结束
 | **`TASKS.md`** | 开发 + AT 任务占用看板 | [TASKS.md](TASKS.md) |
 | **`MULTI-AGENT-REPO-ARCHITECTURE.md`** | 多 Agent 协作框架（可套用） | [协作架构](MULTI-AGENT-REPO-ARCHITECTURE.md) |
 
-其它 markdown **不应**出现在根目录（历史文件已迁入 `docs/` / `test/`）。
+其它 markdown **不应**出现在根目录（历史文件已迁入 `docs/` / `test-to-settle/`）。
 
 ### 2.2 四大工作区
 
@@ -365,7 +365,7 @@ Review Agent Round 2：CONTINUE 续提要求 或 CLOSED 宣布评审结束
 |---|---|---|
 | **长期文档** | [`docs/`](docs/README.md) | 需求、架构、review、运维、交接 |
 | **自动化测试案例** | [`test_task/`](test_task/README.md) | 案例步骤 + **PASS** 执行历史 |
-| **Bug 跟踪** | [`test/`](test/README.md) | `round-*.md`、`test_bug-*.md`、`complexity.md` |
+| **Bug 跟踪** | [`test-to-settle/`](test-to-settle/README.md) | `round-*.md`、`test_bug-*.md`、`complexity.md` |
 | **任务占用** | [`TASKS.md`](TASKS.md) | MOD/RI **开发** + **AT-*** 测试任务占用 |
 
 ### 2.3 需求文档 — `docs/requirements/`
@@ -413,7 +413,7 @@ docs/requirements/
 | 旧位置 | 现位置 |
 |---|---|
 | 根 `architecture-v*.md` / `DEPLOYMENT.md` | `docs/architecture/history/` · `docs/operations/` |
-| 根 `VERIFICATION-REPORT.md` | `test/old/` |
+| 根 `VERIFICATION-REPORT.md` | `test-to-settle/old/` |
 | `docs/` 根下的 `*.md`（除 README） | 已迁入对应子目录，见 [`docs/README.md` §5](docs/README.md#5-路径迁移备忘-2026-06-11) |
 
 ---
@@ -478,7 +478,7 @@ docs/requirements/
 - **后端** — `docs/architecture/ARCHITECTURE-v2.md` (685) + `docs/architecture/DB-SCHEMA-v2.md` (1060)
 - **前端** — `frontend/README.md` + `docs/architecture/AGENT-IMPL-PLAN.md` §I-12
 - **DBA** — `docs/architecture/DB-SCHEMA-v2.md` (1060) + `docs/operations/ENVIRONMENT-DEPENDENCIES.md` (330)
-- **测试** — [`test_task/`](test_task/README.md) + [`test/old/ACCEPTANCE-GUIDE.md`](test/old/ACCEPTANCE-GUIDE.md)（历史参考）
+- **测试** — [`test_task/`](test_task/README.md) + [`test-to-settle/old/ACCEPTANCE-GUIDE.md`](test-to-settle/old/ACCEPTANCE-GUIDE.md)（历史参考）
 
 ### 4.2 需求开发人员必读包
 
@@ -513,10 +513,10 @@ docs/requirements/
 
 | 序 | 文件 | 必读理由 |
 |---|---|---|
-| ① | [§8](#-8-bug-跟踪与修复-test) + [`test/README.md`](test/README.md) | 四 Agent 分工 + 留痕规则 |
-| ② | [`test/round-TEMPLATE.md`](test/round-TEMPLATE.md) | 新开一轮复制 |
-| ③ | 当前 [`test/round-*.md`](test/round-2026-06-11-v1.1-deploy.md) | 只改你负责的那一节 |
-| ④ | [`test/complexity.md`](test/complexity.md) | 升级 / PM 架构拍板 |
+| ① | [§8](#-8-bug-跟踪与修复-test) + [`test-to-settle/README.md`](test-to-settle/README.md) | 四 Agent 分工 + 留痕规则 |
+| ② | [`test-to-settle/round-TEMPLATE.md`](test-to-settle/round-TEMPLATE.md) | 新开一轮复制 |
+| ③ | 当前 [`test-to-settle/round-*.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) | 只改你负责的那一节 |
+| ④ | [`test-to-settle/complexity.md`](test-to-settle/complexity.md) | 升级 / PM 架构拍板 |
 | ⑤ | [`docs/operations/deployment_log.md`](docs/operations/deployment_log.md) | 部署操作时间线 |
 
 ### 4.6 通用参考 (按需查)
@@ -529,7 +529,7 @@ docs/requirements/
 | `docs/operations/GLM-KEY-SETUP.md` | 5KB | 配 GLM API key |
 | `docs/operations/DEV-STANDARDS.md` | 466 | 开发标准 (提交前看 §7.2) |
 | `docs/architecture/ARCH-REUSE-AUDIT.md` | 12KB | 现有可复用模块审计 |
-| `test/old/M1-README.md` / `test/old/M1-TEST-TASKS.md` | - | M1 阶段档案 CRUD + 测试 (历史) |
+| `test-to-settle/old/M1-README.md` / `test-to-settle/old/M1-TEST-TASKS.md` | - | M1 阶段档案 CRUD + 测试 (历史) |
 | `docs/reviews/README.md` | - | 上个接手 AI 的 review 报告 (避坑) |
 
 ---
@@ -599,7 +599,7 @@ cat TASKS.md | less
 2. **commit + push**:
    ```bash
    git add backend/src/main/java/... \
-           backend/src/test/java/... \
+           backend/src/test-to-settle/java/... \
            TASKS.md
    git commit -m "feat(<scope>,<RI-N>): <description>"
    git push origin main
@@ -684,13 +684,13 @@ projects-online/
 │   ├── operations/        ← 怎么跑：部署、运维、规范
 │   └── handoff/           ← 怎么交：版本交付指南
 │
-├── test/                  ← bug：round、test_bug、complexity
+├── test-to-settle/                  ← bug：round、test_bug、complexity
 │   ├── README.md
 │   ├── round-*.md / test_bug-*.md / complexity.md
 │   ├── old/               ← 历史 ACCEPTANCE-GUIDE、M1/V2、VERIFICATION
 │   └── logs/
 │
-├── backend/               ← Spring Boot 源码 + src/test/ 测试代码
+├── backend/               ← Spring Boot 源码 + src/test-to-settle/ 测试代码
 ├── frontend/              ← Vue 3 源码
 ├── deploy/                ← SQL 迁移、Caddy、WinSW
 ├── config/                ← 配置模板
@@ -715,7 +715,7 @@ projects-online/
 | 2026-06-10 下午 | 业务需求 v1.1 §5.6 + 死循环/LLM 兜底配置可配 |
 | 2026-06-10 晚 | **Mavis 拓展**: 业务规则细化 10 处 + 隐含规则 6 类 + 新功能 8 项 (§13) + 需求拆解 RI-1~45 |
 | 2026-06-10 深夜 | **README 重构**: 角色导航 (§1) + 需求文档位置 (§2) + 程序员开工 SOP (§5) |
-| 2026-06-11 | **文档整理**: 长期文档迁入 `docs/` 子目录; 测试文档迁入 `test/`; `docs/` 根只留 README |
+| 2026-06-11 | **文档整理**: 长期文档迁入 `docs/` 子目录; 测试文档迁入 `test-to-settle/`; `docs/` 根只留 README |
 
 ### 7.3 文档维护规则 (Mavis 必守)
 
@@ -728,13 +728,13 @@ projects-online/
 
 ---
 
-## 🧪 8. Bug 跟踪与修复 (`test/`)
+## 🧪 8. Bug 跟踪与修复 (`test-to-settle/`)
 
-> **`test/` 只记 bug。** 发现途径：**(1) 交互式 deploy 联调** **(2) Agent 自主跑测试用例**。测过无缺陷、纯部署步骤 → 不进 `round-*.md`。
+> **`test-to-settle/` 只记 bug。** 发现途径：**(1) 交互式 deploy 联调** **(2) Agent 自主跑测试用例**。测过无缺陷、纯部署步骤 → 不进 `round-*.md`。
 >
 > **一轮一文件** `round-YYYY-MM-DD-*.md`：**§1 记 bug → §2 分析 → §3 改代码 → §4 评审**，各由不同 Agent 接手，**每段留痕（名字 + 时间 + 摘要）**。  
-> **小修**在 round 内闭环；**大改 / 搞不定** → [`test/complexity.md`](test/complexity.md) 交 PM + 架构。  
-> **细节以 [`test/README.md`](test/README.md) 为准**。
+> **小修**在 round 内闭环；**大改 / 搞不定** → [`test-to-settle/complexity.md`](test-to-settle/complexity.md) 交 PM + 架构。  
+> **细节以 [`test-to-settle/README.md`](test-to-settle/README.md) 为准**。
 
 ### 8.1 四轮次 Agent 工作流
 
@@ -756,10 +756,10 @@ Recorder (§1)  →  Analyst (§2)  →  Fix (§3)  →  Reviewer (§4)  →  §
 
 | 路径 | 用途 |
 |---|---|
-| [`test/README.md`](test/README.md) | 工作流、状态机、Agent 一句话指引 |
-| [`test/round-TEMPLATE.md`](test/round-TEMPLATE.md) | **新开一轮**时复制 |
-| [`test/round-*.md`](test/round-2026-06-11-v1.1-deploy.md) | 当轮主文件（§1～§5） |
-| [`test/complexity.md`](test/complexity.md) | 当轮解决不了、需拍板 |
+| [`test-to-settle/README.md`](test-to-settle/README.md) | 工作流、状态机、Agent 一句话指引 |
+| [`test-to-settle/round-TEMPLATE.md`](test-to-settle/round-TEMPLATE.md) | **新开一轮**时复制 |
+| [`test-to-settle/round-*.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) | 当轮主文件（§1～§5） |
+| [`test-to-settle/complexity.md`](test-to-settle/complexity.md) | 当轮解决不了、需拍板 |
 | [`docs/operations/deployment_log.md`](docs/operations/deployment_log.md) | 部署**操作**时间线（不是 bug 清单） |
 
 **Bug ID**：`T-MMDD-NN` · **Complexity ID**：`C-MMDD-NN` · **Commit**：`fix(<scope>,T-0611-XX): …`
@@ -778,7 +778,7 @@ Recorder (§1)  →  Analyst (§2)  →  Fix (§3)  →  Reviewer (§4)  →  §
 
 | 轮次 | 文件 | 轮次状态 |
 |---|---|---|
-| v1.1 / 0611 | [`round-2026-06-11-v1.1-deploy.md`](test/round-2026-06-11-v1.1-deploy.md) | `IN_PROGRESS`（§2 Analyst / §4 Reviewer 待留痕） |
+| v1.1 / 0611 | [`round-2026-06-11-v1.1-deploy.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) | `IN_PROGRESS`（§2 Analyst / §4 Reviewer 待留痕） |
 
 ### 8.5 与 `TASKS.md` 的关系
 
@@ -786,9 +786,9 @@ Recorder (§1)  →  Analyst (§2)  →  Fix (§3)  →  Reviewer (§4)  →  §
 |---|---|
 | **`TASKS.md`** | RI / MOD **开发** + **AT-*** 自动化测试占用 |
 | **`test_task/`** | 测试案例；**PASS** 写 §3 执行历史 |
-| **`test/test_bug-*.md`** | 案例 **FAIL** 入口 → 收入 round §1 |
-| **`test/round-*.md`** | bug 四轮次闭环（DEPLOY / AUTO） |
-| **`test/complexity.md`** | 需 PM/架构拍板后再进 TASKS 或新 RI |
+| **`test-to-settle/test_bug-*.md`** | 案例 **FAIL** 入口 → 收入 round §1 |
+| **`test-to-settle/round-*.md`** | bug 四轮次闭环（DEPLOY / AUTO） |
+| **`test-to-settle/complexity.md`** | 需 PM/架构拍板后再进 TASKS 或新 RI |
 
 ---
 
@@ -803,7 +803,7 @@ Recorder (§1)  →  Analyst (§2)  →  Fix (§3)  →  Reviewer (§4)  →  §
 |---|---|
 | **`test_task/*.md`** | 步骤、预期、**通过**时的执行历史 |
 | **`TASKS.md` AT-*** | 谁占用 / 谁完工 |
-| **`test/test_bug-*.md`** | **失败** bug 单 → 进 `round-*.md` 四轮次 |
+| **`test-to-settle/test_bug-*.md`** | **失败** bug 单 → 进 `round-*.md` 四轮次 |
 
 ### 9.2 工作流
 
@@ -812,7 +812,7 @@ Recorder (§1)  →  Analyst (§2)  →  Fix (§3)  →  Reviewer (§4)  →  §
         ↓
 执行 test_task/<案例>.md
         ├─ PASS → 案例 §3 追加「已成功」+ TASKS 已完成 + push
-        └─ FAIL → test/test_bug-*.md → Recorder 收入 round §1 → 其他 Agent 处理
+        └─ FAIL → test-to-settle/test_bug-*.md → Recorder 收入 round §1 → 其他 Agent 处理
 ```
 
 ### 9.3 抢任务 SOP（与 §5 相同）
@@ -828,7 +828,7 @@ Recorder (§1)  →  Analyst (§2)  →  Fix (§3)  →  Reviewer (§4)  →  §
 |---|---|
 | [`test_task/README.md`](test_task/README.md) | 完整规范 |
 | [`test_task/case-TEMPLATE.md`](test_task/case-TEMPLATE.md) | 新建案例 |
-| [`test/test_bug-TEMPLATE.md`](test/test_bug-TEMPLATE.md) | FAIL 时复制 |
+| [`test-to-settle/test_bug-TEMPLATE.md`](test-to-settle/test_bug-TEMPLATE.md) | FAIL 时复制 |
 
 ---
 
@@ -844,7 +844,7 @@ Recorder (§1)  →  Analyst (§2)  →  Fix (§3)  →  Reviewer (§4)  →  §
 | 任务 | `TASKS.md` | 开发 RI/MOD + 测试 **AT-*** 占用 |
 | 文档 | `docs/` | 需求 / 架构 / 评审 / 运维 / 交接 |
 | 自动化测试 | `test_task/` | 案例 + **PASS** 执行历史 |
-| Bug | `test/` | `round` 四轮次、`test_bug` 入口、`complexity` 升级 |
+| Bug | `test-to-settle/` | `round` 四轮次、`test_bug` 入口、`complexity` 升级 |
 | 评审 | `docs/reviews/` | Review ↔ Subject 对线，**仅 Review Agent CLOSED** |
 
 各层 README 均指向上述架构文档。新项目套用见该文档 **§11 检查清单**。

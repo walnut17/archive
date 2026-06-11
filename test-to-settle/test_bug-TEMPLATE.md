@@ -74,4 +74,4 @@
 
 ---
 
-*模板 · 见 [test/README.md](./README.md) · [test_task/README.md](../test_task/README.md)*
+*模板 · 见 [test-to-settle/README.md](./README.md) · [test_task/README.md](../test_task/README.md)*

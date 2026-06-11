@@ -2,7 +2,7 @@
 
 > **本目录放长期文档**；`docs/` 根下**只有本 README** 一个文件，其余全部在子目录里。
 >
-> 代码在 `backend/` / `frontend/` · 任务看板在 [`../TASKS.md`](../TASKS.md)（开发 + **AT-***）· bug 在 [`../test/`](../test/) · 自动化案例在 [`../test_task/`](../test_task/)
+> 代码在 `backend/` / `frontend/` · 任务看板在 [`../TASKS.md`](../TASKS.md)（开发 + **AT-***）· bug 在 [`../test-to-settle/`](../test-to-settle/) · 自动化案例在 [`../test_task/`](../test_task/)
 
 ---
 
@@ -23,10 +23,10 @@
 | 位置 | 放什么 | 不放什么 |
 |---|---|---|
 | **`docs/`** | 需求、架构、review、运维、交接等**长期文档** | 代码、测试代码、SQL 脚本 |
-| **[`test/`](../test/)** | **仅 bug**：`round-*.md`、`test_bug-*.md`、`complexity.md` | 通过记录、案例定义 |
+| **[`test-to-settle/`](../test-to-settle/)** | **仅 bug**：`round-*.md`、`test_bug-*.md`、`complexity.md` | 通过记录、案例定义 |
 | **[`test_task/`](../test_task/)** | 自动化**案例** + **PASS** 时 §3 执行历史 | bug 修复、round 闭环 |
-| **[`TASKS.md`](../TASKS.md)**（根） | MOD/RI **开发** + **AT-*** 测试任务占用 | bug 清单（`test/`） |
-| **`backend/src/test/`** | Java **单元/集成测试代码** | Markdown 文档 |
+| **[`TASKS.md`](../TASKS.md)**（根） | MOD/RI **开发** + **AT-*** 测试任务占用 | bug 清单（`test-to-settle/`） |
+| **`backend/src/test-to-settle/`** | Java **单元/集成测试代码** | Markdown 文档 |
 | **`deploy/`** | Caddy / WinSW / **SQL 迁移脚本** |  prose 部署说明（在 `operations/`） |
 
 **记「操作」vs 记「问题」：**
@@ -34,10 +34,10 @@
 | 我要记… | 写哪里 |
 |---|---|
 | 在 125 上执行了哪些命令、步骤 | [`operations/deployment_log.md`](operations/deployment_log.md) |
-| 发现 bug、四轮次（记/析/改/审） | [`../test/round-*.md`](../test/round-2026-06-11-v1.1-deploy.md) · 或 `test_bug-*.md` 入口 |
+| 发现 bug、四轮次（记/析/改/审） | [`../test-to-settle/round-*.md`](../test-to-settle/round-2026-06-11-v1.1-deploy.md) · 或 `test_bug-*.md` 入口 |
 | 自动化案例 **通过** | [`../test_task/`](../test_task/README.md) 案例 §3 执行历史 |
-| 自动化案例 **失败** | [`../test/test_bug-TEMPLATE.md`](../test/test_bug-TEMPLATE.md) → round §1 |
-| 大改 / 搞不定 | [`../test/complexity.md`](../test/complexity.md) |
+| 自动化案例 **失败** | [`../test-to-settle/test_bug-TEMPLATE.md`](../test-to-settle/test_bug-TEMPLATE.md) → round §1 |
+| 大改 / 搞不定 | [`../test-to-settle/complexity.md`](../test-to-settle/complexity.md) |
 | 代码/架构 **评审对线**（OPEN→CLOSED） | [`reviews/review-*.md`](reviews/README.md) · 模板 [`review-TEMPLATE.md`](reviews/review-TEMPLATE.md) |
 
 ---
@@ -58,9 +58,9 @@
 | 避免重复踩坑 | [`reviews/LESSONS-LEARNED.md`](reviews/LESSONS-LEARNED.md) |
 | 开/跟 review 对线 | [`reviews/README.md`](reviews/README.md) · `cp review-TEMPLATE.md` |
 | 看 OPEN 的 review / 踩坑 | [`reviews/`](reviews/README.md) → 扫 OPEN + `LESSONS-LEARNED.md` |
-| 自主跑用例 / deploy 发现 bug | [`../test/README.md`](../test/README.md) → `test_bug` / `round` |
-| 大改 / PM 拍板 | [`../test/complexity.md`](../test/complexity.md) |
-| 端到端验收（历史参考） | [`../test/old/ACCEPTANCE-GUIDE.md`](../test/old/ACCEPTANCE-GUIDE.md) · 新案例 [`../test_task/`](../test_task/README.md) |
+| 自主跑用例 / deploy 发现 bug | [`../test-to-settle/README.md`](../test-to-settle/README.md) → `test_bug` / `round` |
+| 大改 / PM 拍板 | [`../test-to-settle/complexity.md`](../test-to-settle/complexity.md) |
+| 端到端验收（历史参考） | [`../test-to-settle/old/ACCEPTANCE-GUIDE.md`](../test-to-settle/old/ACCEPTANCE-GUIDE.md) · 新案例 [`../test_task/`](../test_task/README.md) |
 | 提交规范 / commit 格式 | [`operations/DEV-STANDARDS.md`](operations/DEV-STANDARDS.md) |
 | **多 Agent 协作架构（可套用）** | [`../MULTI-AGENT-REPO-ARCHITECTURE.md`](../MULTI-AGENT-REPO-ARCHITECTURE.md) |
 | v1.1 交付物清单 | [`handoff/v1.1-DELIVERY-REPORT.md`](handoff/v1.1-DELIVERY-REPORT.md) |
@@ -94,7 +94,7 @@
 
 ### [`reviews/`](reviews/README.md) — 评审对线与踩坑
 
-**各 Agent 评审、回复、跟进的正式场所。** Review Agent **新开** `review-*.md` 写意见；Subject Agent **在下方**写回复；**仅 Review Agent 可宣布 `CLOSED`**。与 [`test/round-*.md`](../test/README.md) §4 Reviewer（验收 bug）分工不同。
+**各 Agent 评审、回复、跟进的正式场所。** Review Agent **新开** `review-*.md` 写意见；Subject Agent **在下方**写回复；**仅 Review Agent 可宣布 `CLOSED`**。与 [`test-to-settle/round-*.md`](../test-to-settle/README.md) §4 Reviewer（验收 bug）分工不同。
 
 | 类型 | 文件 |
 |---|---|
@@ -138,8 +138,8 @@
 |---|---|
 | **新接手程序员** | 根 `README` §1 → [`MULTI-AGENT-REPO-ARCHITECTURE.md`](../MULTI-AGENT-REPO-ARCHITECTURE.md) → `reviews/LESSONS-LEARNED.md` → `TASKS.md` 抢任务 |
 | **架构师** | `requirements/REQUIREMENTS.md` → `architecture/ARCHITECTURE-v2.md` + `DB-SCHEMA-v2.md` → 写 RI |
-| **部署 / 联调** | `handoff/v1.1-DEPLOY-GUIDE.md` → `deployment_log.md` → bug 进 `test/` |
-| **测试 Agent** | [`test_task/README.md`](../test_task/README.md) 抢 AT-*；FAIL → [`test/README.md`](../test/README.md) |
+| **部署 / 联调** | `handoff/v1.1-DEPLOY-GUIDE.md` → `deployment_log.md` → bug 进 `test-to-settle/` |
+| **测试 Agent** | [`test_task/README.md`](../test_task/README.md) 抢 AT-*；FAIL → [`test-to-settle/README.md`](../test-to-settle/README.md) |
 | **Review Agent** | [`reviews/README.md`](reviews/README.md) · `cp review-TEMPLATE.md` |
 
 ---
@@ -153,11 +153,11 @@
 | 根 `architecture-v*.md` | `architecture/history/` |
 | 根 `DEPLOYMENT.md` / `RUNBOOK.md` | `operations/` |
 | 根 `SUPPLEMENTARY-REQUIREMENTS.md` | `requirements/` |
-| 根 `VERIFICATION-REPORT.md` | `../test/old/` |
+| 根 `VERIFICATION-REPORT.md` | `../test-to-settle/old/` |
 | `docs/ARCHITECTURE-v2.md` 等根级 md | `architecture/` |
 | `docs/LESSONS-LEARNED.md` | `reviews/` |
 | `docs/DEV-STANDARDS.md` | `operations/` |
-| `docs/M1-*.md` / 旧验收指南 | `../test/old/` |
+| `docs/M1-*.md` / 旧验收指南 | `../test-to-settle/old/` |
 
 ---
 

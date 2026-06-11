@@ -27,7 +27,7 @@
 |---|---|
 | 多 Agent **协作框架** | 根 [`MULTI-AGENT-REPO-ARCHITECTURE.md`](../../MULTI-AGENT-REPO-ARCHITECTURE.md) |
 | 部署**操作**记录 | 本目录 `deployment_log.md` |
-| 部署/用例**发现 bug** | [`../../test/`](../../test/README.md) |
+| 部署/用例**发现 bug** | [`../../test-to-settle/`](../../test-to-settle/README.md) |
 | 自动化测试案例 | [`../../test_task/`](../../test_task/README.md) |
 | 任务占用 | 根 [`TASKS.md`](../../TASKS.md) |
 | 部署 SQL 脚本 | [`../../deploy/`](../../deploy/README.md) |

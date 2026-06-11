@@ -185,7 +185,7 @@ D-2 决策：金融百科 / 互动百科留 "已停用" 占位 entry，业务方
 
 ## 6. 相关文档
 
-- [V2-TEST-TASKS.md](../../test/old/V2-TEST-TASKS.md) — 端到端验收清单（历史）
+- [V2-TEST-TASKS.md](../../test-to-settle/old/V2-TEST-TASKS.md) — 端到端验收清单（历史）
 - [DEPLOYMENT-LOG.md](DEPLOYMENT-LOG.md) — 部署日志
 - [ENVIRONMENT-DEPENDENCIES.md](ENVIRONMENT-DEPENDENCIES.md) — 环境依赖
 - [RUNBOOK.md](RUNBOOK.md) — 运行手册

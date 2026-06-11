@@ -24,7 +24,7 @@
 |---|---|
 | 需求 → RI 拆解 | 本目录 `ARCH-DECOMPOSITION.md` |
 | 抢 **开发任务** | 根 [`TASKS.md`](../../TASKS.md) + 上表 RI |
-| 验收场景（历史） | [`../../test/old/ACCEPTANCE-GUIDE.md`](../../test/old/ACCEPTANCE-GUIDE.md) · 新案例 [`../../test_task/`](../../test_task/README.md) |
+| 验收场景（历史） | [`../../test-to-settle/old/ACCEPTANCE-GUIDE.md`](../../test-to-settle/old/ACCEPTANCE-GUIDE.md) · 新案例 [`../../test_task/`](../../test_task/README.md) |
 | 自动化案例 | [`../../test_task/`](../../test_task/README.md)（AT-* 对应 RI/MOD） |
 | 需求变更评审 | [`../reviews/`](../reviews/README.md)（非 bug） |
 

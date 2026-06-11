@@ -37,7 +37,7 @@
 ### 验收 / Review
 - **[2026-06-09-plan-i-p0-review.md](./2026-06-09-plan-i-p0-review.md)** — Plan I 静态 review (5 P0 + 1 P1)
 - **[2026-06-10-plan-i-10of10-achievement.md](./2026-06-10-plan-i-10of10-achievement.md)** — Plan I 10/10 测例全过复盘
-- **[../../test/old/ACCEPTANCE-GUIDE.md](../../test/old/ACCEPTANCE-GUIDE.md)** — 项目方 11 步验收 SOP（历史）
+- **[../../test-to-settle/old/ACCEPTANCE-GUIDE.md](../../test-to-settle/old/ACCEPTANCE-GUIDE.md)** — 项目方 11 步验收 SOP（历史）
 - **[LESSONS-LEARNED.md](./LESSONS-LEARNED.md)** — 踩坑大全
 
 ---

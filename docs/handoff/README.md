@@ -19,7 +19,7 @@
 | 我要… | 去这里 |
 |---|---|
 | 部署**操作**时间线（做了什么） | [`../operations/deployment_log.md`](../operations/deployment_log.md) |
-| 部署**发现 bug** | [`../../test/`](../../test/README.md) · `round` / `test_bug` |
+| 部署**发现 bug** | [`../../test-to-settle/`](../../test-to-settle/README.md) · `round` / `test_bug` |
 | 跑自动化案例 | [`../../test_task/`](../../test_task/README.md) + [`TASKS.md`](../../TASKS.md) AT-* |
 | 代码评审对线 | [`../reviews/`](../reviews/README.md) |
 
