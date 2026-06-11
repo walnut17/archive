@@ -558,8 +558,8 @@ MOD-01 (DB 迁移, 1.7d)
 
 #### MOD-05: 前端集成（Knowledge / Dashboard / 路由 / 配置）
 
-- **状态**: 未开发
-- **占用者**: 空
+- **状态**: 占用-阿根廷
+- **占用者**: 阿根廷
 - **影响文件**（独占 9 文件）: 2 新 + 4 改前端 + 3 配置（application.yml / config.example.json / GLM-KEY-SETUP.md）
 - **工作量**: ~1.5d
 - **依赖**: API 响应体确定（MOD-03 完工即可，**不等** MOD-04）
