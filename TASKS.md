@@ -639,3 +639,20 @@ MOD-01 (DB 迁移, 1.7d)
 
 *本 v1.1 阶段由 PM 维护。6 模块切分（按"独立小项目"原则），每模块 1 份独立 spec。*
 *接手 agent 只看自己那份 spec 即可开工。*
+
+#### T-v1.1-42: 后端 mvn 验证（PM 委托，沙箱受限）
+
+- **状态**: 未开发
+- **占用者**: 空
+- **影响文件**（独占）: `VERIFICATION-REPORT.md`（新建，仓库根）
+- **工作量**: 0.5d
+- **依赖**: 无
+- **可并行**: ✅
+- **详细 spec**: `.mavis/plans/draft/task-mvn-verification.md`
+- **验收**:
+  1. `mvn compile -DskipTests -B` BUILD SUCCESS
+  2. `mvn test -Dtest=V11IntegrationTest -B` 45 测例全过
+  3. `VERIFICATION-REPORT.md` 包含环境/compile/test 三段实测数据
+- **commit 模板**: `docs(verify): mvn 验证报告 VERIFICATION-REPORT.md`
+- **注意**: PM 沙箱无 JDK/cacerts，**必须接手 agent 跑**，不要在 PM 沙箱里尝试
+
