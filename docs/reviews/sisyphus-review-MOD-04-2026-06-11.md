@@ -151,17 +151,58 @@ findByUserIdAndReadOrderByCreatedAtDesc(userId, false, Pageable.unpaged())
 
 > **回应人**：阿根廷 | **fix commit**：`37e5d7a`
 
-| # | Sisyphus 项 | 阿根廷 | 说明 |
-|---|-------------|--------|------|
-| 1.1 | `DiffViewer` v-html XSS | **已改** | 引入 `dompurify`，`htmlDiff` 经 `DOMPurify.sanitize`。 |
-| 1.2 | `PreviewFrame` Word XSS | **已改** | `wordHtml` 经 `DOMPurify.sanitize`。 |
-| 2.1 | `MaskingService.unmaskRequestUrl` 逻辑 bug | **未改** | 复核：`unmaskRequestUrl` 仅在 `shouldMask==true` 分支（委员且未开敏感视图）设置；admin / viewerId=null 均 early return，审查行号上下文有误。 |
-| 2.2 | `NotificationController` 缺授权 | **已改** | 类级 `@PreAuthorize("isAuthenticated()")`。 |
-| 2.3 | `PreviewService` 缺材料权限 | **未改** | 认同风险；需 project_member / proposal 归属规则，改动面大，留 v2 RBAC 细化。 |
-| 2.4 | `Notification.vue` open redirect | **已改** | 仅 `row.link?.startsWith('/')` 时 `router.push`。 |
-| 3.1 | `markAllRead` N+1 | **未改** | 性能优化，非安全；通知量小可接受，v2 改 bulk UPDATE。 |
-| 3.2 | PDF iframe 无 sandbox | **已改** | 加 `sandbox=""`。 |
-| 3.3 | 上传文件大小无显式限制 | **未改** | 沿用 Spring Boot 默认 + `application.yml`；若业务放大上传需在配置文档显式标注，非本次 hotfix。 |
+| # | Sisyphus 项 | 阿根廷 |
+|---|-------------|--------|
+| 1.1 | `DiffViewer` v-html XSS | **已改** |
+| 1.2 | `PreviewFrame` Word XSS | **已改** |
+| 2.1 | `MaskingService.unmaskRequestUrl` | **未改** |
+| 2.2 | `NotificationController` 缺授权 | **已改** |
+| 2.3 | `PreviewService` 缺材料权限 | **未改** |
+| 2.4 | `Notification.vue` open redirect | **已改** |
+| 3.1 | `markAllRead` N+1 | **未改** |
+| 3.2 | PDF iframe 无 sandbox | **已改** |
+| 3.3 | 上传文件大小无显式限制 | **未改** |
+
+### 逐条理由
+
+**1.1 / 1.2 v-html XSS — 已改**
+
+- `jsondiffpatch` / `mammoth` 输出 HTML 若含恶意脚本，管理员打开 diff/预览即触发存储型 XSS。
+- 引入 `dompurify`，渲染前 `DOMPurify.sanitize()`；允许 diff 样式标签、剥离 script/onerror 等。
+
+**2.1 `MaskingService.unmaskRequestUrl` — 未改（经复核非 bug）**
+
+- 审查将行 46 理解为「无条件设置」；实际代码结构为：`viewerId==null` → return；`admin` → return；`!shouldMask` → return；**仅**委员且未开敏感视图时进入 `shouldMask` 分支才设 `unmaskRequestUrl`。
+- `displayName` 与 `customerName` 在脱敏场景下均返回 masked 值，符合 API 契约（前端用 `displayName` 展示、`customerName` 也不泄露明文）。
+
+**2.2 `NotificationController` — 已改**
+
+- 虽 Service 按当前用户 id 过滤，类级无注解依赖「全局 authenticated」隐式规则，可读性差且 refactor 时易漏。
+- 显式 `@PreAuthorize("isAuthenticated()")` 与 Security 最佳实践一致。
+
+**2.3 `PreviewService` 材料权限 — 未改**
+
+- 认同 IDOR 风险：知道 materialId 的登录用户可预览任意材料。
+- 正确修复需 `project_member` / proposal 归属 / 角色矩阵，牵涉 MOD-02 RBAC 与多处调用方，改动面大；v1.1 内网 MVP 可接受，v2 单列 RBAC 细化任务。
+
+**2.4 open redirect — 已改**
+
+- `row.link` 若被篡改为 `//evil.com` 或 `javascript:`，`router.push` 可能造成钓鱼跳转。
+- 限制为 `row.link?.startsWith('/')` 的内部 SPA 路径。
+
+**3.1 `markAllRead` N+1 — 未改**
+
+- 逐条 save 在通知量小时性能可接受；改为 `@Modifying` bulk UPDATE 是纯优化，不影响功能与安全。
+- v2 与通知量增长再优化。
+
+**3.2 PDF iframe sandbox — 已改**
+
+- 同源 PDF 查看器偶发脚本执行面；加 `sandbox=""` 限制 iframe 内脚本（保留 PDF 浏览器内置渲染）。
+
+**3.3 上传大小限制 — 未改**
+
+- Spring Boot 默认 multipart 限制仍生效；`application.yml` 未放大上传。
+- 若业务需 >1MB，应在配置与文档显式声明；当前无放大需求，非 hotfix。
 
 ---
 

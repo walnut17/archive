@@ -195,13 +195,41 @@ MOD-01 spec 预期 11 个 SQL 文件，实际交付 13 个。多出的 2 个是 
 
 > **回应人**：阿根廷 | **fix commit**：`37e5d7a`（`8fafce3` 含部分前置补丁）
 
-| # | Sisyphus 项 | 阿根廷 | 说明 |
-|---|-------------|--------|------|
-| 1.1 | `I-RI-22` 缺 `version` | **已改** | `project_fact_event` CREATE 补 `version`；`I-RI-31` 去掉重复 ADD，避免顺序执行冲突。`project_fact` 无 JPA Entity，未加（与 `init.sql` 一致）。 |
-| 1.2 | `I-RI-34` 缺 `committee` | **已改** | INSERT IGNORE 补 `committee`，与 `init.sql` 6 角色对齐。 |
-| 2.1 | `I-RI-28` 触发器 NULL 比较 | **未改** | 复核当前 `I-RI-28-fact-event-fields.sql` 已含 `(field IS NULL) <> (OLD.field IS NULL)`，与 `init.sql` 一致；审查时可能基于旧版 diff。 |
-| 3.1–3.2 | 文档计数偏差 | **未改** | 认同为 spec 计数口径差异，非功能 bug，不改代码。 |
-| 7.1–7.2 | Flyway / SQL CI 脚本 | **未改** | 认同建议，留 v2 引入 Flyway 测试 profile + CI 顺序跑迁移。 |
+| # | Sisyphus 项 | 阿根廷 |
+|---|-------------|--------|
+| 1.1 | `I-RI-22` 缺 `version` | **已改** |
+| 1.2 | `I-RI-34` 缺 `committee` | **已改** |
+| 2.1 | `I-RI-28` 触发器 NULL 比较 | **未改** |
+| 3.1–3.2 | 文档计数偏差 | **未改** |
+| 7.1–7.2 | Flyway / SQL CI 脚本 | **未改** |
+
+### 逐条理由
+
+**1.1 `I-RI-22` 缺 `version` — 已改**
+
+- `ProjectFactEvent` 实体带 `@Version`，迁移路径若只跑到 I-RI-22 而不跑 I-RI-31，JPA 会报乐观锁字段缺失。
+- 在 `I-RI-22` 的 `project_fact_event` CREATE 中补 `version INT NOT NULL DEFAULT 1`；同时从 `I-RI-31` 去掉对同表的重复 `ADD COLUMN version`，避免顺序执行时「列已存在」报错。
+- `project_fact` 表当前无对应 JPA Entity，且 `init.sql` 也未给该表加 `version`，故不对其加列，保持与现网 schema 一致。
+
+**1.2 `I-RI-34` 缺 `committee` — 已改**
+
+- 增量升级库只跑迁移、不重建时，`committee` 角色永远不会出现，导致 `@PreAuthorize("…COMMITTEE…")` 永久 403，与 TASKS 验收「6 role」不符。
+- 在 INSERT IGNORE 中补一行 `committee`，权限 JSON 与 `init.sql` 种子数据对齐。
+
+**2.1 `I-RI-28` 触发器 NULL 比较 — 未改**
+
+- 打开当前仓库 `I-RI-28-fact-event-fields.sql`，`evidence` / `confidence` / `created_by` / `confidence_level` 均已写 `(field IS NULL) <> (OLD.field IS NULL)`，与 `init.sql` 触发器一致。
+- 判断为审查时基于旧 diff 的误报；再改会产生无意义 churn，且对已跑过迁移的环境无收益。
+
+**3.1–3.2 文档计数偏差 — 未改**
+
+- 新表 10 张 vs spec 写 7 张、迁移 13 个 vs 预期 11 个，属于 spec 合并计数与实现拆分的口径差异，不影响运行时行为。
+- 修正 spec 属于文档维护，不在 v1.1 hotfix 范围。
+
+**7.1–7.2 Flyway / SQL CI — 未改**
+
+- 认同 Sisyphus 建议：裸 `mysql < file.sql` 无法自动跟踪已执行脚本，长期应引入 Flyway。
+- v1.1 交付窗口内改 CI + 测试 profile 改动面大；已记入 v2 backlog，待 owner 定 staging 流程后实施。
 
 ---
 

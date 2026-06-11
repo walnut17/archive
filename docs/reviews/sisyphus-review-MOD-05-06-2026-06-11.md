@@ -116,24 +116,56 @@ MOD-03 的 5 级隐式切换、7-fold hardening、网络字典等关键功能，
 
 ## 阿根廷回应（2026-06-11）
 
-> **回应人**：阿根廷 | **fix commit**：`37e5d7a` 及前序补丁；汇总见 `sisyphus-fixes-2026-06-11.md`
+> **回应人**：阿根廷 | **fix commit**：`37e5d7a` / `48abc9d` / `8fafce3`；汇总见 `sisyphus-fixes-2026-06-11.md`
 
 ### MOD-05
 
-| 项 | 阿根廷 | 说明 |
-|----|--------|------|
-| `AnimatedModeSwitch` / `Dashboard` / 配置 / 文档 | **未改** | 认同审查「干净」，无需改动。 |
-| `Knowledge.vue` `Record<string,string>` 弱类型 | **未改** | 建议合理；强类型映射小改可单开 FE 任务，非 v1.1 hotfix。 |
+| 项 | 阿根廷 |
+|----|--------|
+| `AnimatedModeSwitch` / `Dashboard` / 配置 / 文档 | **未改** |
+| `Knowledge.vue` 弱类型 | **未改** |
+
+**AnimatedModeSwitch 等 — 未改**
+
+- Sisyphus 结论为「干净」，动画、配置、文档与 v1.1 spec 一致，无缺陷需修。
+
+**Knowledge.vue `Record<string,string>` — 未改**
+
+- 弱类型仅损失编译期枚举 exhaustiveness check，运行时映射已覆盖现有 4 个 `SwitchDecision` 值。
+- 强类型需共享 TS 类型或 OpenAPI codegen，单文件小改收益有限，可单开 FE 任务，不挡 v1.1 发布。
 
 ### MOD-06
 
-| 项 | 阿根廷 | 说明 |
-|----|--------|------|
-| `V11IntegrationTest` JDBC 手写建表 | **未改** | 认同风险；Flyway test profile 改动面大，留 v2。已用 JPA seed 网络字典（`8fafce3`）替代 MERGE。 |
-| 测试断言偏弱 / 缺 MockMvc E2E | **部分改** | `scenario3` 加 EXPORT 审计断言（`48abc9d`）；全量 API E2E 留 v2。 |
-| 缺 MOD-03 Agent 专项测试 | **未改** | `V11IntegrationTest` 已有 `FindProjectTool` / `NetworkDictLookupTool` / `scenario7` 冒烟；7-fold / 6 层降级单测留 v2。 |
-| 文档同步 | **未改** | 认同完整，MOD-06 交付时已同步。 |
-| `ProjectForm` / `QaResponse` / `AgentEngine` | **部分改** | `8fafce3` 补 AI 预填与抽取预览；其余审查项无需改。 |
+| 项 | 阿根廷 |
+|----|--------|
+| JDBC 手写建表 | **未改** |
+| 断言偏弱 / MockMvc E2E | **部分改** |
+| 缺 MOD-03 Agent 专项测试 | **未改** |
+| 文档同步 | **未改** |
+| `ProjectForm` / 抽取预览 | **部分改** |
+
+**JDBC 手写建表 — 未改**
+
+- 认同：测试 schema 与 Flyway 迁移可能漂移，迁移 SQL 错误测不出来。
+- H2 + `@SpringBootTest` 接 Flyway test profile 需改 `application-test.yml`、处理 MySQL 方言差异（触发器 SIGNAL 等），工作量 >1d；v2 专项。已把网络字典 seed 从 MERGE 改为 JPA（`8fafce3`）减少 H2 脆弱点。
+
+**断言 / E2E — 部分改**
+
+- 全量 MockMvc + JWT + 响应体断言理想但 45 用例重写成本高。
+- `48abc9d` 在 `scenario3_ExportPdf` 增加 `auditLogRepo` 断言 `type=EXPORT`，补强 RI-64 审计链路；其余场景留 v2 Cypress/Playwright。
+
+**Agent 专项测试 — 未改**
+
+- 已有 `scenario7` 多轮锁定、`FindProjectTool`/`NetworkDictLookupTool`/`QueryMysqlTool` bean 冒烟。
+- 7-fold 每条规则、6 层降级每一层的单测需大量 fixture，MOD-03 逻辑审查已通过，单测 debt 记 v2。
+
+**文档同步 — 未改**
+
+- MOD-06 交付时已同步 ARCH-DECOMPOSITION、6 分章 architecture、LESSONS 等；无需重复劳动。
+
+**ProjectForm / 抽取 — 部分改**
+
+- Sisyphus 审 MOD-05 时 ProjectForm 尚无 AI 预填；`8fafce3` 已补 `extract-preview` API、`?materialVersionId=` 自动抽取、失败 banner/重试，覆盖 RI-30 用户路径。
 
 ---
 

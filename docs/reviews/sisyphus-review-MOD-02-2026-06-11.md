@@ -127,16 +127,58 @@ User 同时继承了 `BaseEntity`（含 `createdBy/updatedBy`）和有自己的 
 
 > **回应人**：阿根廷 | **fix commit**：`37e5d7a`
 
-| # | Sisyphus 项 | 阿根廷 | 说明 |
-|---|-------------|--------|------|
-| 1.1 | `ProposalController.delete` 无授权 | **已改** | 加 `@PreAuthorize('ADMIN','SECRETARY','PM')`，改调 `softDelete(id, userId)`。 |
-| 1.2 | `User` 缺 `@SQLRestriction` | **已改** | 加 `@SQLRestriction("deleted_at IS NULL")`。 |
-| 1.3 | `committee` 迁移遗漏 | **已改** | 在 MOD-01 `I-RI-34` 修复（见 MOD-01 review §8）。 |
-| 2.1 | JWT `uid` NPE | **已改** | `uid` 非 Number 时 debug 日志并跳过认证，不再 500。 |
-| 2.2 | `BusinessAop` 覆盖面不够 | **未改** | 排除 `FailureLogService` 为防递归，属有意设计；扩 AOP 切面留 v2。 |
-| 2.3 | `MaterialService.delete` userId 为 null | **未改** | 对外 DELETE 已走 `MaterialController.softDelete(id, userId)`；内部 `delete()` 无 Controller 调用，低优先级。 |
-| 3.1 | `ProjectService.rollback` 手动改 version | **未改** | 回滚为事件流记录，非完整快照；手动 bump version 暂保留，v2 接 `project_snapshot` 时一并重构。 |
-| 3.2 | `User` 与 BaseEntity 审计字段冲突 | **未改** | `User` 未继承 `BaseEntity`，审查描述与当前代码不符；无实际冲突。 |
+| # | Sisyphus 项 | 阿根廷 |
+|---|-------------|--------|
+| 1.1 | `ProposalController.delete` 无授权 | **已改** |
+| 1.2 | `User` 缺 `@SQLRestriction` | **已改** |
+| 1.3 | `committee` 迁移遗漏 | **已改** |
+| 2.1 | JWT `uid` NPE | **已改** |
+| 2.2 | `BusinessAop` 覆盖面不够 | **未改** |
+| 2.3 | `MaterialService.delete` userId 为 null | **未改** |
+| 3.1 | `ProjectService.rollback` 手动改 version | **未改** |
+| 3.2 | `User` 与 BaseEntity 审计字段冲突 | **未改** |
+
+### 逐条理由
+
+**1.1 `ProposalController.delete` — 已改**
+
+- 与 `ProjectController` / `MaterialController` 不一致：任意已登录用户可软删任意议案，属明确权限漏洞。
+- 加 `@PreAuthorize("hasAnyRole('ADMIN','SECRETARY','PM')")`，与 reserve/revoke 等写操作角色集一致；改调 `softDelete(id, userId)` 以写入 `deleted_by` 审计。
+
+**1.2 `User` 缺 `@SQLRestriction` — 已改**
+
+- Project/Proposal/Material 均已过滤软删行，User 漏掉会导致：列表仍可见已删账号、按 id 查 user 可能命中幽灵用户。
+- 加 `@SQLRestriction("deleted_at IS NULL")`，与其它实体策略统一。
+
+**1.3 `committee` 迁移遗漏 — 已改**
+
+- RBAC 代码已定义 `Role.CODE_COMMITTEE` 及 `@PreAuthorize(…COMMITTEE…)`，库侧缺角色会导致授权链断裂。
+- 在 MOD-01 `I-RI-34` 补种子（见 MOD-01 review §8），不在 Java 层 workaround。
+
+**2.1 JWT `uid` NPE — 已改**
+
+-  malformed 或旧版 token 缺 `uid` 时，`((Number) null).longValue()` 直接 500，影响全站已带 Authorization 头的请求。
+- 改为：`uid` 非 Number 则打 debug 并跳过认证（等同无 token），由 Spring Security 返回 401，行为可预期。
+
+**2.2 `BusinessAop` 覆盖面 — 未改**
+
+- 排除 `FailureLogService` 是为避免「记失败日志时又失败 → 再记日志」的递归；这是刻意设计。
+- 扩到 NotificationService/RbacService 需重新定义切点与异常分类，超出 review hotfix；留 v2 统一 business 异常策略。
+
+**2.3 `MaterialService.delete` userId — 未改**
+
+- 对外 HTTP 删除已走 `MaterialController.delete` → `softDelete(id, userId)`，审计完整。
+- 内部 `delete(id)` 传 null 但 **无 Controller 引用**（grep 仅 Proposal 侧类似路径）；改签名收益低，避免无关 diff。
+
+**3.1 `ProjectService.rollback` 手动 version — 未改**
+
+- v1.1 回滚仅写 `project_fact_event` ROLLBACK 事件，无 `project_snapshot` 表，不是完整字段级还原。
+- 手动 `setVersion(+1)` 与当前「事件流 + 乐观锁 bump」实现绑定；等 v2 快照回滚一并重构，避免半套方案。
+
+**3.2 `User` vs BaseEntity — 未改**
+
+- 审查称 User 继承 BaseEntity；实际 `User.java` **未** extends BaseEntity，自有 `createdAt`/`updatedAt` 字段，不存在 `@CreatedBy` 覆盖冲突。
+- 属审查与代码不符，无需修改。
 
 ---
 

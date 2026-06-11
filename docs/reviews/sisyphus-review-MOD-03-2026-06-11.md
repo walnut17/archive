@@ -115,17 +115,54 @@ FailureType 已定义 5 种，但没有失败恢复/重试逻辑。
 
 ## 6. 阿根廷回应（2026-06-11）
 
-> **回应人**：阿根廷 | **fix commit**：`8fafce3`（GlmService）；其余见 `37e5d7a` 前序
+> **回应人**：阿根廷 | **fix commit**：`8fafce3`（GlmService）；其余见前序补丁
 
-| # | Sisyphus 项 | 阿根廷 | 说明 |
-|---|-------------|--------|------|
-| 1.1 | `GlmService` 重复 `safe()` 编译错误 | **已改** | `8fafce3` 删除重复方法。 |
-| 2.1 | `UNCLEAR` 静默锁定与 prompt 不一致 | **未改** | 高置信（≥0.7）静默锁定为产品取舍；prompt 与代码对齐需单独 RI，不在 review hotfix 范围。 |
-| 2.2 | `NetworkDictService` URL 拼接风险 | **未改** | 当前仅白名单 `baidu`/`wiki` 分支；新 source 须走 code review，v2 可加 URL 校验器。 |
-| 2.3 | 网络字典缺 Rate Limiting | **未改** | P2；生产依赖 API key + 网关限流，代码内 QPS 留 v2。 |
-| 3.1 | `SwitchDecision` 前端弱类型 | **未改** | 前端 `Record<string,string>` 够用；强类型映射可随 MOD-05 小改，非阻塞。 |
-| 3.2 | `ExtractionEngine.onFailure` 无重试 | **未改** | 同步预览/立项路径已在 `8fafce3` 加 `extractForPreview` + 前端重试；异步 `onFailure` 仍只打日志。 |
-| 5 | 验收 `mvn compile` | **已改** | 重复方法移除后应可编译；本机无 JDK 未实测，待 CI/owner 验证。 |
+| # | Sisyphus 项 | 阿根廷 |
+|---|-------------|--------|
+| 1.1 | `GlmService` 重复 `safe()` | **已改** |
+| 2.1 | `UNCLEAR` 静默锁定与 prompt 不一致 | **未改** |
+| 2.2 | `NetworkDictService` URL 拼接 | **未改** |
+| 2.3 | 网络字典缺 Rate Limiting | **未改** |
+| 3.1 | `SwitchDecision` 前端弱类型 | **未改** |
+| 3.2 | `ExtractionEngine.onFailure` 无重试 | **未改** |
+| 5 | 验收 `mvn compile` | **已改** |
+
+### 逐条理由
+
+**1.1 `GlmService` 重复 `safe()` — 已改**
+
+- 同签名方法定义两次，Java 编译器直接报错，阻塞 `mvn compile` 与部署。
+- `8fafce3` 删除重复定义，保留一处实现。
+
+**2.1 `UNCLEAR` 静默锁定 — 未改**
+
+- 代码在 `UNCLEAR` 且 `confidence >= 0.7` 时静默锁定，与 prompt 文案「反问用户」存在产品语义差。
+- 这是「高置信自动锁 vs 强制澄清」的取舍，需业务/PM 定 RI 后改 prompt 或改阈值；非安全/编译类 hotfix，不在 review 补丁范围。
+
+**2.2 `NetworkDictService` URL 拼接 — 未改**
+
+- 当前仅 `sourceCode.contains("baidu")` / `"wiki"` 两分支，无用户可控任意 URL。
+- 未来新增 source 必须在 code review 中加白名单；v2 可抽 `UrlValidator` 统一校验。现网风险可控。
+
+**2.3 Rate Limiting — 未改**
+
+- 内网部署 + 字典查询非高频路径；百科/维基侧更常见的是 IP 限流而非应用内 QPS。
+- P2 增强：生产建议 API 网关限流 + 业务方 API key；应用内令牌桶留 v2。
+
+**3.1 前端弱类型 — 未改**
+
+- `Record<string,string>` 在运行时与后端枚举字符串兼容，v1.1 已验收通过。
+- 改 `Record<SwitchDecision,string>` 需前后端共享类型或 codegen，收益为编译期提示，非阻塞。
+
+**3.2 `onFailure` 无重试 — 未改**
+
+- 异步批量抽取路径仍只打 warn；**同步**立项路径已在 `8fafce3` 实现 `extractForPreview` + `ProjectForm` 重试按钮，覆盖 RI-30 用户可见场景。
+- 异步队列重试需任务状态机，超出本次 scope。
+
+**5 `mvn compile` — 已改（逻辑上）**
+
+- BLOCKER 根因是重复方法，移除后应可编译。
+- 开发机无 JDK/Maven 未本地验证；请 owner/CI 跑 `mvn compile -B` 作最终确认。
 
 ---
 
