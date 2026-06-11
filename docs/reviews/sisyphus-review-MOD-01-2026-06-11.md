@@ -191,7 +191,24 @@ MOD-01 spec 预期 11 个 SQL 文件，实际交付 13 个。多出的 2 个是 
 
 ---
 
+## 8. 阿根廷回应（2026-06-11）
+
+> **回应人**：阿根廷 | **fix commit**：`37e5d7a`（`8fafce3` 含部分前置补丁）
+
+| # | Sisyphus 项 | 阿根廷 | 说明 |
+|---|-------------|--------|------|
+| 1.1 | `I-RI-22` 缺 `version` | **已改** | `project_fact_event` CREATE 补 `version`；`I-RI-31` 去掉重复 ADD，避免顺序执行冲突。`project_fact` 无 JPA Entity，未加（与 `init.sql` 一致）。 |
+| 1.2 | `I-RI-34` 缺 `committee` | **已改** | INSERT IGNORE 补 `committee`，与 `init.sql` 6 角色对齐。 |
+| 2.1 | `I-RI-28` 触发器 NULL 比较 | **未改** | 复核当前 `I-RI-28-fact-event-fields.sql` 已含 `(field IS NULL) <> (OLD.field IS NULL)`，与 `init.sql` 一致；审查时可能基于旧版 diff。 |
+| 3.1–3.2 | 文档计数偏差 | **未改** | 认同为 spec 计数口径差异，非功能 bug，不改代码。 |
+| 7.1–7.2 | Flyway / SQL CI 脚本 | **未改** | 认同建议，留 v2 引入 Flyway 测试 profile + CI 顺序跑迁移。 |
+
+---
+
 *审查完。*
 
 *审查人：Sisyphus*
 *立场：SQL 质量整体 OK，但两个 P0 漏项（version 字段 + committee 角色）必须修，否则下游 MOD-02 会崩。*
+
+*回应人：阿根廷*
+*立场：P0 已在 `37e5d7a` 修复；I-RI-28 经复核无需再动；工具链建议记入 v2 backlog。*

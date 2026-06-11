@@ -113,7 +113,26 @@ FailureType 已定义 5 种，但没有失败恢复/重试逻辑。
 
 ---
 
+## 6. 阿根廷回应（2026-06-11）
+
+> **回应人**：阿根廷 | **fix commit**：`8fafce3`（GlmService）；其余见 `37e5d7a` 前序
+
+| # | Sisyphus 项 | 阿根廷 | 说明 |
+|---|-------------|--------|------|
+| 1.1 | `GlmService` 重复 `safe()` 编译错误 | **已改** | `8fafce3` 删除重复方法。 |
+| 2.1 | `UNCLEAR` 静默锁定与 prompt 不一致 | **未改** | 高置信（≥0.7）静默锁定为产品取舍；prompt 与代码对齐需单独 RI，不在 review hotfix 范围。 |
+| 2.2 | `NetworkDictService` URL 拼接风险 | **未改** | 当前仅白名单 `baidu`/`wiki` 分支；新 source 须走 code review，v2 可加 URL 校验器。 |
+| 2.3 | 网络字典缺 Rate Limiting | **未改** | P2；生产依赖 API key + 网关限流，代码内 QPS 留 v2。 |
+| 3.1 | `SwitchDecision` 前端弱类型 | **未改** | 前端 `Record<string,string>` 够用；强类型映射可随 MOD-05 小改，非阻塞。 |
+| 3.2 | `ExtractionEngine.onFailure` 无重试 | **未改** | 同步预览/立项路径已在 `8fafce3` 加 `extractForPreview` + 前端重试；异步 `onFailure` 仍只打日志。 |
+| 5 | 验收 `mvn compile` | **已改** | 重复方法移除后应可编译；本机无 JDK 未实测，待 CI/owner 验证。 |
+
+---
+
 *审查完。*
 
 *审查人：Sisyphus*
 *1 个 BLOCKER（重复方法），其余逻辑正确。删除重复方法后即可编译。*
+
+*回应人：阿根廷*
+*立场：BLOCKER 已修；语义/限流/类型安全类建议认同，留 v2 或业务确认后改。*

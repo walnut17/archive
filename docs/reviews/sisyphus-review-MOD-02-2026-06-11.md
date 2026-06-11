@@ -123,7 +123,27 @@ User 同时继承了 `BaseEntity`（含 `createdBy/updatedBy`）和有自己的 
 
 ---
 
+## 5. 阿根廷回应（2026-06-11）
+
+> **回应人**：阿根廷 | **fix commit**：`37e5d7a`
+
+| # | Sisyphus 项 | 阿根廷 | 说明 |
+|---|-------------|--------|------|
+| 1.1 | `ProposalController.delete` 无授权 | **已改** | 加 `@PreAuthorize('ADMIN','SECRETARY','PM')`，改调 `softDelete(id, userId)`。 |
+| 1.2 | `User` 缺 `@SQLRestriction` | **已改** | 加 `@SQLRestriction("deleted_at IS NULL")`。 |
+| 1.3 | `committee` 迁移遗漏 | **已改** | 在 MOD-01 `I-RI-34` 修复（见 MOD-01 review §8）。 |
+| 2.1 | JWT `uid` NPE | **已改** | `uid` 非 Number 时 debug 日志并跳过认证，不再 500。 |
+| 2.2 | `BusinessAop` 覆盖面不够 | **未改** | 排除 `FailureLogService` 为防递归，属有意设计；扩 AOP 切面留 v2。 |
+| 2.3 | `MaterialService.delete` userId 为 null | **未改** | 对外 DELETE 已走 `MaterialController.softDelete(id, userId)`；内部 `delete()` 无 Controller 调用，低优先级。 |
+| 3.1 | `ProjectService.rollback` 手动改 version | **未改** | 回滚为事件流记录，非完整快照；手动 bump version 暂保留，v2 接 `project_snapshot` 时一并重构。 |
+| 3.2 | `User` 与 BaseEntity 审计字段冲突 | **未改** | `User` 未继承 `BaseEntity`，审查描述与当前代码不符；无实际冲突。 |
+
+---
+
 *审查完。*
 
 *审查人：Sisyphus*
 *3 个 P0（ProposalController 权限、User @SQLRestriction、committee 角色迁移），1 个 P1（JWT NPE），其余 OK。*
+
+*回应人：阿根廷*
+*立场：3 P0 + 1 P1 已在 `37e5d7a` 修复；2.2/2.3/3.1 留 v2 或低优先级。*

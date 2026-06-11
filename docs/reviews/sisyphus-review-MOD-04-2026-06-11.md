@@ -136,14 +136,32 @@ findByUserIdAndReadOrderByCreatedAtDesc(userId, false, Pageable.unpaged())
 
 | 文件 | 用途 | 质量 |
 |------|------|------|
-| `DiffViewer.vue` | 事实档案 diff 展示 | ⚠️ XSS（v-html） |
+| `DiffViewer.vue` | 事实档案 diff 展示 | ✅ 已消毒（DOMPurify） |
 | `MaskedField.vue` | 脱敏字段组件 | ✅ 干净 |
 | `NotifBell.vue` | 通知铃铛 | ✅ 干净 |
-| `PreviewFrame.vue` | PDF/Word/图片预览 | ⚠️ XSS + iframe |
+| `PreviewFrame.vue` | PDF/Word/图片预览 | ✅ 已消毒 + iframe sandbox |
 | `ImportWizard.vue` | 导入向导 | ✅ 干净 |
-| `Notification.vue` | 通知列表 | ⚠️ router.push |
+| `Notification.vue` | 通知列表 | ✅ 已限内部路径 |
 | `ProjectBoard.vue` | 项目看板 | ✅ 干净 |
 | `store/notification.ts` | 通知状态管理 | ✅ 干净 |
+
+---
+
+## 6. 阿根廷回应（2026-06-11）
+
+> **回应人**：阿根廷 | **fix commit**：`37e5d7a`
+
+| # | Sisyphus 项 | 阿根廷 | 说明 |
+|---|-------------|--------|------|
+| 1.1 | `DiffViewer` v-html XSS | **已改** | 引入 `dompurify`，`htmlDiff` 经 `DOMPurify.sanitize`。 |
+| 1.2 | `PreviewFrame` Word XSS | **已改** | `wordHtml` 经 `DOMPurify.sanitize`。 |
+| 2.1 | `MaskingService.unmaskRequestUrl` 逻辑 bug | **未改** | 复核：`unmaskRequestUrl` 仅在 `shouldMask==true` 分支（委员且未开敏感视图）设置；admin / viewerId=null 均 early return，审查行号上下文有误。 |
+| 2.2 | `NotificationController` 缺授权 | **已改** | 类级 `@PreAuthorize("isAuthenticated()")`。 |
+| 2.3 | `PreviewService` 缺材料权限 | **未改** | 认同风险；需 project_member / proposal 归属规则，改动面大，留 v2 RBAC 细化。 |
+| 2.4 | `Notification.vue` open redirect | **已改** | 仅 `row.link?.startsWith('/')` 时 `router.push`。 |
+| 3.1 | `markAllRead` N+1 | **未改** | 性能优化，非安全；通知量小可接受，v2 改 bulk UPDATE。 |
+| 3.2 | PDF iframe 无 sandbox | **已改** | 加 `sandbox=""`。 |
+| 3.3 | 上传文件大小无显式限制 | **未改** | 沿用 Spring Boot 默认 + `application.yml`；若业务放大上传需在配置文档显式标注，非本次 hotfix。 |
 
 ---
 
@@ -151,3 +169,6 @@ findByUserIdAndReadOrderByCreatedAtDesc(userId, false, Pageable.unpaged())
 
 *审查人：Sisyphus*
 *2 个 XSS（DiffViewer + PreviewFrame 的 v-html）、1 个逻辑 bug（MaskingService.unmaskRequestUrl）。前端整体风格统一，后端安全意识在线。*
+
+*回应人：阿根廷*
+*立场：2 XSS + 通知安全 3 项已修；MaskingService 经复核非 bug；Preview 权限与 N+1 留 v2。*

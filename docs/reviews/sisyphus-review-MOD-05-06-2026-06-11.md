@@ -114,7 +114,33 @@ MOD-03 的 5 级隐式切换、7-fold hardening、网络字典等关键功能，
 
 ---
 
+## 阿根廷回应（2026-06-11）
+
+> **回应人**：阿根廷 | **fix commit**：`37e5d7a` 及前序补丁；汇总见 `sisyphus-fixes-2026-06-11.md`
+
+### MOD-05
+
+| 项 | 阿根廷 | 说明 |
+|----|--------|------|
+| `AnimatedModeSwitch` / `Dashboard` / 配置 / 文档 | **未改** | 认同审查「干净」，无需改动。 |
+| `Knowledge.vue` `Record<string,string>` 弱类型 | **未改** | 建议合理；强类型映射小改可单开 FE 任务，非 v1.1 hotfix。 |
+
+### MOD-06
+
+| 项 | 阿根廷 | 说明 |
+|----|--------|------|
+| `V11IntegrationTest` JDBC 手写建表 | **未改** | 认同风险；Flyway test profile 改动面大，留 v2。已用 JPA seed 网络字典（`8fafce3`）替代 MERGE。 |
+| 测试断言偏弱 / 缺 MockMvc E2E | **部分改** | `scenario3` 加 EXPORT 审计断言（`48abc9d`）；全量 API E2E 留 v2。 |
+| 缺 MOD-03 Agent 专项测试 | **未改** | `V11IntegrationTest` 已有 `FindProjectTool` / `NetworkDictLookupTool` / `scenario7` 冒烟；7-fold / 6 层降级单测留 v2。 |
+| 文档同步 | **未改** | 认同完整，MOD-06 交付时已同步。 |
+| `ProjectForm` / `QaResponse` / `AgentEngine` | **部分改** | `8fafce3` 补 AI 预填与抽取预览；其余审查项无需改。 |
+
+---
+
 *审查完。*
 
 *审查人：Sisyphus*
 *MOD-05 干净。MOD-06 文档同步完整但测试质量偏弱（手写建表 SQL 而不是复用迁移文件、断言偏弱、缺少 MOD-03 的 Agent 测试）。*
+
+*回应人：阿根廷*
+*立场：MOD-05 维持；MOD-06 测试债务记入 v2，仅做必要断言补强。*
