@@ -1,6 +1,6 @@
 # Plan UP-0611-04 — 知识库聊天式 UI 重构
 
-> **状态**：`DRAFT`（待 Implement 认领）
+> **状态**：`VERIFY`（待 Reviewer 审 / `npm run build` 回归）
 > **活跃目录**：`upgrade_to_settle/` · 完工后 → `done/`
 
 ---
@@ -153,11 +153,20 @@ npm run build  # 0 错
 
 ## 5. Implement
 
-（Implementer 填写）
+| **Agent** | Sisyphus |
+|---|---|
+| **时间** | 2026-06-11 |
+| **摘要** | ChatMessage + ChatInput 组件创建；Knowledge.vue 重构为聊天式 UI |
+
+| 项 | Commit | 说明 | 状态 |
+|---|---|---|---|
+| ChatMessage.vue | (当前) | 消息气泡 + 步骤折叠 + 来源 | `DONE` |
+| ChatInput.vue | (当前) | 底栏输入 + Enter 发送 | `DONE` |
+| Knowledge.vue 重构 | (当前) | 消息列表 + 多轮路由 | `DONE` |
 
 ---
 
-## 6. Review
+## 6. 评审（Reviewer Agent）
 
 | Agent | 时间 | 结论 |
 |---|---|---|
