@@ -82,15 +82,12 @@ public class LlmUsageService {
                 ? repo.findByCreatedAtBetweenOrderByCreatedAtDesc(
                         now.minusDays(30), now.plusSeconds(1),
                         PageRequest.of(0, recentLimit)).getContent()
-                : repo.findByUserIdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                        null,  // 简化:实际按 username 查
+                : repo.findByUsernameAndCreatedAtBetweenOrderByCreatedAtDesc(
+                        username,
                         now.minusDays(30), now.plusSeconds(1),
                         PageRequest.of(0, recentLimit)).getContent();
 
-        // 简化:按 username 过滤 recent(实际应该按 userId 查,这里先用全量)
-        // 真实生产可加 findByUsername 方法
         List<LlmUsageStats.RecentCall> recent = recentLogs.stream()
-                .filter(l -> username == null || username.equals(l.getUsername()))
                 .map(l -> LlmUsageStats.RecentCall.builder()
                         .id(l.getId())
                         .username(l.getUsername())

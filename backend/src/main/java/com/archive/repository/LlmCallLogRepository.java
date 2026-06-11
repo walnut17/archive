@@ -23,6 +23,10 @@ public interface LlmCallLogRepository extends JpaRepository<LlmCallLog, Long> {
     Page<LlmCallLog> findByUserIdAndCreatedAtBetweenOrderByCreatedAtDesc(
             Long userId, LocalDateTime start, LocalDateTime end, Pageable pageable);
 
+    /** 按用户名 + 时间段分页查. */
+    Page<LlmCallLog> findByUsernameAndCreatedAtBetweenOrderByCreatedAtDesc(
+            String username, LocalDateTime start, LocalDateTime end, Pageable pageable);
+
     /** 按时间窗口查所有. */
     Page<LlmCallLog> findByCreatedAtBetweenOrderByCreatedAtDesc(
             LocalDateTime start, LocalDateTime end, Pageable pageable);

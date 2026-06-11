@@ -43,7 +43,7 @@ public class LlmUsageController {
      * 全员聚合(仅 admin).
      */
     @GetMapping("/stats")
-    @PreAuthorize("hasRole('admin')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<LlmUsageStats> stats(@RequestParam(defaultValue = "50") int recentLimit) {
         return ApiResponse.ok(service.getUsage(null, recentLimit));
     }

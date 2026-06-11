@@ -5,7 +5,7 @@
 > **详情不在本文件**：两目录存具体任务；本表只存 **ID + 路径 + 占用状态**。  
 > **协作架构**：[`MULTI-AGENT-REPO-ARCHITECTURE.md`](MULTI-AGENT-REPO-ARCHITECTURE.md)
 
-> **占用规则**：状态变更 **10 秒内 commit + push main**。**谁先 push 谁占**。
+> **Coder** → 下文 **🎯 任务路由** · **代码审查员** → [`CODE-REVIEWER.md`](CODE-REVIEWER.md) + [`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) / [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)
 
 ---
 
@@ -42,10 +42,10 @@ complexity.md（大改中转路由，不在 TASKS）
 | 路由 ID | 类型 | 详情路径 | 状态 | 占用人 | 摘要 |
 |---|---|---|---|---|---|
 | **T-0611-08** | DEBUG | [`test-to-settle/round-2026-06-11-v1.1-deploy.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) §1.3 · `LlmUsage.vue` | `VERIFY` | — | 125 pull 后 AI 用量无双 `/api` |
-| **T-0611-09** | DEBUG | 同上 §1.3 · `LlmUsageService` | `未开发` | — | recent 查询 userId=null |
-| **T-0611-18** | DEBUG | 同上 §1.3 · `LlmUsageController` | `未开发` | — | admin `stats` 403 |
+| **T-0611-09** | DEBUG | 同上 §1.3 · `LlmUsageService` | `已完成(Sisyphus / 2026-06-11)` | Sisyphus | recent 查询改为 findByUsername |
+| **T-0611-18** | DEBUG | 同上 §1.3 · `LlmUsageController` | `已完成(Sisyphus / 2026-06-11)` | Sisyphus | `hasRole('admin')`→`hasRole('ADMIN')` 大小写修复 |
 | **T-0611-20** | DEBUG | 同上 §1.9 · `FindProjectTool` | `VERIFY` | — | lmz find_project；125 rebuild |
-| **UP-0611-01** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) | `未开发` | — | archive_fs ls/grep/read |
+| **UP-0611-01** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) | `已完成(Sisyphus / 2026-06-11)` | Sisyphus | archive_fs ls/grep/read |
 
 **complexity 中转（不进本表）**：T-0611-15→C-0611-01 · T-0611-19→C-0611-08 · T-0611-05/06/10/11→C-0611-04/09/10/11 · 架构 A-1～A-6→C-0611-02～07
 
