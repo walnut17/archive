@@ -9,7 +9,7 @@
 
 | 版本 | 日期 | 服务器 | 指挥/执行 | 状态 |
 |---|---|---|---|---|
-| **v1.1 / 0611** | 2026-06-11 | `182.168.1.125` | 阿根廷 (AI 指挥) + 用户 (125 上操作) | 🟡 进行中 — DB 迁移待确认，前端验收未跑完 |
+| **v1.1 / 0611** | 2026-06-11 | `182.168.1.125` | 阿根廷 (AI 指挥) + 用户 (125 上操作) | 🟡 DB 迁移 ✅ — 待浏览器验证 + 7 场景验收 |
 
 ---
 
@@ -173,28 +173,23 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'archive_db.failure_log' does
 
 ---
 
-### Step 7 — 数据库 v1.1 迁移 🟡 用户执行中
+### Step 7 — 数据库 v1.1 迁移 ✅（2026-06-11 用户确认）
 
-**决策：** 一次性补全，合并为单文件，MySQL 终端 `source` 一次跑完。
+**执行结果：** MySQL 客户端显示 **112 queries 全部成功**。
 
-**文件：** `deploy/sql/migrate_260611_01.sql`
+**文件：** `deploy/sql/migrate_260611_01.sql`（commit `5551b74` 完整版）
 
-**125 上执行：**
+**125 上已执行：**
 
 ```powershell
 cd D:\projects-online
-git pull origin main   # 含 5551b74
-
+git pull origin main
 mysql -u archive_app -p archive_db < D:\projects-online\deploy\sql\migrate_260611_01.sql
 ```
 
-或在 mysql 内：
+（或 mysql 内 `source D:/projects-online/deploy/sql/migrate_260611_01.sql`）
 
-```sql
-source D:/projects-online/deploy/sql/migrate_260611_01.sql
-```
-
-**脚本覆盖（完整版 5551b74）：**
+**脚本覆盖：** 见下表（完整版含 v2 旧表补丁 + v1.1 旧表 ALTER + 新表 + 触发器，幂等可重跑）。
 
 | 类别 | 内容 |
 |---|---|
@@ -202,23 +197,19 @@ source D:/projects-online/deploy/sql/migrate_260611_01.sql
 | **B. v1.1 旧表 ALTER** | `project/proposal/material/user/audit_log` 软删+version；`proposal` 附条件/编号；`audit_log.type`；`user.sensitive_view_enabled` |
 | **C. v1.1 新表** | `failure_log`、`user_role`、`notification`(is_read)、`import_*`、`project_fact*`、`business_term` 等 + RBAC 种子 + 触发器 |
 
-**特性：** `sp_add_column_if_missing` — 列/索引已存在则跳过，可重复执行。
+**跑完后：** 无需重启 jar → 浏览器 **Ctrl+F5** 验证控制台无 500。
 
-**踩坑 — PowerShell 整段粘贴一行报错：**
+---
 
-```text
-表达式或语句中包含意外的标记 "$migDir"
-```
+### Step 7 附录 — 迁移脚本踩坑（已解决）
 
-**处理：** 不要用一行脚本；用 `source migrate_260611_01.sql` 或 `deploy/sql/run-v11-migrations.ps1`（需 pull 后存在）。
-
-**跑完后：** 无需重启 jar，浏览器 **Ctrl+F5**；看脚本末尾验证输出 + 是否还有 500。
+**PowerShell 整段粘贴一行报错：** 不要用一行 `$files=...foreach`；改用 `source migrate_260611_01.sql` 或 `run-v11-migrations.ps1`。
 
 ---
 
 ## 4. 尚未完成（下次继续）
 
-- [ ] 确认 `migrate_260611_01.sql` 在 125 执行成功（贴验证输出）
+- [x] 确认 `migrate_260611_01.sql` 在 125 执行成功（**112 queries OK**）
 - [ ] 浏览器登录无 500，通知/待办/health 正常
 - [ ] 跑 `v1.1-DEPLOY-GUIDE.md` **7 大场景** + v1.0 零回归 4 项
 - [ ] 改 `admin` 默认密码、配真实 GLM API key
