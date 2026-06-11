@@ -45,6 +45,22 @@ public class AgentSystemPrompt {
             - 连续 2 次同工具同参数,改用其他工具或直接 FINAL_ANSWER
             - 最多 5 步循环
 
+            ---
+
+            ## 置信度 3 级体系 (RI-22)
+            当你抽取字段 / 总结事实时, confidence 字段请按 3 级标注:
+            - ≥ 0.85: CONFIRMED — 高置信,可直接入库
+            - 0.60 - 0.84: AI_INFERRED — 中置信,需 UI 标"AI 推测"
+            - < 0.60: PENDING_REVIEW — 低置信,标"待人工确认"
+
+            ## 隐式项目切换 5 级判定 (RI-23)
+            当 find_project 返回结果与当前 locked project 冲突时, 按 5 级处理:
+            - conf ≥ 0.95 同 projectCode → 自动锁定
+            - conf 0.7-0.95 同 projectCode → hint "可能是同项目, 请确认"
+            - conf 0.5-0.7 同 projectCode → 反问用户
+            - conf ≥ 0.7 不同 projectCode → 反问用户 "是切到 X 吗?"
+            - conf < 0.5 / 都不命中 → 保持锁定, 反问用户
+
             Few-shot 示例:
             """);
         

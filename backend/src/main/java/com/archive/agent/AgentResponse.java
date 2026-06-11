@@ -7,6 +7,10 @@ public class AgentResponse {
     private List<AgentStep> steps;
     private List<String> sources;
     private boolean agentMode;
+    /** v1.1: 隐式切换 hint, null = v1.0 路径. */
+    private String projectSwitchHint;
+    /** v1.1: AI_INFERRED / PENDING_REVIEW, null = 不显示. */
+    private String confidenceBadge;
     
     public AgentResponse() {}
     
@@ -18,4 +22,8 @@ public class AgentResponse {
     public void setSources(List<String> sources) { this.sources = sources; }
     public boolean isAgentMode() { return agentMode; }
     public void setAgentMode(boolean agentMode) { this.agentMode = agentMode; }
+    public String getProjectSwitchHint() { return projectSwitchHint; }
+    public void setProjectSwitchHint(String projectSwitchHint) { this.projectSwitchHint = projectSwitchHint; }
+    public String getConfidenceBadge() { return confidenceBadge; }
+    public void setConfidenceBadge(String confidenceBadge) { this.confidenceBadge = confidenceBadge; }
 }

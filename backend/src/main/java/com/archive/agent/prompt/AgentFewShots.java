@@ -59,6 +59,15 @@ public class AgentFewShots {
             - 字段名严格: query_mysql 用 "table" (不是 entity), "where" (不是 filters), "column" (不是 field)
             - operator 严格: = / != / > / >= / < / <= / in / like / is_null / is_not_null
             - aggregate: count / sum / avg / max / min / group_by
-            - 没信息就说"我不知道" + FINAL_ANSWER, 不要编造""";
+            - 没信息就说"我不知道" + FINAL_ANSWER, 不要编造
+
+            示例 5 (英文术语 + network_dict_lookup):
+            用户: "vacant claim 是什么意思?"
+            思考: 用户问英文术语, 先查网络字典.
+            工具: network_dict_lookup, args: {"query": "空债权", "source": "baidu_baike"}
+            观察: {"found":true,"definition":"空债权 = 借款人无财产可供执行的债权...","source":"baidu_baike"}
+
+            思考: 拿到中文定义, 翻译给用户.
+            工具: FINAL_ANSWER, args: {"answer": "vacant claim（空债权）= 借款人无财产可供执行的债权...", "sources": [{"title":"百度百科","source":"baidu_baike"}]}""";
     }
 }

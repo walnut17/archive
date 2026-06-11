@@ -1,5 +1,6 @@
 package com.archive.engine;
 
+import com.archive.common.FailureType;
 import com.archive.entity.ExtractionMethod;
 import com.archive.entity.MaterialVersion;
 import com.archive.repository.ExtractionMethodRepository;
@@ -7,6 +8,7 @@ import com.archive.repository.MaterialVersionRepository;
 import com.archive.service.AuditLogService;
 import com.archive.provider.LLMProvider;
 import com.archive.provider.LLMProviderFactory;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.net.SocketTimeoutException;
 import java.util.Collections;
 import java.util.Map;
 
@@ -49,7 +52,6 @@ public class ExtractionEngine {
     @Async("taskExecutor")
     public Map<String, Object> extract(Long materialVersionId, String methodCode) {
         try {
-            // 1. 加载抽取方法
             ExtractionMethod method = extractionMethodRepository.findByCode(methodCode)
                     .orElseGet(() -> {
                         log.warn("Extraction method [{}] not found, fallback to [{}]",
@@ -61,7 +63,6 @@ public class ExtractionEngine {
                 return Collections.emptyMap();
             }
 
-            // 2. 读取材料内容
             MaterialVersion mv = materialVersionRepository.findById(materialVersionId).orElse(null);
             if (mv == null) {
                 log.warn("MaterialVersion not found: id={}", materialVersionId);
@@ -73,37 +74,62 @@ public class ExtractionEngine {
                 return Collections.emptyMap();
             }
 
-            // 3. 构建 Prompt
             String title = mv.getOriginalFilename();
             String prompt = method.getPromptTemplate()
                     .replace("${material_title}", title != null ? title : "")
                     .replace("${material_content}", materialContent);
 
-            // 4. 调用 LLM
             LLMProvider provider = llmProviderFactory.getProvider();
             String response = provider.chat("你是文档字段抽取助手。按要求输出 JSON。", prompt);
 
-            // 5. 解析结果(用 Jackson,允许 LLM 返回带 markdown 围栏)
             ObjectMapper mapper = new ObjectMapper();
             String cleaned = response.trim();
             if (cleaned.startsWith("```")) {
-                cleaned = cleaned.replaceAll("^```(?:json)?\s*", "").replaceAll("\s*```\s*$", "");
+                cleaned = cleaned.replaceAll("^```(?:json)?\\s*", "").replaceAll("\\s*```\\s*$", "");
             }
             Map<String, Object> result = mapper.readValue(cleaned,
                     new TypeReference<Map<String, Object>>() {});
 
-            // 6. 审计日志
             auditLogService.logSimple("system", "LLM_CALL", "material_version", materialVersionId);
 
             log.info("Extraction completed for materialVersionId={}, method={}, fields={}",
                     materialVersionId, methodCode, result.size());
 
             return result;
+        } catch (JsonProcessingException e) {
+            onFailure(FailureType.PARSE_ERROR, e.getMessage());
+            return Collections.emptyMap();
+        } catch (RuntimeException e) {
+            onFailure(classifyFailure(e), e.getMessage());
+            return Collections.emptyMap();
         } catch (Exception e) {
-            log.warn("Extraction failed for materialVersionId={}, method={}: {}",
-                    materialVersionId, methodCode, e.getMessage());
+            onFailure(classifyFailure(e), e.getMessage());
             return Collections.emptyMap();
         }
+    }
+
+    /**
+     * LLM 抽字段失败兜底 (RI-30).
+     */
+    public void onFailure(FailureType type, String message) {
+        log.error("Extraction failed: type={}, msg={}", type, message);
+    }
+
+    private FailureType classifyFailure(Throwable e) {
+        if (e instanceof SocketTimeoutException) {
+            return FailureType.TIMEOUT;
+        }
+        if (e instanceof JsonProcessingException) {
+            return FailureType.PARSE_ERROR;
+        }
+        if (e.getMessage() != null && e.getMessage().contains("API")) {
+            return FailureType.API_ERROR;
+        }
+        Throwable cause = e.getCause();
+        if (cause != null) {
+            return classifyFailure(cause);
+        }
+        return FailureType.API_ERROR;
     }
 
     /**

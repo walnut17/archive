@@ -1,5 +1,6 @@
 package com.archive.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,6 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.archive.common.FailureType;
 import com.archive.common.LlmScenario;
 import com.archive.entity.LlmCallLog;
 import com.archive.entity.Project;
@@ -19,6 +21,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -259,6 +262,112 @@ public class GlmService {
 
     private String safe(String s) {
         return s == null ? "" : s.replace("\n", " ").trim();
+    }
+
+    private String safe(String s) {
+        return s == null ? "" : s.replace("\n", " ").trim();
+    }
+
+    /**
+     * LLM 抽字段调用 (RI-30): 分类 5 种 FailureType, 不抛异常.
+     */
+    public ExtractionFailureResponse callWithLog(String prompt) {
+        long start = System.currentTimeMillis();
+        String username = currentUsername();
+        try {
+            String response = doChat("你是文档字段抽取助手。按要求输出 JSON。", prompt, 0.2, 2048);
+            JsonNode json = parseExtractionJson(response);
+
+            if (!json.has("projectName") || !json.has("amount")) {
+                saveLog(LlmScenario.EXTRACTION, username, "FAILED",
+                        (int) (System.currentTimeMillis() - start), "FIELD_MISSING");
+                return ExtractionFailureResponse.of(FailureType.FIELD_MISSING, "缺少必填字段", true);
+            }
+
+            double amount = json.get("amount").asDouble();
+            if (amount < 0) {
+                saveLog(LlmScenario.EXTRACTION, username, "FAILED",
+                        (int) (System.currentTimeMillis() - start), "VALUE_INVALID");
+                return ExtractionFailureResponse.of(FailureType.VALUE_INVALID, "amount 不能为负", false);
+            }
+
+            saveLog(LlmScenario.EXTRACTION, username, "SUCCESS",
+                    (int) (System.currentTimeMillis() - start), null);
+            return ExtractionFailureResponse.ok(json);
+        } catch (JsonProcessingException e) {
+            saveLog(LlmScenario.EXTRACTION, username, "FAILED",
+                    (int) (System.currentTimeMillis() - start), e.getMessage());
+            return ExtractionFailureResponse.of(FailureType.PARSE_ERROR, e.getMessage(), true);
+        } catch (RuntimeException e) {
+            FailureType type = classifyRuntimeFailure(e);
+            saveLog(LlmScenario.EXTRACTION, username, "FAILED",
+                    (int) (System.currentTimeMillis() - start), e.getMessage());
+            return ExtractionFailureResponse.of(type, e.getMessage(), type != FailureType.VALUE_INVALID);
+        } catch (Exception e) {
+            FailureType type = classifyExceptionFailure(e);
+            saveLog(LlmScenario.EXTRACTION, username, "FAILED",
+                    (int) (System.currentTimeMillis() - start), e.getMessage());
+            return ExtractionFailureResponse.of(type, e.getMessage(), true);
+        }
+    }
+
+    private JsonNode parseExtractionJson(String response) throws JsonProcessingException {
+        String cleaned = response == null ? "" : response.trim();
+        if (cleaned.startsWith("```")) {
+            cleaned = cleaned.replaceAll("^```(?:json)?\\s*", "").replaceAll("\\s*```\\s*$", "");
+        }
+        return mapper.readTree(cleaned);
+    }
+
+    private FailureType classifyRuntimeFailure(RuntimeException e) {
+        if (e.getMessage() != null && e.getMessage().contains("GLM API error")) {
+            return FailureType.API_ERROR;
+        }
+        Throwable cause = e.getCause();
+        if (cause instanceof SocketTimeoutException) {
+            return FailureType.TIMEOUT;
+        }
+        return FailureType.API_ERROR;
+    }
+
+    private FailureType classifyExceptionFailure(Exception e) {
+        if (e instanceof SocketTimeoutException) {
+            return FailureType.TIMEOUT;
+        }
+        Throwable cause = e.getCause();
+        if (cause instanceof SocketTimeoutException) {
+            return FailureType.TIMEOUT;
+        }
+        return FailureType.API_ERROR;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ExtractionFailureResponse {
+        private boolean success;
+        private JsonNode data;
+        @JsonProperty("failureType") private FailureType failureType;
+        private String message;
+        private boolean retryable;
+
+        public static ExtractionFailureResponse ok(JsonNode data) {
+            return ExtractionFailureResponse.builder()
+                    .success(true)
+                    .data(data)
+                    .retryable(false)
+                    .build();
+        }
+
+        public static ExtractionFailureResponse of(FailureType type, String message, boolean retryable) {
+            return ExtractionFailureResponse.builder()
+                    .success(false)
+                    .failureType(type)
+                    .message(message)
+                    .retryable(retryable)
+                    .build();
+        }
     }
 
     /**

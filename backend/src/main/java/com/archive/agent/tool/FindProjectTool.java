@@ -1,11 +1,11 @@
 package com.archive.agent.tool;
 
 import com.archive.agent.AgentContext;
+import com.archive.common.SwitchDecision;
 import com.archive.entity.Project;
 import com.archive.repository.ProjectRepository;
 import com.archive.service.GlmService;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +44,8 @@ public class FindProjectTool implements AgentTool {
     @Override
     public String description() {
         return "用语义从 project.name + customer_name 中找匹配的项目,返回 Top N 候选(带置信度)。"
-             + "支持简称/拼音/口头语 (内部 4 级兜底: code 精确 → FULLTEXT → LIKE 模糊 → LLM 语义匹配).";
+             + "支持简称/拼音/口头语 (内部 4 级兜底: code 精确 → FULLTEXT → LIKE 模糊 → LLM 语义匹配)."
+             + " v1.1 内部 5 级隐式切换判定 (不算 ReAct 步数).";
     }
 
     @Override
@@ -62,19 +63,19 @@ public class FindProjectTool implements AgentTool {
         // 1) 精确匹配 projectCode
         Optional<Project> exact = projectRepo.findByCode(q);
         if (exact.isPresent()) {
-            ctx.setProjectCode(exact.get().getCode());
-            return ToolResult.ok(List.of(new FindProjectMatch(
+            FindProjectMatch match = new FindProjectMatch(
                     exact.get().getCode(),
                     exact.get().getName(),
                     exact.get().getCustomerName(),
                     1.0
-            )));
+            );
+            return finalizeWithSwitchRule(List.of(match), ctx, "EXACT");
         }
 
         // 2) FULLTEXT 模糊 (name / customer_name)
         List<Object[]> fulltextRows = projectRepo.searchByNameOrCustomerFulltext(q, topN);
         if (!fulltextRows.isEmpty()) {
-            return finalizeMatches(fulltextRows, topN, ctx, "FULLTEXT");
+            return finalizeMatches(fulltextRows, ctx, "FULLTEXT");
         }
 
         // 3) LIKE 模糊兜底 (name / code / summary / customer_name 四字段)
@@ -93,7 +94,6 @@ public class FindProjectTool implements AgentTool {
             if (matchedCodes.isEmpty()) {
                 return ToolResult.ok(List.of());
             }
-            // 拉匹配到的项目实体
             Map<String, Project> byCode = all.stream()
                     .collect(Collectors.toMap(Project::getCode, p -> p, (a, b) -> a));
             List<Project> matched = matchedCodes.stream()
@@ -110,7 +110,7 @@ public class FindProjectTool implements AgentTool {
         return ToolResult.ok(List.of());
     }
 
-    private ToolResult finalizeMatches(List<Object[]> rows, int topN, AgentContext ctx, String source) {
+    private ToolResult finalizeMatches(List<Object[]> rows, AgentContext ctx, String source) {
         double maxScore = ((Number) rows.get(0)[3]).doubleValue();
         List<FindProjectMatch> matches = new ArrayList<>();
         for (Object[] row : rows) {
@@ -121,28 +121,79 @@ public class FindProjectTool implements AgentTool {
             double confidence = score / maxScore;
             matches.add(new FindProjectMatch(code, name, customerName, confidence));
         }
-        FindProjectMatch top = matches.get(0);
-        if (top.confidence >= 0.7) {
-            ctx.setProjectCode(top.projectCode);
-        }
-        log.info("[find_project] {} match: q={}, top={} (conf={})", source, ctx.getQuestion(), top.projectCode, top.confidence);
-        return ToolResult.ok(matches);
+        return finalizeWithSwitchRule(matches, ctx, source);
     }
 
     private ToolResult finalizeFromEntities(List<Project> projects, AgentContext ctx, String source) {
         List<FindProjectMatch> matches = new ArrayList<>();
         for (int i = 0; i < projects.size(); i++) {
             Project p = projects.get(i);
-            // LIKE/LLM 命中没有原生 score, 用 1.0 / (i+1) 做伪 confidence
             double confidence = 1.0 / (i + 1);
             matches.add(new FindProjectMatch(p.getCode(), p.getName(), p.getCustomerName(), confidence));
         }
-        FindProjectMatch top = matches.get(0);
-        if (top.confidence >= 0.7) {
-            ctx.setProjectCode(top.projectCode);
+        return finalizeWithSwitchRule(matches, ctx, source);
+    }
+
+    /**
+     * 5 级隐式切换判定 (RI-23) — in-tool, 不算 ReAct 步数.
+     */
+    private ToolResult finalizeWithSwitchRule(List<FindProjectMatch> matches, AgentContext ctx, String source) {
+        if (matches.isEmpty()) {
+            return ToolResult.ok(matches);
         }
-        log.info("[find_project] {} match: q={}, top={} (conf={})", source, ctx.getQuestion(), top.projectCode, top.confidence);
-        return ToolResult.ok(matches);
+
+        FindProjectMatch top = matches.get(0);
+        String currentLock = ctx.getLockedProjectCode();
+        SwitchDecision decision = applyImplicitSwitchRule(top, currentLock);
+        ctx.setLastSwitchDecision(decision);
+
+        switch (decision) {
+            case SAME_CONFIRMED -> ctx.setProjectCode(top.projectCode);
+            case SAME_PROBABLY, DIFFERENT_PROBABLY -> {
+                if (currentLock == null || currentLock.isBlank()) {
+                    ctx.setProjectCode(top.projectCode);
+                }
+            }
+            case UNCLEAR -> {
+                if (currentLock == null || currentLock.isBlank()) {
+                    if (top.confidence >= 0.7) {
+                        ctx.setProjectCode(top.projectCode);
+                    }
+                }
+            }
+        }
+
+        log.info("[find_project] {} match: q={}, top={} (conf={}), switch={}",
+                source, ctx.getQuestion(), top.projectCode, top.confidence, decision);
+        return ToolResult.ok(buildResult(matches, decision));
+    }
+
+    /**
+     * 5 级隐式项目切换判定规则 (RI-23).
+     */
+    static SwitchDecision applyImplicitSwitchRule(FindProjectMatch top, String currentLock) {
+        double conf = top.confidence;
+        boolean sameCode = currentLock != null && top.projectCode.equals(currentLock);
+
+        if (currentLock == null || currentLock.isBlank()) {
+            if (conf >= 0.95) return SwitchDecision.SAME_CONFIRMED;
+            if (conf >= 0.7) return SwitchDecision.SAME_PROBABLY;
+            if (conf >= 0.5) return SwitchDecision.UNCLEAR;
+            return SwitchDecision.UNCLEAR;
+        }
+
+        if (sameCode && conf >= 0.95) return SwitchDecision.SAME_CONFIRMED;
+        if (sameCode && conf >= 0.7) return SwitchDecision.SAME_PROBABLY;
+        if (sameCode && conf >= 0.5) return SwitchDecision.UNCLEAR;
+        if (!sameCode && conf >= 0.7) return SwitchDecision.DIFFERENT_PROBABLY;
+        return SwitchDecision.UNCLEAR;
+    }
+
+    private List<FindProjectMatch> buildResult(List<FindProjectMatch> matches, SwitchDecision decision) {
+        for (FindProjectMatch match : matches) {
+            match.switchDecision = decision.name();
+        }
+        return matches;
     }
 
     @Data
@@ -152,11 +203,18 @@ public class FindProjectTool implements AgentTool {
     }
 
     @Data
-    @AllArgsConstructor
     public static class FindProjectMatch {
         @JsonProperty("projectCode") private String projectCode;
         @JsonProperty("projectName") private String projectName;
         @JsonProperty("customerName") private String customerName;
         @JsonProperty("confidence") private double confidence;
+        @JsonProperty("switchDecision") private String switchDecision;
+
+        public FindProjectMatch(String projectCode, String projectName, String customerName, double confidence) {
+            this.projectCode = projectCode;
+            this.projectName = projectName;
+            this.customerName = customerName;
+            this.confidence = confidence;
+        }
     }
 }

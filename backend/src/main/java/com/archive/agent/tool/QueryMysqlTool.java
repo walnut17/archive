@@ -29,7 +29,14 @@ public class QueryMysqlTool implements AgentTool {
     );
 
     private static final int MAX_ROWS = 500;
+    private static final int MAX_RESULT_ROWS = 1000;
     private static final int MAX_IN_VALUES = 50;  // IN 长度上限,防注入/防 DoS
+    private static final double MAX_AMOUNT = 1e8;
+
+    /** v1.1 重 6: filters 白名单 (RI-27). */
+    private static final Set<String> ALLOWED_FILTER_KEYS = Set.of(
+            "region", "industry", "stage", "fact_type", "time_bucket"
+    );
 
     private static Map<String, Set<String>> buildAllowedColumns() {
         Map<String, Set<String>> map = new HashMap<>();
@@ -93,7 +100,13 @@ public class QueryMysqlTool implements AgentTool {
 
         var allowedCols = ALLOWED_COLUMNS.get(table);
 
-        // 2. Validate aggregate
+        // 2. Validate optional filters (v1.1 重 6 + 数值上限)
+        var filterError = validateFilters(queryArgs.getFilters());
+        if (filterError != null) {
+            return ToolResult.error(filterError);
+        }
+
+        // 3. Validate aggregate
         var aggregate = queryArgs.getAggregate();
         if (aggregate != null && !aggregate.isBlank()) {
             aggregate = aggregate.toLowerCase();
@@ -128,7 +141,7 @@ public class QueryMysqlTool implements AgentTool {
             }
         }
 
-        // 3. Validate groupBy
+        // 4. Validate groupBy
         if (queryArgs.getGroupBy() != null && !queryArgs.getGroupBy().isBlank()) {
             if (!isValidColumnName(queryArgs.getGroupBy())) {
                 return ToolResult.error("GROUP BY column name '" + queryArgs.getGroupBy() + "' contains invalid characters");
@@ -138,7 +151,7 @@ public class QueryMysqlTool implements AgentTool {
             }
         }
 
-        // 4. Build SELECT columns
+        // 5. Build SELECT columns
         var selectColumns = new ArrayList<String>();
         if ("group_by".equals(aggregate)) {
             // group_by 模式: SELECT groupByCol, COUNT(*) AS aggregate_value GROUP BY groupByCol
@@ -167,9 +180,11 @@ public class QueryMysqlTool implements AgentTool {
             }
         }
 
-        // 5. Build WHERE clause
+        // 6. Build WHERE clause
         var params = new ArrayList<>();
         var whereClauses = new ArrayList<String>();
+
+        appendFilterWhereClauses(queryArgs.getFilters(), allowedCols, whereClauses, params);
 
         if (queryArgs.getWhere() != null) {
             for (var wc : queryArgs.getWhere()) {
@@ -230,7 +245,7 @@ public class QueryMysqlTool implements AgentTool {
             }
         }
 
-        // 6. Build SQL
+        // 7. Build SQL
         var sql = new StringBuilder("SELECT ");
         sql.append(String.join(", ", selectColumns));
         sql.append(" FROM ").append(table);
@@ -252,17 +267,26 @@ public class QueryMysqlTool implements AgentTool {
         }
 
         var limit = (queryArgs.getLimit() != null && queryArgs.getLimit() > 0)
-                ? Math.min(queryArgs.getLimit(), MAX_ROWS) : MAX_ROWS;
+                ? Math.min(queryArgs.getLimit(), MAX_RESULT_ROWS) : MAX_RESULT_ROWS;
         sql.append(" LIMIT ?");
         params.add(limit);
 
-        // 7. Execute
+        // 8. Execute
         try {
             var rows = jdbcTemplate.queryForList(sql.toString(), params.toArray());
+
+            String warning = null;
+            if (rows.size() > MAX_RESULT_ROWS) {
+                rows = rows.subList(0, MAX_RESULT_ROWS);
+                warning = "结果超 " + MAX_RESULT_ROWS + " 行, 已截断. 请缩小范围.";
+            }
 
             var result = new LinkedHashMap<String, Object>();
             result.put("rows", rows);
             result.put("rowCount", rows.size());
+            if (warning != null) {
+                result.put("warning", warning);
+            }
             if (aggregate != null && !aggregate.isBlank() && !rows.isEmpty()) {
                 result.put("aggregate", rows.get(0).get("aggregate_value"));
             }
@@ -271,6 +295,63 @@ public class QueryMysqlTool implements AgentTool {
         } catch (Exception e) {
             return ToolResult.error("Query execution failed: " + e.getMessage());
         }
+    }
+
+    /**
+     * v1.1 重 6: filters 白名单 + 数值上限校验.
+     */
+    private String validateFilters(Map<String, Object> filters) {
+        if (filters == null || filters.isEmpty()) {
+            return null;
+        }
+        for (var entry : filters.entrySet()) {
+            String key = entry.getKey();
+            if ("amount".equals(key) || "max_amount".equals(key)) {
+                if (entry.getValue() == null) {
+                    return "filter value missing for key: " + key;
+                }
+                double v;
+                try {
+                    v = Double.parseDouble(entry.getValue().toString());
+                } catch (NumberFormatException e) {
+                    return "数值无效: " + entry.getValue();
+                }
+                if (v > MAX_AMOUNT) {
+                    return "数值超限: " + v + " > " + MAX_AMOUNT;
+                }
+                continue;
+            }
+            if (!ALLOWED_FILTER_KEYS.contains(key)) {
+                return "filter key 不在白名单: " + key;
+            }
+        }
+        return null;
+    }
+
+    private void appendFilterWhereClauses(Map<String, Object> filters, Set<String> allowedCols,
+                                            List<String> whereClauses, List<Object> params) {
+        if (filters == null || filters.isEmpty()) {
+            return;
+        }
+        for (var entry : filters.entrySet()) {
+            String key = entry.getKey();
+            if ("amount".equals(key) || "max_amount".equals(key)) {
+                continue;
+            }
+            String column = mapFilterKeyToColumn(key);
+            if (column != null && allowedCols.contains(column) && entry.getValue() != null) {
+                whereClauses.add(column + " = ?");
+                params.add(entry.getValue());
+            }
+        }
+    }
+
+    private String mapFilterKeyToColumn(String filterKey) {
+        return switch (filterKey) {
+            case "stage" -> "status";
+            case "region", "industry", "fact_type", "time_bucket" -> null;
+            default -> null;
+        };
     }
 
     private boolean isValidColumnName(String name) {
@@ -306,6 +387,8 @@ public class QueryMysqlTool implements AgentTool {
         private String table;
         private List<String> columns;
         private List<WhereCondition> where;
+        /** v1.1: 跨项目 filters (白名单 region/industry/stage/fact_type/time_bucket). */
+        private Map<String, Object> filters;
         private String aggregate;
         private String aggregateColumn;
         private String groupBy;
