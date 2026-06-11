@@ -901,3 +901,42 @@ management:
 | 9.4 | Vite 5 + element-plus 缓存脏死锁 | (本次部署隐式) |
 | 9.5 | Actuator health mail 配置缩进错 | `9774b8e` |
 
+---
+
+## 12. v1.1 关键教训 (P0-24+, MOD-06, 2026-06-11)
+
+### P0-24.1 RBAC 双轨兼容（v1.1 RBAC 5 角色改造）
+**现象**: v1.1 改 RBAC 时差点删除 `user.role_id` 字段
+**教训**: v1.0 单用户路径千万不能断，新增 `user_role` 多对多是主路径，`user.role_id` 保留兼容
+**预防**: 任何升级前先列"v1.0 用户操作清单"逐项验证
+
+### P0-24.2 乐观锁严格度（v1.1 灰度）
+**现象**: v1.1 乐观锁 `strict=true` 会导致单用户系统频繁 409
+**教训**: v1.1 期 `strict=false`（冲突仅记日志），v2 多用户时切 true
+**预防**: 配置项加详细注释 + README 标注 (D-3)
+
+### P0-24.3 网络查字典降级（v1.1 RI-50）
+**现象**: 内网全失败时网络查字典抛异常导致 AgentEngine 崩溃
+**教训**: 工具级降级必须返回 `{found: false, reason: ...}` 而非抛异常
+**预防**: 所有外部 API 调用都要有"全失败兜底"
+
+### P0-25.1 ARCH-DECOMPOSITION 双编号（RI-22~45 vs RI-46~69）
+**现象**: 需求底稿 (RI-22~45) 与实现跟踪 (RI-46~69) 编号并存易混淆
+**教训**: MOD-06 收口时 append RI-46~69 带 MOD 映射，不动 RI-1~45
+**预防**: TASKS.md v1.1 章节统一引用 RI-46~69
+
+### P0-26.1 集成测试禁真实 GLM（V11IntegrationTest）
+**现象**: CI 无 GLM_API_KEY 时 Agent 集成测试挂
+**教训**: V11IntegrationTest 必须 @MockBean GlmService + H2，不测真实 API
+**预防**: application-test.yml 文档化 + review checklist
+
+### P0-27.1 OpenPDF jar 增量（RI-64）
+**现象**: 初估 iText 增量 >15 MB，超出 D-4 预算
+**教训**: 改用 OpenPDF 2.0.2，jar 增量 <3 MB，功能满足单项目 PDF 报告
+**预防**: 新增 PDF 库先量 jar 再拍板
+
+### P0-28.1 前端预览纯浏览器（D-5）
+**现象**: 曾考虑 LibreOffice headless 转 Word，Windows 单机部署过重
+**教训**: pdfjs + mammoth 纯前端预览，后端只返文件流
+**预防**: 单机部署原则——能前端做的不引第 4 进程
+

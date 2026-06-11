@@ -28,7 +28,7 @@
 - 如果继续写死管道,每加一个能力(如"查贷后状态")就要改 controller + 新加 method,**线性膨胀**。
 - 用 LLM 一次性 prompt,长 context 下准确率从 ~85% 掉到 ~60%(已观察)。
 
-### 1.2 引入哪个:**Spring AI 1.1 + Spring AI Alibaba 1.1**(调研 Top 1)
+### 1.2 引入哪个: Spring AI 1.1（仅 spring-ai-starter-model-openai）
 
 | 候选 | 决策 | 理由 |
 |---|---|---|
@@ -57,6 +57,14 @@
 4. **避免再引一组传递依赖**(`spring-ai-alibaba-core` / `spring-ai-alibaba-autoconfigure-dashscope` / `aliyun-java-sdk-core` 等),jar 增量能省 8-10MB。
 5. **不锁定单一云厂商**:以后想换 Qwen / DeepSeek,把 `base-url` 改一下就行,starter 还是同一个,跨厂商 0 摩擦。
 6. **(踩坑)Spring AI 1.1 公开 API 现状**:Spring AI 1.1 GA(2025-11)没有 `ReactAgent` 公开 class,只有 `ChatClient` + `@Tool` + `Advisor` + 5 个 Workflow 模式(Chain/Parallelization/Routing/Orchestrator-Workers/Evaluator-Optimizer)。**`ReactAgent` 是 1.2 路线 / 阿里云 Spring AI Alibaba 概念**,本项目 plan-I-9 改用 `ChatClient` + `@Tool` + `MessageChatMemoryAdvisor` + 手写 ReAct 循环(5 步上限)。
+
+**§1.2.1.2 v1.1 Agent 增量 (MOD-03, 2026-06-11)**:
+
+1. **工具 6→7**: 新增 `network_dict_lookup` (RI-50), 内网全失败返回 `{found:false}` 不抛异常 (D-2: 百度百科+维基启用).
+2. **FindProjectTool 5 级判定** (RI-47): SAME_CONFIRMED / SAME_PROBABLY / DIFFERENT_PROBABLY / UNCLEAR, 不算 ReAct 步数.
+3. **QueryMysqlTool 7 重加固** (RI-51): filters 白名单 + 数值上限 + 1000 行截断.
+4. **ProjectFactEvent EntityListener** (RI-46/52): 与 DB 触发器双保险, 非白名单字段 UPDATE/DELETE 拦截.
+5. **置信度 3 级 prompt** (RI-46): AgentSystemPrompt 追加 CONFIRMED / AI_INFERRED / PENDING_REVIEW 规则.
 
 **保留的退路**:未来真要接 Qwen(比如 GLM 限流),加 1 个 `spring-ai-alibaba-starter-dashscope` 即可(2 个 starter 共存,Spring AI 支持),不破坏当前架构。
 
@@ -87,7 +95,7 @@
 
 ### 1.4 一句话总结
 
-> **Spring AI 1.1 + spring-ai-starter-model-openai**(走 OpenAI 兼容协议调智谱 GLM-4-Flash,**不**引 spring-ai-alibaba),`ChatClient` + `@Tool` + `Advisor` + 手写 ReAct 循环(5 步上限),**6 个工具**(search_fulltext / find_project / query_mysql / get_project_business_data / llm_summarize / ask_clarification),白名单 + JSON DSL,GlmService 兜底降级。对外仍走 `QaController` 但行为升级为 agent 调度。
+> **Spring AI 1.1 + spring-ai-starter-model-openai**(走 OpenAI 兼容协议调智谱 GLM-4-Flash,**不**引 spring-ai-alibaba),`ChatClient` + `@Tool` + `Advisor` + 手写 ReAct 循环(5 步上限),**7 个工具**(v1.1: +network_dict_lookup; v1.0 的 6 个: search_fulltext / find_project / query_mysql / get_project_business_data / llm_summarize / ask_clarification),白名单 + JSON DSL,GlmService 兜底降级。对外仍走 `QaController` 但行为升级为 agent 调度。
 
 ---
 

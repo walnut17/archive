@@ -342,3 +342,16 @@ java -Xms512m -Xmx1536m -Dfile.encoding=UTF-8 -jar archive.jar
 | 并发用户 | 5-10 人 | 单机 + 智谱 60 req/min 限速 |
 | 文件大小 | ≤ 50 MB | Tika 解析超时风险 |
 | TOTAL 支持文件类型 | docx/xlsx/pdf/txt | Tika 支持格式 |
+
+---
+
+## v1.1 jar 增量 (MOD-04/05, 2026-06-11)
+
+| 依赖 | 版本 | jar 增量 | 用途 |
+|---|---|---|---|
+| OpenPDF (lowagie) | 2.0.2 | ~2 MB | PDF 导出 (RI-64, D-4) |
+| Apache POI | 5.2.5 (已有) | — | Excel 导出 |
+| pdfjs-dist | ^4.0 | ~3 MB (前端) | PDF 预览 (D-5) |
+| mammoth | ^1.7 | ~0.5 MB (前端) | Word→HTML 预览 |
+
+**后端 fat jar 增量**: OpenPDF ~2 MB; 总 jar 仍 < 80 MB (单机可接受).

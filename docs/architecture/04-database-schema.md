@@ -1,6 +1,6 @@
 # 投委会档案管理系统 — 数据库架构
 
-> 撰写人：Sisyphus | 日期：2026-06-10 | 版本：v1.0
+> 撰写人：Sisyphus | 日期：2026-06-10 | 版本：v1.0 + v1.1 (2026-06-11)
 
 ## 1. 总览
 
@@ -10,7 +10,7 @@
 
 **字符集**：`utf8mb4`
 
-**表总数**：16 张业务表 + 2 张新增基础设施表 = 18 张
+**表总数**：v1.0 为 16 张业务表 + 2 张基础设施表 = 18 张；**v1.1 增量** 7 新表 + 7 ALTER = **30 张实体/表**（含 JDBC 表 user_role / project_member / proposal_series）
 
 ---
 
@@ -355,3 +355,13 @@ Agent 多轮对话记忆（Spring AI 1.1 兼容格式）。
 | 分类变更 | 分类∈各种审计报告 | 创建MEDIUM待办，3天 |
 | 状态变更 | 项目状态=结清 | 创建LOW待办，归档 |
 | 时点临近 | 时点距离≤3天 | 创建LOW待办 |
+
+---
+
+## v1.1 增量表 (MOD-01, 2026-06-11)
+
+| 类型 | 表/变更 | 说明 |
+|---|---|---|
+| 新表 | notification, failure_log, import_batch, import_error, proposal_series, user_role, project_member | RI-49/58/61/63/68 |
+| ALTER | project, proposal, material, business_term, project_fact_event, audit_log, user | +deleted_at/deleted_by/version/confidence_level 等 |
+| 触发器 | trg_pfe_no_delete, trg_pfe_whitelist_update | fact_event 不可删 + 白名单 UPDATE |

@@ -1,6 +1,6 @@
 # 投委会档案管理系统 — 后端分层架构
 
-> 撰写人：Sisyphus | 日期：2026-06-10 | 版本：v1.0
+> 撰写人：Sisyphus | 日期：2026-06-10 | 版本：v1.0 + v1.1 (2026-06-11)
 
 ## 1. 包结构总览
 
@@ -9,12 +9,12 @@ com.archive/
 ├── ArchiveApplication.java            # 启动类
 ├── common/                            # 公共组件
 ├── config/                            # 配置加载
-├── controller/                        # REST API (13个)
-├── dto/                               # 数据传输对象 (24个)
-├── entity/                            # JPA实体 (16个)
-├── repository/                        # 数据访问 (16个)
+├── controller/                        # REST API (18个, v1.1 +5)
+├── dto/                               # 数据传输对象 (30+个)
+├── entity/                            # JPA实体 (23个, v1.1 +7)
+├── repository/                        # 数据访问 (20+个)
 ├── security/                          # 认证授权 (4个)
-├── service/                           # 业务逻辑 (17个)
+├── service/                           # 业务逻辑 (29个, v1.1 +12)
 ├── engine/                            # 异步引擎 (4个)
 ├── provider/                          # LLM抽象 (2个)
 └── agent/                             # 智能Agent (Plan I, 14个文件)
@@ -24,8 +24,8 @@ com.archive/
 
 | 层 | 文件数 | 注解风格 |
 |-----|--------|----------|
-| controller | 13 | @RestController + @RequestMapping |
-| service | 17 | @Service + @Slf4j |
+| controller | 18 | @RestController + @RequestMapping |
+| service | 29 | @Service + @Slf4j |
 | engine | 4 | @Service + @Async |
 | provider | 2 | @Service + 接口 |
 | repository | 16 | @Repository + extends JpaRepository |
@@ -297,3 +297,16 @@ QaController (/api/qa/ask)
 | 工具接口 | 自定义 `AgentTool` 接口，非 Spring AI @Tool 注解 | 更好的控制力和可测试性 |
 | LLM 桥接 | GLMChatModel 包装 GlmService | 复用现有 API key + 埋点 |
 | 降级策略 | 异常 → catch → 走 GlmService 老路径 | 零回归要求 |
+
+---
+
+## v1.1 增量 (MOD-01~05, 2026-06-11)
+
+| 层 | v1.0 | v1.1 | 新增 |
+|---|---|---|---|
+| Controller | 13 | **18** | ProjectBoard, Notification, RecycleBin, Import, FailureLog |
+| Service | 17 | **29** | ProjectBoard, Notification, Export, Preview, Masking, NetworkDict, Rbac, RecycleBin, Import, FailureLog, Archive, ProjectFactEvent |
+| AgentTool | 6 | **7** | +network_dict_lookup (RI-50) |
+| Entity | 16 | **23** | Notification, ImportBatch, ImportError, ProjectFactEvent, BusinessTerm 等 |
+
+**v1.1 核心域**: 7 表软删 ALTER + RBAC 双轨 + 乐观锁 (D-3 strict=false) + 5 类审计 + failure_log.

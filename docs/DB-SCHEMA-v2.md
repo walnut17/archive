@@ -1056,5 +1056,20 @@ UNION ALL SELECT 'audit_log', COUNT(*) FROM audit_log;
 ---
 
 *文档作者: 架构师 架构设计 Agent*
-*版本: v2 / 2026-06-08*
+*版本: v2 / 2026-06-08 + v1.1 增量 2026-06-11*
 *配套文档: `ARCHITECTURE-v2.md`*
+
+---
+
+## 附录 C: v1.1 增量摘要 (MOD-01, 2026-06-11)
+
+| 类别 | 数量 | 明细 |
+|---|---|---|
+| 沿用表 | 16 | v1.0 init.sql 不动 |
+| v1.1 新表 | **7** | notification, failure_log, import_batch, import_error, proposal_series, user_role, project_member |
+| v1.1 ALTER | **7** | project, proposal, material, business_term, project_fact_event, audit_log, user |
+| 触发器 | 2 | project_fact_event 不可 DELETE + 白名单 UPDATE |
+| 回填 SQL | 3 | confidence_level, condition_status, audit_log.type |
+| 迁移文件 | 11 | `db/migration/I-RI-*.sql` |
+
+**实体总计 30**: 16 业务沿用 + 7 新 JPA/JDBC 表 + 7 ALTER 扩展字段 (与 architecture/04 §v1.1 一致).

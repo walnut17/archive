@@ -1,6 +1,6 @@
 # 投委会档案管理系统 — 系统总体架构
 
-> 撰写人：Sisyphus | 日期：2026-06-10 | 版本：v1.0
+> 撰写人：Sisyphus | 日期：2026-06-10 | 版本：v1.0 + v1.1 增量 (2026-06-11)
 
 ## 1. 系统定位
 
@@ -99,14 +99,14 @@
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Controller 层 (13 个 REST 控制器)                    │
+│  Controller 层 (18 个 REST 控制器, v1.1 +5)            │
 │  /api/auth/*  /api/projects/*  /api/qa/*  ...         │
 ├─────────────────────────────────────────────────────┤
-│  Service 层 (17 个业务服务)                            │
+│  Service 层 (29 个业务服务, v1.1 +12)                  │
 │  Auth/Project/Proposal/Material/Glm/KnowledgeSearch   │
 ├─────────────────────────────────────────────────────┤
-│  Agent 层 (Plan I 智能问答)                            │
-│  AgentEngine → 6 AgentTool + MessageChatMemory         │
+│  Agent 层 (Plan I 智能问答 + v1.1 改造)                │
+│  AgentEngine → 7 AgentTool + MessageChatMemory         │
 │  (5步ReAct循环, LLM + 工具交错执行)                    │
 ├─────────────────────────────────────────────────────┤
 │  Engine 层 (4 个业务引擎)                              │
@@ -119,8 +119,8 @@
 │  Repository 层 (16 个 JPA 仓库)                        │
 │  JpaRepository + 全文检索NativeQuery                     │
 ├─────────────────────────────────────────────────────┤
-│  Entity 层 (16 个 JPA 实体)                            │
-│  Project/Proposal/Material/MaterialVersion/...          │
+│  Entity 层 (23 个 JPA 实体, v1.1 +7)                   │
+│  Project/Proposal/Material/Notification/ImportBatch/... │
 ├─────────────────────────────────────────────────────┤
 │  Security 层                                           │
 │  JwtAuthFilter → JwtUtil + SecurityConfig + RBAC        │
@@ -168,7 +168,11 @@ src/
 
 ---
 
-## 6. 数据库概览（16 张业务表 + 2 张基础设施表）
+## 6. 数据库概览（v1.1: 16 沿用 + 7 新表 + 7 ALTER = 30 实体/表）
+
+> v1.1 增量见 `docs/DB-SCHEMA-v2.md` §v1.1 段 + `I-RI-*.sql` 迁移.
+
+### v1.0 基线（16 张业务表 + 2 张基础设施表）
 
 | 组 | 表 | 记录数 |
 |----|-----|--------|

@@ -264,3 +264,57 @@ mvn test -B 2>&1 | tail -20
 
 - 项目方: _____________ 日期: _______
 - Mavis 沙箱: _____________ 日期: _______
+
+---
+
+## v1.1 增量验收场景 (MOD-06, 2026-06-11)
+
+> 沿用上方 11 步 v1.0 SOP 零回归验证后, 追加 7 大场景.
+
+### 场景 1: 项目看板
+1. 登录 → 主页 → 项目看板
+2. 切换视图 table → card → kanban
+3. 应用筛选 region=江苏 + stage=POST_LOAN
+4. 排序 amount desc
+5. 期望：列表实时更新，9 列完整
+
+### 场景 2: 通知中心
+1. 触发系统通知（如新建 todo）
+2. 顶栏铃铛显示未读数 badge
+3. 点击铃铛 → 通知中心全屏
+4. 标已读 → 未读数 -1
+5. 30s 后自动刷新（无新通知则无变化）
+
+### 场景 3: 数据导出
+1. 项目详情页 → 导出按钮
+2. 选 PDF → 下载 project-1.pdf
+3. 选 Excel → 下载 project-1.xlsx
+4. 验证 PDF 内容含项目所有字段
+5. 验证 audit_log.type='EXPORT'
+
+### 场景 4: 附件预览
+1. 材料列表点文件名
+2. PDF 文件 → 内嵌预览
+3. Word 文件 → mammoth 转 HTML 预览
+4. 图片文件 → 原生 img 预览
+5. 大文件 > 50MB → 提示"请下载查看"
+
+### 场景 5: 脱敏视图
+1. 委员登录 → 访问项目详情
+2. 期望：displayName='张**', displayAmount='***万'
+3. 点"申请脱敏查看" → 写 audit_log + 通知 admin
+4. admin 登录 → 收到通知 + 审批
+5. 审批通过后，委员可看完整信息
+
+### 场景 6: 降级测试
+1. application.yml 改 archive.optimistic-lock.strict=true
+2. 2 user 同时 PATCH project
+3. 期望：1 成功 1 409 + "数据已被他人修改"
+
+### 场景 7: 多轮对话
+1. 第 1 轮: "PRJ-2026-001 怎么样"
+2. 第 2 轮: "它的剩余金额"
+3. 第 3 轮: "谁负责"
+4. 期望：第 2/3 轮自动锁定 PRJ-2026-001 不丢
+
+**自动化**: `mvn test -Dtest=V11IntegrationTest` (45 测例, H2 + MockBean GlmService).

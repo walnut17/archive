@@ -547,3 +547,275 @@
 - RI-26 网络查 4 个 API key 业务方需提前准备
 - RI-40 PDF 生成需业务方提供"项目报告模板"
 - RI-45 脱敏规则细节需法务确认
+
+---
+
+## 四、v1.1 实现拆解 (RI-46 ~ RI-69, MOD-01~06 收口)
+
+> **编号说明**: RI-22~45 是 v1.0 阶段需求底稿; RI-46~69 是 v1.1 **实现跟踪**续编号 (见 `tasks-v1.1.md`).
+> **唯一真相源**: 本段 + `.mavis/plans/draft/v1.1-modules/MOD-*.md` §4 验收.
+> **与 RI-22~45 关系**: 业务内容对应, RI-46~69 增加 Given/When/Then 验收 + MOD 映射, **不修改**上文 RI-1~45.
+
+### RI-46: 置信度 3 级体系 (§13.1.1)
+
+- **业务**: 替换 §5.8.3 "0.6 阈值"为 3 级 (≥0.85 CONFIRMED / 0.60–0.84 AI_INFERRED / <0.60 PENDING_REVIEW)
+- **影响表**: `project_fact` + `project_fact_event` ALTER `confidence_level` + 回填 SQL
+- **角色**: admin / 业务部门 / 投委会委员
+- **验收**: confidence=0.90→CONFIRMED; 0.70→AI_INFERRED 徽章; 0.50→PENDING_REVIEW; 历史 fact 回填非 NULL; 集成测例 ≥3
+- **依赖**: RI-50, RI-47
+- **估算**: BE 0.5d / FE 0.2d / 测试 0.2d
+- **对应 §X.Y**: REQUIREMENTS §13.1.1
+- **对应 MOD**: MOD-01 (SQL) + MOD-02 (实体) + MOD-03 (prompt)
+
+### RI-47: Agent 隐式项目切换 5 级判定 (§13.1.2)
+
+- **业务**: 替换 §5.6.7.4 "0.95 阈值"为 5 级 (同/不同 projectCode 各 3/2 档)
+- **影响表**: 无 DB 改动
+- **角色**: admin / 业务部门
+- **验收**: SAME_PROBABLY hint; DIFFERENT_PROBABLY 反问; UNCLEAR 保持锁定; MAX_ITERATIONS=5; 集成测例 ≥5
+- **依赖**: RI-46
+- **估算**: BE 0.5d / FE 0.2d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.1.2
+- **对应 MOD**: MOD-03 (FindProjectTool) + MOD-05 (Knowledge.vue hint)
+
+### RI-48: 决议变更业务规则 (§13.1.3)
+
+- **业务**: 草稿可改 / 已开投委会不可改 (走复议=新议案) / 附条件 `condition_status` 跟踪
+- **影响表**: `proposal` ALTER +3 字段
+- **角色**: admin / 项目经理 / 投委会委员
+- **验收**: OPEN 议案 PATCH decision→403; DRAFT→200; condition MET 自动 todo; 集成测例 ≥4
+- **依赖**: RI-58, RI-49
+- **估算**: BE 0.7d / FE 0.3d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.1.3
+- **对应 MOD**: MOD-01 + MOD-02
+
+### RI-49: 投委会编号预留/撤销/改系列 (§13.1.4)
+
+- **业务**: draft_reserved (24h 释放) / revoked (`.revoked` 后缀) / 改系列 (仅 draft_reserved)
+- **影响表**: `proposal_series` 新表 + `proposal` ALTER
+- **角色**: admin / 项目经理
+- **验收**: reserve→200+expiresAt; 24h cron 释放; change-series OPEN→403; 集成测例 ≥4
+- **依赖**: RI-48
+- **估算**: BE 1d / FE 0.3d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.1.4
+- **对应 MOD**: MOD-01 + MOD-02
+
+### RI-50: 网络查 API 字典 (§13.1.5)
+
+- **业务**: 4 候选 + 优先级 + 可配; v1.1 只启用百度百科 + 维基 (D-2)
+- **影响表**: `dict_type` / `dict_item` 扩行
+- **角色**: admin / 业务部门
+- **验收**: 命中返回 definition; 内网全失败→`{found:false, reason:INTRANET_BLOCKED}` 不抛异常; 集成测例 ≥3
+- **依赖**: —
+- **估算**: BE 1d / FE 0.3d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.1.5
+- **对应 MOD**: MOD-03 (NetworkDictLookupTool)
+
+### RI-51: 跨项目批量工具安全白名单 (§13.1.6)
+
+- **业务**: filters 白名单 (region/industry/stage/fact_type/time_bucket) + 数值上限 + 行数 ≤1000
+- **影响表**: 无 (tool 配置)
+- **角色**: admin / Agent
+- **验收**: 合法 filters 命中; `<script>` reject; 1500 行截断; 集成测例 ≥8
+- **依赖**: RI-46
+- **估算**: BE 1d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.1.6
+- **对应 MOD**: MOD-03 (QueryMysqlTool 7 重加固)
+
+### RI-52: 关键事实事件流字段细化 (§13.1.7)
+
+- **业务**: `project_fact_event` +4 字段 + DB 触发器白名单
+- **影响表**: `project_fact_event` ALTER + 触发器
+- **角色**: admin / 投委会委员
+- **验收**: PATCH owner_id→200; PATCH fact_value→403; DELETE→403; pending 列表; 集成测例 ≥5
+- **依赖**: RI-46
+- **估算**: BE 0.7d / FE 0.2d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.1.7
+- **对应 MOD**: MOD-01 + MOD-03 (EntityListener)
+
+### RI-53: 主页双模过渡动画 (§13.1.8)
+
+- **业务**: 待办 0↔N 时 300ms CSS transition
+- **影响表**: 无
+- **角色**: 全部
+- **验收**: 0→1 / N→0 触发 transition; "问点什么"按钮常驻
+- **依赖**: —
+- **估算**: FE 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.1.8
+- **对应 MOD**: MOD-05 (Home.vue)
+
+### RI-54: LLM 抽字段失败兜底 (§13.1.9)
+
+- **业务**: 5 种 failureType 差异化兜底
+- **影响表**: 无
+- **角色**: admin
+- **验收**: API_ERROR / PARSE_ERROR / FIELD_MISSING / VALUE_INVALID / parse 失败各一条; 集成测例 ≥5
+- **依赖**: —
+- **估算**: BE 0.5d / FE 0.3d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.1.9
+- **对应 MOD**: MOD-03 + MOD-05 (ProjectForm banner)
+
+### RI-55: 软删 + 回收站 (§13.1.10)
+
+- **业务**: 4 实体软删 + FactEvent 不可删 + 30 天回收站
+- **影响表**: 7 表 ALTER `deleted_at/deleted_by`
+- **角色**: admin
+- **验收**: DELETE→软删; 30 天 cron 物理删; restore→200; DELETE fact_event→403; 集成测例 ≥6
+- **依赖**: RI-58
+- **估算**: BE 1.5d / FE 0.7d / 测试 0.5d
+- **对应 §X.Y**: REQUIREMENTS §13.1.10
+- **对应 MOD**: MOD-01 + MOD-02
+
+### RI-56: 撤销/回滚/反悔 (§13.2.1)
+
+- **业务**: 24h 整撤销 / 历史 version 回滚
+- **影响表**: 3 实体 `version` (与 RI-57 合并)
+- **角色**: admin / 项目经理
+- **验收**: <24h DELETE→revoked; rollback version→fact_event UPDATE; 集成测例 ≥4
+- **依赖**: RI-58
+- **估算**: BE 0.7d / FE 0.3d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.2.1
+- **对应 MOD**: MOD-02
+
+### RI-57: 并发编辑乐观锁 (§13.2.2)
+
+- **业务**: `version` INT + WHERE id=? AND version=?; v1.1 strict=false
+- **影响表**: project / proposal / material ALTER
+- **角色**: 全部
+- **验收**: 并发 PATCH 后 version+1; strict=true→409; strict=false→仅日志; 集成测例 ≥3
+- **依赖**: —
+- **估算**: BE 0.5d / FE 0.2d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.2.2
+- **对应 MOD**: MOD-02 (D-3)
+
+### RI-58: RBAC 5 角色 (§13.2.3)
+
+- **业务**: admin/pm/legal/committee/secretary + `user_role` 多对多 + `project_member`
+- **影响表**: `user_role` / `project_member` 新表 + role 扩 4 行
+- **角色**: admin
+- **验收**: user.role_id 零回归; user_role 优先于 role_id; 集成测例 ≥5
+- **依赖**: —
+- **估算**: BE 1d / FE 0.5d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.2.3
+- **对应 MOD**: MOD-02 (D-1)
+
+### RI-59: 审计加强 (§13.2.4)
+
+- **业务**: 5 类 audit_log.type (WRITE/LOGIN/SENSITIVE_VIEW/EXPORT/LLM)
+- **影响表**: `audit_log` ALTER +2 字段
+- **角色**: admin
+- **验收**: 5 类事件各留痕; GET 按 type 筛选; 历史回填 WRITE; 集成测例 ≥6
+- **依赖**: —
+- **估算**: BE 0.7d / FE 0.3d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.2.4
+- **对应 MOD**: MOD-02
+
+### RI-60: 数据生命周期 (§13.2.5)
+
+- **业务**: 软删 30 天→物理删文件; 1 年归档; 5 年长期归档
+- **影响表**: `material.archived_at` + `archive.retention.*` 配置
+- **角色**: admin
+- **验收**: cron 物理删文件保留 DB 行; 集成测例 ≥3
+- **依赖**: RI-55
+- **估算**: BE 0.5d / 测试 0.2d
+- **对应 §X.Y**: REQUIREMENTS §13.2.5
+- **对应 MOD**: MOD-02
+
+### RI-61: 失败兜底全景 (§13.2.6)
+
+- **业务**: 10 路径失败→`failure_log` + admin 可查
+- **影响表**: `failure_log` 新表
+- **角色**: admin
+- **验收**: AOP 写 failure_log; GET 筛选; PATCH resolved; 集成测例 ≥4
+- **依赖**: —
+- **估算**: BE 0.7d / FE 0.3d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.2.6
+- **对应 MOD**: MOD-02
+
+### RI-62: 项目看板 (§13.3.1)
+
+- **业务**: 3 视图 + 7 筛选 + 4 排序 + 9 列
+- **影响表**: 无 (聚合查询)
+- **角色**: 全部
+- **验收**: GET board kanban/table; 9 列含议案数/待办数; 集成测例 ≥3
+- **依赖**: —
+- **估算**: BE 0.5d / FE 0.7d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.3.1
+- **对应 MOD**: MOD-04 + MOD-05 (ProjectBoard.vue)
+
+### RI-63: 站内通知中心 (§13.3.2)
+
+- **业务**: 顶栏铃铛 + 4 类来源 + 已读/未读 + 30s 轮询
+- **影响表**: `notification` 新表
+- **角色**: 全部
+- **验收**: 未读列表; mark read; mark-all-read; 4 类来源; 集成测例 ≥5
+- **依赖**: —
+- **估算**: BE 0.7d / FE 0.5d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.3.2
+- **对应 MOD**: MOD-04 + MOD-05
+
+### RI-64: 数据导出 (§13.3.3)
+
+- **业务**: PDF (OpenPDF) + Excel (POI) 4 类列表 + EXPORT 审计
+- **影响表**: 无
+- **角色**: 全部
+- **验收**: PDF 流; Excel 4 类; audit_log.type=EXPORT; 集成测例 ≥4
+- **依赖**: RI-59
+- **估算**: BE 0.7d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.3.3
+- **对应 MOD**: MOD-04 (D-4)
+
+### RI-65: 附件预览 (§13.3.4)
+
+- **业务**: PDF/Word/图片/文本 浏览器内嵌预览
+- **影响表**: 无
+- **角色**: 全部
+- **验收**: preview API; pdfjs/mammoth/img; 集成测例 ≥4
+- **依赖**: —
+- **估算**: BE 0.5d / FE 0.7d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.3.4
+- **对应 MOD**: MOD-04 + MOD-05 (D-5)
+
+### RI-66: 关键事实变更对比 (§13.3.5)
+
+- **业务**: UPDATE 事件 before/after JSON diff
+- **影响表**: 无 (派生)
+- **角色**: 全部
+- **验收**: GET diff API; DiffViewer 渲染; 集成测例 ≥3
+- **依赖**: RI-52
+- **估算**: BE 0.3d / FE 0.5d / 测试 0.2d
+- **对应 §X.Y**: REQUIREMENTS §13.3.5
+- **对应 MOD**: MOD-04
+
+### RI-67: 业务术语中英对照 (§13.3.6)
+
+- **业务**: `business_term.english_name` + Agent 英文查询
+- **影响表**: `business_term` ALTER
+- **角色**: admin
+- **验收**: GET terms?q=vacant 命中; network_dict_lookup 英文; 集成测例 ≥2
+- **依赖**: RI-50
+- **估算**: BE 0.3d / FE 0.2d / 测试 0.2d
+- **对应 §X.Y**: REQUIREMENTS §13.3.6
+- **对应 MOD**: MOD-01 + MOD-04
+
+### RI-68: 旧系统 Excel 导入 (§13.3.7)
+
+- **业务**: admin 导入入口 + 4 类模板 + 字段校验 + import_error
+- **影响表**: `import_batch` / `import_error` 新表
+- **角色**: admin
+- **验收**: multipart 上传; 校验失败写 error; 唯一冲突 rollback; 集成测例 ≥5
+- **依赖**: RI-59
+- **估算**: BE 1d / FE 0.5d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.3.7
+- **对应 MOD**: MOD-04
+
+### RI-69: 数据脱敏视图 (§13.3.8)
+
+- **业务**: 委员脱敏 (`张**` / `***万`) + 申请查看留痕 + admin 通知
+- **影响表**: `user.sensitive_view_enabled`
+- **角色**: 投委会委员 / admin
+- **验收**: COMMITTEE masked=true; unmask→SENSITIVE_VIEW 审计; admin 全量; 集成测例 ≥4
+- **依赖**: RI-58, RI-59, RI-63
+- **估算**: BE 0.5d / FE 0.5d / 测试 0.3d
+- **对应 §X.Y**: REQUIREMENTS §13.3.8
+- **对应 MOD**: MOD-04 + MOD-02

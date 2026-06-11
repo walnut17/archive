@@ -1,6 +1,6 @@
 # 投委会档案管理系统 — 前端架构
 
-> 撰写人：Sisyphus | 日期：2026-06-10 | 版本：v1.0
+> 撰写人：Sisyphus | 日期：2026-06-10 | 版本：v1.0 + v1.1 (2026-06-11)
 
 ## 1. 技术选型
 
@@ -34,7 +34,7 @@ frontend/
     │   └── archive.ts              # 业务 API (~50 端点)
     ├── store/auth.ts               # Pinia auth store
     ├── router/index.ts             # 路由定义 + 导航守卫
-    ├── views/                      # 13 个页面组件
+    ├── views/                      # 18 个页面组件 (v1.1 +5)
     │   ├── Login.vue
     │   ├── Layout.vue
     │   ├── Dashboard.vue
@@ -44,7 +44,11 @@ frontend/
     │   ├── LlmUsage.vue
     │   └── AdminDict / AdminExtraction / AdminComparison / AdminTrigger
     └── components/
-        └── AgentStepsPanel.vue     # Agent 推理步骤展示
+        ├── AgentStepsPanel.vue     # Agent 推理步骤展示
+        ├── ConfidenceBadge.vue     # v1.1 置信度徽章 (RI-46)
+        ├── FactDiffViewer.vue      # v1.1 事实变更对比 (RI-66)
+        ├── MaterialPreview.vue     # v1.1 附件预览 (RI-65)
+        └── NotificationBell.vue    # v1.1 通知铃铛 (RI-63)
 ```
 
 ### 文件统计
@@ -328,3 +332,14 @@ Knowledge.vue
 - Axios 120s 超时是为 Agent 模式 5 步循环预留的
 - Agent 模式响应会多出 `steps`、`agentMode`、`toolCalls` 字段
 - 老前端不会崩——新字段是可选的
+
+---
+
+## v1.1 前端增量 (MOD-05, 2026-06-11)
+
+| 类型 | 文件 | 说明 |
+|---|---|---|
+| 新 View | ProjectBoard.vue, AdminImport.vue, RecycleBin.vue | 看板 / 导入 / 回收站 |
+| 改 View | Knowledge.vue, Home.vue, ProjectForm.vue, ProjectDetail.vue, Layout.vue | 徽章 / 双模动画 / 失败 banner / 导出 / 通知铃铛 |
+| 新 Component | 5 个 (见 §2 结构) | 从 1→5 |
+| 新依赖 | pdfjs-dist, mammoth | 纯前端预览 (D-5) |

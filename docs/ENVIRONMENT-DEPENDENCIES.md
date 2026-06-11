@@ -327,4 +327,19 @@
 
 ---
 
+## 14. v1.1 配置项 (MOD-01~05, 2026-06-11)
+
+| 配置键 | 默认值 | 说明 | 模块 |
+|---|---|---|---|
+| `archive.optimistic-lock.strict` | `false` | v1.1 冲突仅记日志; v2 多用户切 `true` (D-3) | MOD-02 |
+| `archive.retention.soft-delete-days` | `30` | 软删后物理删文件天数 | MOD-02 |
+| `archive.retention.archive-years` | `1` | 归档年限 | MOD-02 |
+| `spring.ai.agent.enabled` | `true` | Agent 模式开关; false 走 QaController 降级 | MOD-03 |
+| `spring.ai.agent.find-project.loop-trigger-threshold` | `1` | 死循环判定阈值 | MOD-03 |
+| `agent.find-project.llm-fallback-max-total` | `300` | LLM 兜底项目数上限 | MOD-03 |
+| `app.network-dict.baidu.api-key` | (空) | 百度百科 API (D-2) | MOD-03 |
+| `app.network-dict.wikipedia.enabled` | `true` | 维基百科启用 | MOD-03 |
+
+详见 `application.yml` + `docs/GLM-KEY-SETUP.md` §v1.1 网络查字典.
+
 *本档案与 `TEAM-ARCHIVE.md` 互补。本档案侧重"对外依赖"和"环境约束",`TEAM-ARCHIVE.md` 侧重"团队约定"和"踩坑"。*

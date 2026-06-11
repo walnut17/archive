@@ -681,5 +681,21 @@ public class ProjectAmountCalculator {
 ---
 
 *文档作者: 架构师 架构设计 Agent*
-*版本: v2 / 2026-06-08*
+*版本: v2 / 2026-06-08 + v1.1 增量 2026-06-11*
 *配套文档: `DB-SCHEMA-v2.md`*
+
+---
+
+## 附录 B: v1.1 增量摘要 (MOD-01~06, 基线 7aa7bae)
+
+| 维度 | v1.0 | v1.1 | 说明 |
+|---|---|---|---|
+| Controller | 13 | **18** | +看板/通知/回收站/导入/失败日志 |
+| Service | 17 | **29** | +导出/预览/脱敏/RBAC/网络字典等 |
+| AgentTool | 6 | **7** | +network_dict_lookup |
+| Entity/表 | 18 | **30** | +7 新表 + 7 ALTER |
+| 前端 View | 13 | **18** | +看板/导入/回收站等 |
+| 集成测例 | 10 (AgentIntegrationTest) | **45+** (V11IntegrationTest) | MOD-06 收口 |
+
+**零回归**: v1.0 全部 API / 页面行为保留; Agent 降级路径 (spring.ai.agent.enabled=false) 仍可用.
+**详细 RI**: `docs/requirements/ARCH-DECOMPOSITION.md` §四 RI-46~69.
