@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -58,7 +59,7 @@ public class QaResponse {
         return QaResponse.builder()
                 .question(null)
                 .answer(ar.getAnswer())
-                .sources(null)
+                .sources(Collections.emptyList())
                 .reranked(false)
                 .agentMode(true)
                 .steps(ar.getSteps())

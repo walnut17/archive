@@ -29,7 +29,7 @@ interface AgentStep {
 interface QaResponse {
   question: string
   answer: string | null
-  sources: Source[]
+  sources: Source[] | null
   reranked: boolean
   elapsedMs: number
   agentMode?: boolean | null
@@ -37,6 +37,11 @@ interface QaResponse {
   toolCalls?: number | null
   projectSwitchHint?: string | null
   confidenceBadge?: string | null
+}
+
+/** 安全获取 sources 数组(兼容 Agent 模式 sources=null 的场景). */
+function safeSources(src: Source[] | null | undefined): Source[] {
+  return src ?? []
 }
 
 const question = ref('')
@@ -85,7 +90,7 @@ async function onAsk() {
   }
   loading.value = true
   try {
-    const body = { question: question.value, topN: 10, rerank: useRerank.value }
+    const body = { question: question.value, topN: 10, rerank: useRerank.value, agentMode: agentMode.value }
     const resp = await http.post<any>('/qa/ask', body)
     result.value = getData<QaResponse>(resp)
   } catch (e: any) {
@@ -171,12 +176,12 @@ const exampleQuestions = [
       <el-card>
         <template #header>
           <div>
-            <span style="font-weight: 500">参考来源({{ result.sources.length }})</span>
+            <span style="font-weight: 500">参考来源({{ safeSources(result.sources).length }})</span>
           </div>
         </template>
-        <div v-if="result.sources.length === 0" style="color: #909399">未检索到匹配材料</div>
+        <div v-if="safeSources(result.sources).length === 0" style="color: #909399">未检索到匹配材料</div>
         <el-collapse>
-          <el-collapse-item v-for="(s, i) in result.sources" :key="s.versionId" :name="i">
+          <el-collapse-item v-for="(s, i) in safeSources(result.sources)" :key="s.versionId" :name="i">
             <template #title>
               <div style="width: 100%; display: flex; justify-content: space-between; align-items: center">
                 <div>
