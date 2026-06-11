@@ -1,5 +1,6 @@
 package com.archive.service;
 
+import com.archive.common.OptimisticLockException;
 import com.archive.dto.MaterialRequest;
 import com.archive.dto.PageResponse;
 import com.archive.entity.Material;
@@ -9,6 +10,7 @@ import com.archive.repository.ProposalRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +36,7 @@ public class MaterialService {
     private final MaterialRepository materialRepository;
     private final MaterialVersionRepository materialVersionRepository;
     private final ProposalRepository proposalRepository;
+    private final RecycleBinService recycleBinService;
 
     @Autowired
     private MaterialVersionService materialVersionService;
@@ -58,7 +61,7 @@ public class MaterialService {
                 .description(req.getDescription())
                 .tags(req.getTags())
                 .build();
-        return materialRepository.save(m);
+        return saveWithVersionCheck(m);
     }
 
     @Transactional
@@ -68,13 +71,19 @@ public class MaterialService {
         if (req.getStatus() != null && !VALID_STATUSES.contains(req.getStatus())) {
             throw new IllegalArgumentException("非法状态: " + req.getStatus());
         }
-        // 不允许改 proposalId(变更归属)
         m.setTitle(req.getTitle());
         m.setCategory(req.getCategory());
-        if (req.getStatus() != null) m.setStatus(req.getStatus());
+        if (req.getStatus() != null) {
+            m.setStatus(req.getStatus());
+        }
         m.setDescription(req.getDescription());
         m.setTags(req.getTags());
-        return materialRepository.save(m);
+        return saveWithVersionCheck(m);
+    }
+
+    @Transactional
+    public void softDelete(Long id, Long userId) {
+        recycleBinService.softDeleteMaterial(id, userId);
     }
 
     @Transactional
@@ -85,7 +94,7 @@ public class MaterialService {
         if (versionCount > 0) {
             throw new IllegalStateException("材料下还有 " + versionCount + " 个版本,不可删除");
         }
-        materialRepository.delete(m);
+        recycleBinService.softDeleteMaterial(id, null);
     }
 
     public Material getById(Long id) {
@@ -112,16 +121,6 @@ public class MaterialService {
         return materialVersionRepository.countByMaterialId(materialId);
     }
 
-    /**
-     * 批量上传材料（含版本创建并触发解析）.
-     *
-     * @param proposalId     所属议案 ID
-     * @param files          上传的文件数组（最多 20 个）
-     * @param defaultCategory 默认分类（为空则用"其他"）
-     * @param defaultTags    默认标签
-     * @param uploadedBy     上传人 username
-     * @return 已创建的 Material 列表
-     */
     @Transactional
     public List<Material> batchUpload(Long proposalId, MultipartFile[] files,
                                       String defaultCategory, String defaultTags,
@@ -141,9 +140,10 @@ public class MaterialService {
 
         List<Material> materials = new ArrayList<>();
         for (MultipartFile file : files) {
-            if (file.isEmpty()) continue;
+            if (file.isEmpty()) {
+                continue;
+            }
 
-            // 从文件名去掉扩展名作为标题
             String originalFilename = file.getOriginalFilename();
             String title = originalFilename;
             if (title != null && title.contains(".")) {
@@ -162,12 +162,18 @@ public class MaterialService {
                     .build();
             m = materialRepository.save(m);
 
-            // 创建第一个版本（null changeNote 表示首次上传）
             materialVersionService.upload(m.getId(), file, null, uploadedBy);
-
             materials.add(m);
         }
 
         return materials;
+    }
+
+    private Material saveWithVersionCheck(Material m) {
+        try {
+            return materialRepository.save(m);
+        } catch (OptimisticLockingFailureException e) {
+            throw new OptimisticLockException("数据已被他人修改，请刷新后重试", e);
+        }
     }
 }

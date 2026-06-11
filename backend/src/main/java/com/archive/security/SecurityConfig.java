@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -35,6 +36,7 @@ import java.util.List;
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -68,6 +70,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/extraction-methods/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/comparison-methods/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/audit-logs/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/failure-logs/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                         // 其他 /api/** 需要认证(任意角色)
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()

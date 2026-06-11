@@ -14,14 +14,14 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.archive.service.RbacService;
+
 import java.io.IOException;
-import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * JWT 认证过滤器.
- *
- * 每次请求检查 Authorization Header,如果有有效 JWT,设置 SecurityContext.
- * 没 token 或 token 无效 → 不设置,后续 Spring Security 会按未认证处理.
+ * JWT 认证过滤器 — v1.1 多角色 via RbacService.
  *
  * @author Mavis
  */
@@ -31,6 +31,7 @@ import java.util.Collections;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final RbacService rbacService;
 
     private static final String AUTH_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
@@ -54,14 +55,26 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         String username = claims.getSubject();
-        String role = (String) claims.get("role");
+        String legacyRole = (String) claims.get("role");
         Long uid = ((Number) claims.get("uid")).longValue();
 
-        // 把 uid 放在 details 里,Controller 可以取
+        List<String> roleCodes = rbacService.getRoleCodes(uid);
+        if (roleCodes.isEmpty() && legacyRole != null) {
+            roleCodes = List.of(legacyRole.toLowerCase());
+        }
+
+        List<SimpleGrantedAuthority> authorities = roleCodes.stream()
+                .map(code -> new SimpleGrantedAuthority("ROLE_" + code.toUpperCase()))
+                .collect(Collectors.toList());
+
+        String primaryRole = roleCodes.isEmpty()
+                ? (legacyRole != null ? legacyRole : "user")
+                : roleCodes.get(0);
+
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                new AuthenticatedUser(uid, username, role),
+                new AuthenticatedUser(uid, username, primaryRole),
                 null,
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + (role == null ? "USER" : role.toUpperCase())))
+                authorities
         );
         auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(auth);

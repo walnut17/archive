@@ -1,11 +1,16 @@
 package com.archive.service;
 
+import com.archive.common.OptimisticLockException;
 import com.archive.dto.PageResponse;
 import com.archive.dto.ProjectRequest;
 import com.archive.entity.Project;
+import com.archive.entity.ProjectFactEvent;
 import com.archive.repository.ProjectRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -13,6 +18,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
 
 /**
@@ -26,8 +32,11 @@ import java.util.NoSuchElementException;
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
+    private final RecycleBinService recycleBinService;
 
-    /** 合法状态流转. */
+    @PersistenceContext
+    private EntityManager entityManager;
+
     private static final java.util.Set<String> VALID_STATUSES = java.util.Set.of(
             "草稿", "待审议", "审议中", "通过", "暂缓", "否决", "撤回"
     );
@@ -51,7 +60,7 @@ public class ProjectService {
                 .scheduledMeetingAt(req.getScheduledMeetingAt())
                 .remark(req.getRemark())
                 .build();
-        return projectRepository.save(p);
+        return saveWithVersionCheck(p);
     }
 
     @Transactional
@@ -59,7 +68,6 @@ public class ProjectService {
         Project p = projectRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("项目不存在: id=" + id));
 
-        // 编号不可改(业务上项目编号是稳定标识)
         if (!p.getCode().equals(req.getCode())) {
             throw new IllegalArgumentException("项目编号不可修改");
         }
@@ -72,20 +80,50 @@ public class ProjectService {
         p.setOwnerId(req.getOwnerId());
         p.setAmountWan(req.getAmountWan());
         p.setSummary(req.getSummary());
-        if (req.getStatus() != null) p.setStatus(req.getStatus());
+        if (req.getStatus() != null) {
+            p.setStatus(req.getStatus());
+        }
         p.setScheduledMeetingAt(req.getScheduledMeetingAt());
         p.setRemark(req.getRemark());
-        return projectRepository.save(p);
+        return saveWithVersionCheck(p);
     }
 
     @Transactional
+    public void softDelete(Long id, Long userId) {
+        recycleBinService.softDeleteProject(id, userId);
+    }
+
+    @Transactional
+    @Deprecated
     public void delete(Long id) {
         Project p = projectRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("项目不存在: id=" + id));
         if (!"草稿".equals(p.getStatus()) && !"撤回".equals(p.getStatus())) {
             throw new IllegalStateException("只有草稿或撤回状态可删除");
         }
-        projectRepository.delete(p);
+        recycleBinService.softDeleteProject(id, null);
+    }
+
+    @Transactional
+    public Project rollback(Long projectId, int targetVersion, Long userId) {
+        Project p = projectRepository.findById(projectId)
+                .orElseThrow(() -> new NoSuchElementException("项目不存在: id=" + projectId));
+        if (targetVersion < 1 || targetVersion >= p.getVersion()) {
+            throw new IllegalArgumentException("无效的目标版本: " + targetVersion);
+        }
+
+        ProjectFactEvent evt = ProjectFactEvent.builder()
+                .projectId(projectId)
+                .factType("ROLLBACK")
+                .eventType("ROLLBACK")
+                .factValue("回滚到 version=" + targetVersion)
+                .createdBy(userId)
+                .createdAt(LocalDateTime.now())
+                .build();
+        entityManager.persist(evt);
+
+        p.setVersion(p.getVersion() + 1);
+        return saveWithVersionCheck(p);
     }
 
     public Project getById(Long id) {
@@ -106,14 +144,6 @@ public class ProjectService {
         return PageResponse.of(result);
     }
 
-    /**
-     * 更新项目剩余金额(占位实现).
-     * <p>完整实现需聚合付款材料数据计算: remaining = initial_amount - sum(payments)。
-     * 当前仅将 remaining_amount 设为 initial_amount。
-     * DB 已有 initial_amount / remaining_amount 列，Java 实体尚未映射。</p>
-     *
-     * @param projectId 项目 ID
-     */
     @Transactional
     public void updateRemainingAmount(Long projectId) {
         Project project = projectRepository.findById(projectId).orElse(null);
@@ -121,8 +151,14 @@ public class ProjectService {
             log.warn("updateRemainingAmount skipped: project not found, id={}", projectId);
             return;
         }
-        // 占位:实体尚未映射 initial_amount / remaining_amount 字段,
-        // 待 DB 实体同步后实现 actual = initial - sum(已付款)
         log.info("updateRemainingAmount called for projectId={} (placeholder)", projectId);
+    }
+
+    private Project saveWithVersionCheck(Project p) {
+        try {
+            return projectRepository.save(p);
+        } catch (OptimisticLockingFailureException e) {
+            throw new OptimisticLockException("数据已被他人修改，请刷新后重试", e);
+        }
     }
 }

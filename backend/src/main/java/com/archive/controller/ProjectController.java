@@ -5,9 +5,13 @@ import com.archive.dto.PageResponse;
 import com.archive.dto.ProjectRequest;
 import com.archive.dto.ProjectResponse;
 import com.archive.entity.Project;
+import com.archive.security.JwtAuthFilter;
 import com.archive.service.ProjectService;
 import jakarta.validation.Valid;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -50,8 +54,28 @@ public class ProjectController {
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
-        projectService.delete(id);
+    @PreAuthorize("hasAnyRole('ADMIN','PM')")
+    public ApiResponse<Void> delete(
+            @PathVariable Long id,
+            @AuthenticationPrincipal JwtAuthFilter.AuthenticatedUser user) {
+        Long userId = user != null ? user.id() : null;
+        projectService.softDelete(id, userId);
         return ApiResponse.ok();
+    }
+
+    @PostMapping("/{id}/rollback")
+    @PreAuthorize("hasAnyRole('ADMIN','PM')")
+    public ApiResponse<ProjectResponse> rollback(
+            @PathVariable Long id,
+            @RequestBody RollbackRequest req,
+            @AuthenticationPrincipal JwtAuthFilter.AuthenticatedUser user) {
+        Long userId = user != null ? user.id() : null;
+        Project rolled = projectService.rollback(id, req.getTargetVersion(), userId);
+        return ApiResponse.ok(ProjectResponse.from(rolled));
+    }
+
+    @Data
+    public static class RollbackRequest {
+        private int targetVersion;
     }
 }

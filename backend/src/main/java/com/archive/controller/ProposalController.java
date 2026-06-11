@@ -7,8 +7,12 @@ import com.archive.dto.ProposalResponse;
 import com.archive.entity.Proposal;
 import com.archive.service.ProposalService;
 import jakarta.validation.Valid;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 /**
  * 议案 API.
@@ -60,5 +64,58 @@ public class ProposalController {
     public ApiResponse<ProposalResponse> regenerateSummary(@PathVariable Long id) {
         Proposal updated = proposalService.regenerateSummary(id);
         return ApiResponse.ok(ProposalResponse.from(updated));
+    }
+
+    @PatchMapping("/{id}/decision")
+    @PreAuthorize("hasAnyRole('ADMIN','COMMITTEE')")
+    public ApiResponse<ProposalResponse> updateDecision(
+            @PathVariable Long id,
+            @RequestBody DecisionRequest dto) {
+        Proposal updated = proposalService.updateDecision(id, dto.getMeetingResult(), dto.getConditionText());
+        return ApiResponse.ok(ProposalResponse.from(updated));
+    }
+
+    @PostMapping("/reserve")
+    @PreAuthorize("hasAnyRole('ADMIN','SECRETARY','PM')")
+    public ApiResponse<Map<String, Object>> reserve(@RequestBody ReserveRequest dto) {
+        Proposal p = proposalService.reserve(dto.getSeriesCode(), dto.getProjectId());
+        return ApiResponse.ok(Map.of(
+                "proposalCode", p.getCode(),
+                "proposalId", p.getId(),
+                "expiresAt", p.getReservedAt().plusHours(24)
+        ));
+    }
+
+    @PostMapping("/{id}/revoke")
+    @PreAuthorize("hasAnyRole('ADMIN','SECRETARY','PM')")
+    public ApiResponse<Void> revoke(@PathVariable Long id) {
+        proposalService.revoke(id);
+        return ApiResponse.ok();
+    }
+
+    @PostMapping("/{id}/change-series")
+    @PreAuthorize("hasAnyRole('ADMIN','SECRETARY')")
+    public ApiResponse<ProposalResponse> changeSeries(
+            @PathVariable Long id,
+            @RequestBody ChangeSeriesRequest dto) {
+        Proposal p = proposalService.changeSeries(id, dto.getSeriesCode());
+        return ApiResponse.ok(ProposalResponse.from(p));
+    }
+
+    @Data
+    public static class DecisionRequest {
+        private String meetingResult;
+        private String conditionText;
+    }
+
+    @Data
+    public static class ReserveRequest {
+        private String seriesCode;
+        private Long projectId;
+    }
+
+    @Data
+    public static class ChangeSeriesRequest {
+        private String seriesCode;
     }
 }

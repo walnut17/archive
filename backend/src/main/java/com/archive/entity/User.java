@@ -30,36 +30,45 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 登录用户名(唯一). */
     @Column(name = "username", nullable = false, unique = true, length = 64)
     private String username;
 
-    /** 显示名称. */
     @Column(name = "display_name", nullable = false, length = 128)
     private String displayName;
 
-    /** BCrypt 加密后的密码(不要存明文). */
     @Column(name = "password_hash", nullable = false, length = 128)
     private String passwordHash;
 
     @Column(name = "email", length = 128)
     private String email;
 
-    /** 角色 ID(多对一,实际权限以 role.permissions 为准). */
     @Column(name = "role_id")
     private Long roleId;
 
-    /** 部门. */
     @Column(name = "department", length = 128)
     private String department;
 
-    /** 在岗 / 停用. */
     @Column(name = "status", nullable = false, length = 16)
     @Builder.Default
     private String status = "在岗";
 
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Column(name = "deleted_by")
+    private Long deletedBy;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Integer version = 1;
+
+    @Column(name = "sensitive_view_enabled", nullable = false)
+    @Builder.Default
+    private Boolean sensitiveViewEnabled = false;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

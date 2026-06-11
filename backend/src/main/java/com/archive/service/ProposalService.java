@@ -1,11 +1,11 @@
 package com.archive.service;
 
+import com.archive.common.OptimisticLockException;
 import com.archive.dto.PageResponse;
 import com.archive.dto.ProposalRequest;
 import com.archive.engine.ComparisonEngine;
 import com.archive.entity.Material;
 import com.archive.entity.MaterialVersion;
-import com.archive.entity.Project;
 import com.archive.entity.Proposal;
 import com.archive.provider.LLMProvider;
 import com.archive.provider.LLMProviderFactory;
@@ -16,6 +16,7 @@ import com.archive.repository.ProposalRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -39,6 +40,8 @@ public class ProposalService {
 
     private final ProposalRepository proposalRepository;
     private final ProjectRepository projectRepository;
+    private final RecycleBinService recycleBinService;
+    private final ProposalNumberGenerator proposalNumberGenerator;
 
     @Autowired
     private ComparisonEngine comparisonEngine;
@@ -76,7 +79,53 @@ public class ProposalService {
                 .decision(req.getDecision())
                 .remark(req.getRemark())
                 .build();
-        return proposalRepository.save(p);
+        return saveWithVersionCheck(p);
+    }
+
+    @Transactional
+    public Proposal updateDecision(Long id, String meetingResult, String conditionText) {
+        Proposal p = proposalRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("议案不存在: id=" + id));
+
+        if (isImmutableAfterMeeting(p.getStatus())) {
+            throw new IllegalStateException("已开投委会，需走复议（新建议案）");
+        }
+
+        if ("CONDITIONAL_PASS".equalsIgnoreCase(meetingResult) || "附条件通过".equals(meetingResult)) {
+            p.setConditionText(conditionText);
+            p.setConditionStatus("PENDING");
+        }
+
+        if (meetingResult != null && !meetingResult.isBlank()) {
+            p.setDecision(meetingResult);
+        }
+        return saveWithVersionCheck(p);
+    }
+
+    @Transactional
+    public Proposal reserve(String seriesCode, Long projectId) {
+        if (!projectRepository.existsById(projectId)) {
+            throw new NoSuchElementException("项目不存在: id=" + projectId);
+        }
+        return proposalNumberGenerator.reserve(seriesCode, projectId);
+    }
+
+    @Transactional
+    public void revoke(Long proposalId) {
+        proposalNumberGenerator.release(proposalId);
+    }
+
+    @Transactional
+    public Proposal changeSeries(Long proposalId, String newSeriesCode) {
+        return proposalNumberGenerator.changeSeries(proposalId, newSeriesCode);
+    }
+
+    private static boolean isImmutableAfterMeeting(String status) {
+        if (status == null) {
+            return false;
+        }
+        return "审议中".equals(status) || "通过".equals(status) || "暂缓".equals(status) || "否决".equals(status)
+                || "OPEN".equalsIgnoreCase(status) || "CLOSED".equalsIgnoreCase(status);
     }
 
     @Transactional
@@ -105,7 +154,7 @@ public class ProposalService {
         p.setReviewedAt(req.getReviewedAt());
         p.setDecision(req.getDecision());
         p.setRemark(req.getRemark());
-        Proposal saved = proposalRepository.save(p);
+        Proposal saved = saveWithVersionCheck(p);
 
         // 非阻塞:状态变为"已提交"时触发对比引擎 + 自动摘要
         if (!"已提交".equals(oldStatus) && "已提交".equals(saved.getStatus())) {
@@ -119,13 +168,18 @@ public class ProposalService {
     }
 
     @Transactional
+    public void softDelete(Long id, Long userId) {
+        recycleBinService.softDeleteProposal(id, userId);
+    }
+
+    @Transactional
     public void delete(Long id) {
         Proposal p = proposalRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("议案不存在: id=" + id));
-        if (!"草稿".equals(p.getStatus()) && !"撤回".equals(p.getStatus())) {
+        if (!"草稿".equals(p.getStatus()) && !"撤回".equals(p.getStatus()) && !"DRAFT_RESERVED".equals(p.getStatus())) {
             throw new IllegalStateException("只有草稿或撤回状态可删除");
         }
-        proposalRepository.delete(p);
+        recycleBinService.softDeleteProposal(id, null);
     }
 
     public Proposal getById(Long id) {
@@ -244,7 +298,15 @@ public class ProposalService {
         if (summary != null) {
             saveSummary(proposal, summary);
         }
-        return proposalRepository.save(proposal);
+        return saveWithVersionCheck(proposal);
+    }
+
+    private Proposal saveWithVersionCheck(Proposal p) {
+        try {
+            return proposalRepository.save(p);
+        } catch (OptimisticLockingFailureException e) {
+            throw new OptimisticLockException("数据已被他人修改，请刷新后重试", e);
+        }
     }
 
     /**

@@ -2,6 +2,7 @@ package com.archive.common;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -9,6 +10,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 /**
@@ -19,6 +21,24 @@ import java.util.NoSuchElementException;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /** D-3: v1.1 灰度默认 false; application.yml 配置属 MOD-05 */
+    @Value("${archive.optimistic-lock.strict:false}")
+    private boolean optimisticLockStrict;
+
+    @ExceptionHandler(OptimisticLockException.class)
+    public ResponseEntity<ApiResponse<Map<String, Object>>> handleOptimisticLock(
+            OptimisticLockException e, HttpServletRequest req) {
+        if (!optimisticLockStrict) {
+            log.warn("Optimistic lock conflict (v1.1 灰度, 仅记日志) @ {}: {}", req.getRequestURI(), e.getMessage());
+            return ResponseEntity.ok(ApiResponse.ok(Map.of(
+                    "warning", "数据已被他人修改，请刷新后重试",
+                    "version", -1
+            )));
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.fail(40901,
+                "数据已被他人修改，请刷新后重试"));
+    }
 
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(NoSuchElementException e, HttpServletRequest req) {

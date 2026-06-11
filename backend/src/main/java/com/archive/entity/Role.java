@@ -11,10 +11,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 /**
- * 角色实体.
- *
- * 角色承载权限位,用户多对一挂角色。M0 阶段权限简化,role 字段直接是字符串(admin/committee/project_owner/employee),
- * 但保留独立 Role 实体便于未来扩展(权限位、ACL 等).
+ * 角色实体 — v1.1 5 角色 + v1.0 user 兼容.
  *
  * @author Mavis
  */
@@ -26,23 +23,26 @@ import java.time.LocalDateTime;
 @Table(name = "role")
 public class Role {
 
+    public static final String CODE_ADMIN = "admin";
+    public static final String CODE_USER = "user";
+    public static final String CODE_PM = "pm";
+    public static final String CODE_LEGAL = "legal";
+    public static final String CODE_COMMITTEE = "committee";
+    public static final String CODE_SECRETARY = "secretary";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 角色代码(唯一),如 admin / committee / project_owner / employee. */
     @Column(name = "code", nullable = false, unique = true, length = 64)
     private String code;
 
-    /** 显示名称,如"管理员" / "投委会委员" / "项目经理" / "普通员工". */
     @Column(name = "name", nullable = false, length = 128)
     private String name;
 
-    /** 描述. */
     @Column(name = "description", length = 512)
     private String description;
 
-    /** 权限位(JSON 数组,存放具体权限标识,留待后续扩展). */
     @Column(name = "permissions", columnDefinition = "JSON")
     private String permissions;
 

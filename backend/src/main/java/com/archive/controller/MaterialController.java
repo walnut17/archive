@@ -5,15 +5,17 @@ import com.archive.dto.MaterialRequest;
 import com.archive.dto.MaterialResponse;
 import com.archive.dto.PageResponse;
 import com.archive.entity.Material;
+import com.archive.security.JwtAuthFilter;
 import com.archive.service.MaterialService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 
 /**
  * 材料 API.
@@ -36,7 +38,6 @@ public class MaterialController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String keyword) {
         PageResponse<Material> result = materialService.list(page, size, proposalId, category, status, keyword);
-        // 转换时填上版本数(注意:N+1 查询,后续可优化)
         return ApiResponse.ok(PageResponse.<MaterialResponse>builder()
                 .content(result.getContent().stream()
                         .map(m -> MaterialResponse.from(m, materialService.countVersions(m.getId())))
@@ -69,8 +70,12 @@ public class MaterialController {
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
-        materialService.delete(id);
+    @PreAuthorize("hasAnyRole('ADMIN','PM','LEGAL')")
+    public ApiResponse<Void> delete(
+            @PathVariable Long id,
+            @AuthenticationPrincipal JwtAuthFilter.AuthenticatedUser user) {
+        Long userId = user != null ? user.id() : null;
+        materialService.softDelete(id, userId);
         return ApiResponse.ok();
     }
 
