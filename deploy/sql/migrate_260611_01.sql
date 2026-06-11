@@ -1,60 +1,296 @@
 -- =============================================================================
--- v1.1 生产库一次性迁移 — migrate_260611_01.sql
--- 合并: I-RI-22/24/25/26/28/31/33/34/35/37/39/43/44/45 (共 14 份)
+-- 生产库一次性迁移 — migrate_260611_01.sql (完整版)
 -- 日期: 2026-06-11 | 作者: 阿根廷
 --
--- 用法 (125 生产机):
---   1. 先备份: mysqldump -u archive_app -p archive_db > D:\archive\backup\before-v11.sql
---   2. mysql -u archive_app -p archive_db < D:\projects-online\deploy\sql\migrate_260611_01.sql
---   或在 mysql 终端: source D:/projects-online/deploy/sql/migrate_260611_01.sql
+-- 覆盖范围:
+--   A. v1/v2 旧表补丁 (material_version / project / user / llm_call_log 等)
+--   B. v1.1 旧表 ALTER (project / proposal / material / user / audit_log / business_term / fact*)
+--   C. v1.1 新表 CREATE + 种子数据 + 触发器 + 回填
 --
--- 注意:
---   - 勿对空库跑 init.sql; 本脚本用于 v1.0/v2 已有库升级到 v1.1
---   - 若报 Duplicate column / Duplicate key, 说明 Hibernate 或旧脚本已加过, 可忽略该段后继续
---   - notification 使用 is_read (与 Java 实体一致, 非 I-RI-39 原 ``read``)
+-- 用法:
+--   mysqldump -u archive_app -p archive_db > D:\archive\backup\before-v11.sql
+--   mysql -u archive_app -p archive_db < D:\projects-online\deploy\sql\migrate_260611_01.sql
+--   或: source D:/projects-online/deploy/sql/migrate_260611_01.sql
+--
+-- 特性: 列/索引已存在则跳过 (可重复执行, Duplicate 报错大幅减少)
+-- 勿对空库跑 init.sql; 本脚本用于已有 archive_db 升级
 -- =============================================================================
 
 USE archive_db;
 
 -- =============================================================================
--- I-RI-22: 置信度 3 级
+-- 工具: 列不存在才 ADD (MySQL 客户端 source 友好)
+-- =============================================================================
+
+DROP PROCEDURE IF EXISTS sp_add_column_if_missing;
+DELIMITER $$
+CREATE PROCEDURE sp_add_column_if_missing(
+    IN p_table VARCHAR(64),
+    IN p_column VARCHAR(64),
+    IN p_definition TEXT
+)
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = p_table
+          AND COLUMN_NAME = p_column
+    ) THEN
+        SET @ddl = CONCAT('ALTER TABLE `', p_table, '` ADD COLUMN `', p_column, '` ', p_definition);
+        PREPARE stmt FROM @ddl;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+    END IF;
+END$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS sp_add_index_if_missing;
+DELIMITER $$
+CREATE PROCEDURE sp_add_index_if_missing(
+    IN p_table VARCHAR(64),
+    IN p_index VARCHAR(64),
+    IN p_index_ddl TEXT
+)
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = p_table
+          AND INDEX_NAME = p_index
+    ) THEN
+        SET @ddl = p_index_ddl;
+        PREPARE stmt FROM @ddl;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+    END IF;
+END$$
+DELIMITER ;
+
+-- =============================================================================
+-- A1. v2-schema: material_version 全文检索字段
+-- =============================================================================
+
+CALL sp_add_column_if_missing('material_version', 'parsed_text',
+    'LONGTEXT NULL COMMENT ''解析后纯文本(M2 FULLTEXT)''');
+CALL sp_add_index_if_missing('material_version', 'ft_parsed_text',
+    'ALTER TABLE material_version ADD FULLTEXT INDEX ft_parsed_text (parsed_text) WITH PARSER ngram');
+
+-- =============================================================================
+-- A2. Plan I: project.customer_name + FULLTEXT
+-- =============================================================================
+
+CALL sp_add_column_if_missing('project', 'customer_name',
+    'VARCHAR(256) NULL COMMENT ''客户名称(FindProjectTool)''');
+CALL sp_add_index_if_missing('project', 'ft_name_cust',
+    'ALTER TABLE project ADD FULLTEXT INDEX ft_name_cust (name, customer_name) WITH PARSER ngram');
+
+-- =============================================================================
+-- A3. v2-schema: project 金额 + 归档状态
+-- =============================================================================
+
+CALL sp_add_column_if_missing('project', 'initial_amount',
+    'DECIMAL(18,2) NULL COMMENT ''初始总金额(元)''');
+CALL sp_add_column_if_missing('project', 'remaining_amount',
+    'DECIMAL(18,2) NULL COMMENT ''剩余金额(元)''');
+CALL sp_add_column_if_missing('project', 'archive_status',
+    'VARCHAR(32) NULL COMMENT ''归档/在档状态''');
+CALL sp_add_index_if_missing('project', 'idx_project_archive_status',
+    'ALTER TABLE project ADD INDEX idx_project_archive_status (archive_status)');
+
+-- =============================================================================
+-- A4. v2-schema: user 登录限流
+-- =============================================================================
+
+CALL sp_add_column_if_missing('user', 'failed_login_count',
+    'INT NOT NULL DEFAULT 0 COMMENT ''连续登录失败次数''');
+CALL sp_add_column_if_missing('user', 'lockout_until',
+    'DATETIME NULL COMMENT ''账号锁定截止时间''');
+
+-- =============================================================================
+-- A5. Plan G: llm_call_log (表 + token 列)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS llm_call_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NULL COMMENT '调用用户 ID',
+    username VARCHAR(64) NULL COMMENT '用户名冗余',
+    scenario VARCHAR(64) NOT NULL COMMENT '场景',
+    model VARCHAR(64) NOT NULL COMMENT '模型名',
+    prompt_tokens INT NULL,
+    completion_tokens INT NULL,
+    total_tokens INT NULL,
+    duration_ms INT NOT NULL COMMENT '耗时毫秒',
+    status VARCHAR(16) NOT NULL COMMENT 'SUCCESS/FAILED',
+    error_message VARCHAR(500) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_created (user_id, created_at),
+    INDEX idx_scenario_created (scenario, created_at),
+    INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='LLM 调用日志';
+
+CALL sp_add_column_if_missing('llm_call_log', 'prompt_tokens', 'INT NULL');
+CALL sp_add_column_if_missing('llm_call_log', 'completion_tokens', 'INT NULL');
+CALL sp_add_column_if_missing('llm_call_log', 'total_tokens', 'INT NULL');
+
+-- =============================================================================
+-- A6. Plan I: 多轮对话记忆表
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS spring_ai_chat_memory (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    conversation_id VARCHAR(64) NOT NULL COMMENT '会话 ID',
+    content TEXT NOT NULL COMMENT '消息内容',
+    type VARCHAR(16) NOT NULL COMMENT 'user/assistant/system/tool',
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_conversation_timestamp (conversation_id, timestamp)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Agent 多轮对话记忆';
+
+-- =============================================================================
+-- B1. I-RI-24: proposal 附条件通过 (旧表 ALTER)
+-- =============================================================================
+
+CALL sp_add_column_if_missing('proposal', 'condition_text',
+    'TEXT NULL COMMENT ''附条件通过的条件描述''');
+CALL sp_add_column_if_missing('proposal', 'condition_status',
+    'VARCHAR(16) NOT NULL DEFAULT ''NONE'' COMMENT ''NONE/PENDING/MET/UNMET''');
+CALL sp_add_column_if_missing('proposal', 'condition_met_at',
+    'DATETIME NULL COMMENT ''条件满足时间''');
+
+-- =============================================================================
+-- B2. I-RI-25: proposal 编号预留 (旧表 ALTER)
+-- =============================================================================
+
+CALL sp_add_column_if_missing('proposal', 'reserved_at',
+    'DATETIME NULL COMMENT ''编号预留时间''');
+CALL sp_add_column_if_missing('proposal', 'released_at',
+    'DATETIME NULL COMMENT ''编号释放时间''');
+
+-- =============================================================================
+-- B3. I-RI-31: 7 表软删 + version (旧表 ALTER)
+-- =============================================================================
+
+-- project
+CALL sp_add_column_if_missing('project', 'deleted_at', 'DATETIME NULL COMMENT ''软删时间''');
+CALL sp_add_column_if_missing('project', 'deleted_by', 'BIGINT NULL COMMENT ''软删操作者''');
+CALL sp_add_column_if_missing('project', 'version', 'INT NOT NULL DEFAULT 1 COMMENT ''乐观锁版本''');
+CALL sp_add_index_if_missing('project', 'idx_deleted_at',
+    'ALTER TABLE project ADD INDEX idx_deleted_at (deleted_at)');
+
+-- proposal
+CALL sp_add_column_if_missing('proposal', 'deleted_at', 'DATETIME NULL COMMENT ''软删时间''');
+CALL sp_add_column_if_missing('proposal', 'deleted_by', 'BIGINT NULL COMMENT ''软删操作者''');
+CALL sp_add_column_if_missing('proposal', 'version', 'INT NOT NULL DEFAULT 1 COMMENT ''乐观锁版本''');
+
+-- material
+CALL sp_add_column_if_missing('material', 'deleted_at', 'DATETIME NULL COMMENT ''软删时间''');
+CALL sp_add_column_if_missing('material', 'deleted_by', 'BIGINT NULL COMMENT ''软删操作者''');
+CALL sp_add_column_if_missing('material', 'version', 'INT NOT NULL DEFAULT 1 COMMENT ''乐观锁版本''');
+CALL sp_add_column_if_missing('material', 'archived_at', 'DATETIME NULL COMMENT ''归档时间''');
+
+-- user
+CALL sp_add_column_if_missing('user', 'deleted_at', 'DATETIME NULL COMMENT ''软删时间''');
+CALL sp_add_column_if_missing('user', 'deleted_by', 'BIGINT NULL COMMENT ''软删操作者''');
+CALL sp_add_column_if_missing('user', 'version', 'INT NOT NULL DEFAULT 1 COMMENT ''乐观锁版本''');
+
+-- audit_log (旧表可能来自 v2-schema, 仅 audit 列)
+CALL sp_add_column_if_missing('audit_log', 'deleted_at', 'DATETIME NULL COMMENT ''软删时间''');
+CALL sp_add_column_if_missing('audit_log', 'deleted_by', 'BIGINT NULL COMMENT ''软删操作者''');
+CALL sp_add_column_if_missing('audit_log', 'version', 'INT NOT NULL DEFAULT 1 COMMENT ''乐观锁版本''');
+
+-- business_term (表可能尚未存在, 先建表再加列 — 见 C 节)
+
+-- =============================================================================
+-- B4. I-RI-33: 乐观锁默认值 (旧表 MODIFY)
+-- =============================================================================
+
+-- 仅当 version 列已存在时 MODIFY (忽略不存在的情况)
+SET @has_pv = (SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='project' AND COLUMN_NAME='version');
+SET @sql = IF(@has_pv > 0,
+    'ALTER TABLE project MODIFY COLUMN version INT NOT NULL DEFAULT 1 COMMENT ''乐观锁版本''',
+    'SELECT 1'); PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @has_ppv = (SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='proposal' AND COLUMN_NAME='version');
+SET @sql = IF(@has_ppv > 0,
+    'ALTER TABLE proposal MODIFY COLUMN version INT NOT NULL DEFAULT 1 COMMENT ''乐观锁版本''',
+    'SELECT 1'); PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @has_mv = (SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='material' AND COLUMN_NAME='version');
+SET @sql = IF(@has_mv > 0,
+    'ALTER TABLE material MODIFY COLUMN version INT NOT NULL DEFAULT 1 COMMENT ''乐观锁版本''',
+    'SELECT 1'); PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+-- =============================================================================
+-- B5. I-RI-35: audit_log 审计分类 (旧表 ALTER)
+-- =============================================================================
+
+CALL sp_add_column_if_missing('audit_log', 'type',
+    'VARCHAR(32) NULL COMMENT ''WRITE/LOGIN/SENSITIVE_VIEW/EXPORT/LLM''');
+CALL sp_add_column_if_missing('audit_log', 'entity_subtype',
+    'VARCHAR(32) NULL COMMENT ''实体子类型''');
+CALL sp_add_index_if_missing('audit_log', 'idx_type',
+    'ALTER TABLE audit_log ADD INDEX idx_type (type, created_at)');
+
+UPDATE audit_log SET type = CASE
+    WHEN action IN ('LOGIN', 'LOGOUT') THEN 'LOGIN'
+    WHEN action LIKE 'EXPORT%' THEN 'EXPORT'
+    WHEN action LIKE 'LLM%' THEN 'LLM'
+    WHEN action LIKE 'SENSITIVE%' THEN 'SENSITIVE_VIEW'
+    ELSE 'WRITE'
+END WHERE type IS NULL;
+
+-- =============================================================================
+-- B6. I-RI-45: user.sensitive_view_enabled (旧表 ALTER)
+-- =============================================================================
+
+CALL sp_add_column_if_missing('user', 'sensitive_view_enabled',
+    'TINYINT(1) NOT NULL DEFAULT 0 COMMENT ''是否允许查看脱敏原始值''');
+
+UPDATE user SET sensitive_view_enabled = 1 WHERE username = 'admin' AND sensitive_view_enabled = 0;
+
+-- (business_term / user_role 列补丁见 C3/C4 建表后)
+
+-- =============================================================================
+-- C1. I-RI-22: project_fact / project_fact_event (新表 + 旧表 ALTER)
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS project_fact (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     project_id BIGINT NOT NULL,
-    fact_type VARCHAR(64) NOT NULL COMMENT 'mortgage/guarantor/settlement/milestone/risk/decision/transaction',
+    fact_type VARCHAR(64) NOT NULL,
     fact_value TEXT,
-    confidence DECIMAL(3,2) COMMENT 'LLM 置信度 0-1',
-    evidence_material_id BIGINT COMMENT '证据材料 ID',
-    evidence_snippet TEXT COMMENT '证据原文摘录',
+    confidence DECIMAL(3,2),
+    evidence_material_id BIGINT,
+    evidence_snippet TEXT,
     status VARCHAR(32) DEFAULT 'active',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_pf_project_type (project_id, fact_type),
     CONSTRAINT fk_pf_project FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='项目关键事实';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS project_fact_event (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     project_id BIGINT NOT NULL,
     fact_type VARCHAR(64) NOT NULL,
-    event_type VARCHAR(32) NOT NULL COMMENT 'INSERT/UPDATE/DELETE/ROLLBACK',
+    event_type VARCHAR(32) NOT NULL,
     fact_value TEXT,
     evidence TEXT,
     confidence DECIMAL(3,2),
-    created_by BIGINT COMMENT '操作者 user_id',
+    created_by BIGINT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本',
+    version INT NOT NULL DEFAULT 1,
     INDEX idx_pfe_project_type (project_id, fact_type),
     CONSTRAINT fk_pfe_project FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='关键事实事件流(INSERT-only)';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-ALTER TABLE project_fact
-    ADD COLUMN confidence_level VARCHAR(16) COMMENT 'CONFIRMED/AI_INFERRED/PENDING_REVIEW' AFTER confidence;
-
-ALTER TABLE project_fact_event
-    ADD COLUMN confidence_level VARCHAR(16) COMMENT 'CONFIRMED/AI_INFERRED/PENDING_REVIEW' AFTER confidence;
+CALL sp_add_column_if_missing('project_fact', 'confidence_level',
+    'VARCHAR(16) NULL COMMENT ''CONFIRMED/AI_INFERRED/PENDING_REVIEW''');
+CALL sp_add_column_if_missing('project_fact_event', 'confidence_level',
+    'VARCHAR(16) NULL COMMENT ''CONFIRMED/AI_INFERRED/PENDING_REVIEW''');
 
 UPDATE project_fact SET confidence_level = CASE
     WHEN confidence >= 0.85 THEN 'CONFIRMED'
@@ -70,34 +306,154 @@ UPDATE project_fact_event SET confidence_level = CASE
 END WHERE confidence_level IS NULL;
 
 -- =============================================================================
--- I-RI-24: 议案附条件通过
+-- C2. I-RI-28 + I-RI-31: project_fact_event 扩展字段 (旧表 ALTER)
 -- =============================================================================
 
-ALTER TABLE proposal
-    ADD COLUMN condition_text TEXT COMMENT '附条件通过的条件描述' AFTER decision,
-    ADD COLUMN condition_status VARCHAR(16) NOT NULL DEFAULT 'NONE' COMMENT 'NONE/PENDING/MET/UNMET' AFTER condition_text,
-    ADD COLUMN condition_met_at DATETIME COMMENT '条件满足时间' AFTER condition_status;
+CALL sp_add_column_if_missing('project_fact_event', 'owner_id',
+    'BIGINT NULL COMMENT ''责任人 user_id''');
+CALL sp_add_column_if_missing('project_fact_event', 'due_date',
+    'DATE NULL COMMENT ''跟进截止日''');
+CALL sp_add_column_if_missing('project_fact_event', 'resolved_at',
+    'DATETIME NULL COMMENT ''处置完成时间''');
+CALL sp_add_column_if_missing('project_fact_event', 'resolution_note',
+    'TEXT NULL COMMENT ''处置备注''');
+CALL sp_add_column_if_missing('project_fact_event', 'deleted_at',
+    'DATETIME NULL COMMENT ''软删标记''');
+CALL sp_add_column_if_missing('project_fact_event', 'deleted_by',
+    'BIGINT NULL COMMENT ''软删操作者''');
+CALL sp_add_index_if_missing('project_fact_event', 'idx_owner_due',
+    'ALTER TABLE project_fact_event ADD INDEX idx_owner_due (owner_id, due_date)');
 
 -- =============================================================================
--- I-RI-25: 议案编号系列
+-- C3. I-RI-31: business_term 新表 + 软删列
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS business_term (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(128) NOT NULL,
+    aliases VARCHAR(512),
+    category VARCHAR(64),
+    definition TEXT,
+    standard_definition TEXT,
+    source_url VARCHAR(512),
+    data_mapping JSON,
+    status VARCHAR(32) NOT NULL DEFAULT 'draft',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_bt_name (name),
+    INDEX idx_bt_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CALL sp_add_column_if_missing('business_term', 'english_name',
+    'VARCHAR(128) NULL COMMENT ''英文名称''');
+CALL sp_add_column_if_missing('business_term', 'deleted_at', 'DATETIME NULL');
+CALL sp_add_column_if_missing('business_term', 'deleted_by', 'BIGINT NULL');
+CALL sp_add_column_if_missing('business_term', 'version', 'INT NOT NULL DEFAULT 1');
+
+-- =============================================================================
+-- C4. I-RI-25: proposal_series
+-- C5. I-RI-34: RBAC 角色 + user_role / project_member
+-- C6. I-RI-37: failure_log
+-- C7. I-RI-39: notification
+-- C8. I-RI-44: import_batch / import_error
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS proposal_series (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    code VARCHAR(64) NOT NULL COMMENT '系列编码, 如 tx/xc',
-    prefix VARCHAR(32) COMMENT '编号前缀',
-    current_seq INT NOT NULL DEFAULT 0 COMMENT '当前自增序号',
+    code VARCHAR(64) NOT NULL,
+    prefix VARCHAR(32),
+    current_seq INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_code (code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='议案编号系列';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-ALTER TABLE proposal
-    ADD COLUMN reserved_at DATETIME COMMENT '编号预留时间' AFTER updated_by,
-    ADD COLUMN released_at DATETIME COMMENT '编号释放时间' AFTER reserved_at;
+UPDATE role SET code = 'pm', name = '项目经理',
+    description = '负责项目的项目经理,可创建项目、编辑材料、触发规则'
+WHERE code = 'project_owner';
+
+UPDATE role SET code = 'user', name = '普通用户',
+    description = 'v1.0 兼容普通用户,基础查询、提交流转'
+WHERE code = 'employee';
+
+INSERT IGNORE INTO role (code, name, description, permissions) VALUES
+('committee', '投委会委员', '审议、查看所有项目、查询知识库、查阅议案',
+ JSON_ARRAY('project:read', 'proposal:read', 'qa:ask', 'task:view')),
+('legal', '法务', '法务审查权限', JSON_ARRAY('project:read', 'legal:review')),
+('secretary', '投委会秘书', '议案登记与秘书事务',
+ JSON_ARRAY('project:read', 'proposal:write', 'task:write'));
+
+CREATE TABLE IF NOT EXISTS user_role (
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+    assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, role_id),
+    CONSTRAINT fk_ur_user FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ur_role FOREIGN KEY (role_id) REFERENCES role(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CALL sp_add_column_if_missing('user_role', 'assigned_at',
+    'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT ''角色分配时间''');
+
+CREATE TABLE IF NOT EXISTS project_member (
+    project_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    role_in_project VARCHAR(64) NOT NULL DEFAULT 'member',
+    assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (project_id, user_id),
+    CONSTRAINT fk_pm_project FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pm_user FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS failure_log (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    path VARCHAR(512) NOT NULL,
+    failure_type VARCHAR(64) NOT NULL,
+    error_msg TEXT,
+    stack_trace TEXT,
+    resolved TINYINT(1) NOT NULL DEFAULT 0,
+    occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at DATETIME,
+    INDEX idx_path_resolved (path, resolved, occurred_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS notification (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    type VARCHAR(32) NOT NULL,
+    title VARCHAR(256) NOT NULL,
+    content TEXT,
+    link VARCHAR(512),
+    is_read TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_read (user_id, is_read, created_at),
+    CONSTRAINT fk_notif_user FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS import_batch (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    type VARCHAR(64) NOT NULL,
+    total INT NOT NULL DEFAULT 0,
+    success INT NOT NULL DEFAULT 0,
+    failed INT NOT NULL DEFAULT 0,
+    created_by BIGINT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_type_created (type, created_at),
+    CONSTRAINT fk_ib_user FOREIGN KEY (created_by) REFERENCES user(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS import_error (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    batch_id BIGINT NOT NULL,
+    row_num INT NOT NULL,
+    column_name VARCHAR(128),
+    error_msg VARCHAR(1000) NOT NULL,
+    INDEX idx_batch (batch_id),
+    CONSTRAINT fk_ie_batch FOREIGN KEY (batch_id) REFERENCES import_batch(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =============================================================================
--- I-RI-26: 网络查源字典种子
+-- C9. I-RI-26: 网络查源字典种子
 -- =============================================================================
 
 INSERT IGNORE INTO dict_type (type_code, type_name, is_system, sort_order, enabled) VALUES
@@ -105,23 +461,34 @@ INSERT IGNORE INTO dict_type (type_code, type_name, is_system, sort_order, enabl
 
 INSERT IGNORE INTO dict_item (type_code, item_key, item_value, is_default, is_system, sort_order, enabled) VALUES
 ('network_dict_source', 'baidu_baike',
- '{"baseUrl":"https://baike.baidu.com/api/openapi","timeout":5000}',
- 0, 1, 1, 1),
+ '{"baseUrl":"https://baike.baidu.com/api/openapi","timeout":5000}', 0, 1, 1, 1),
 ('network_dict_source', 'wikipedia_zh',
- '{"baseUrl":"https://zh.wikipedia.org/w/api.php","timeout":5000}',
- 0, 1, 2, 1);
+ '{"baseUrl":"https://zh.wikipedia.org/w/api.php","timeout":5000}', 0, 1, 2, 1);
 
 -- =============================================================================
--- I-RI-28: 事实事件流字段 + INSERT-only 触发器
+-- C10. notification: 旧列 read -> is_read
 -- =============================================================================
 
-ALTER TABLE project_fact_event
-    ADD COLUMN owner_id BIGINT COMMENT '责任人 user_id' AFTER confidence_level,
-    ADD COLUMN due_date DATE COMMENT '跟进截止日' AFTER owner_id,
-    ADD COLUMN resolved_at DATETIME COMMENT '处置完成时间' AFTER due_date,
-    ADD COLUMN resolution_note TEXT COMMENT '处置备注' AFTER resolved_at;
+SET @has_read_col := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notification' AND COLUMN_NAME = 'read'
+);
+SET @has_is_read_col := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notification' AND COLUMN_NAME = 'is_read'
+);
+SET @fix_notif_sql := IF(
+    @has_read_col > 0 AND @has_is_read_col = 0,
+    'ALTER TABLE notification CHANGE COLUMN `read` is_read TINYINT(1) NOT NULL DEFAULT 0',
+    'SELECT ''notification column OK'' AS msg'
+);
+PREPARE fix_notif_stmt FROM @fix_notif_sql;
+EXECUTE fix_notif_stmt;
+DEALLOCATE PREPARE fix_notif_stmt;
 
-CREATE INDEX idx_owner_due ON project_fact_event(owner_id, due_date);
+-- =============================================================================
+-- C11. I-RI-28: project_fact_event INSERT-only 触发器
+-- =============================================================================
 
 DROP TRIGGER IF EXISTS trg_fact_event_immutable;
 DROP TRIGGER IF EXISTS trg_fact_event_no_delete;
@@ -155,230 +522,37 @@ END$$
 DELIMITER ;
 
 -- =============================================================================
--- I-RI-31: 软删 + version + 归档
+-- 清理工具存储过程
 -- =============================================================================
 
-CREATE TABLE IF NOT EXISTS business_term (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(128) NOT NULL,
-    aliases VARCHAR(512),
-    category VARCHAR(64),
-    definition TEXT,
-    standard_definition TEXT,
-    source_url VARCHAR(512),
-    data_mapping JSON,
-    status VARCHAR(32) NOT NULL DEFAULT 'draft' COMMENT 'draft/pending_review/active/deprecated',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_bt_name (name),
-    INDEX idx_bt_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='业务术语字典';
-
-ALTER TABLE project
-    ADD COLUMN deleted_at DATETIME COMMENT '软删时间' AFTER updated_by,
-    ADD COLUMN deleted_by BIGINT COMMENT '软删操作者' AFTER deleted_at,
-    ADD COLUMN version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本' AFTER deleted_by,
-    ADD COLUMN archive_status VARCHAR(32) DEFAULT NULL COMMENT '归档状态' AFTER version;
-
-ALTER TABLE proposal
-    ADD COLUMN deleted_at DATETIME COMMENT '软删时间' AFTER released_at,
-    ADD COLUMN deleted_by BIGINT COMMENT '软删操作者' AFTER deleted_at,
-    ADD COLUMN version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本' AFTER deleted_by;
-
-ALTER TABLE material
-    ADD COLUMN deleted_at DATETIME COMMENT '软删时间' AFTER updated_by,
-    ADD COLUMN deleted_by BIGINT COMMENT '软删操作者' AFTER deleted_at,
-    ADD COLUMN version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本' AFTER deleted_by,
-    ADD COLUMN archived_at DATETIME COMMENT '归档时间' AFTER version;
-
-ALTER TABLE business_term
-    ADD COLUMN deleted_at DATETIME COMMENT '软删时间' AFTER updated_at,
-    ADD COLUMN deleted_by BIGINT COMMENT '软删操作者' AFTER deleted_at,
-    ADD COLUMN version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本' AFTER deleted_by;
-
-ALTER TABLE audit_log
-    ADD COLUMN deleted_at DATETIME COMMENT '软删时间' AFTER created_at,
-    ADD COLUMN deleted_by BIGINT COMMENT '软删操作者' AFTER deleted_at,
-    ADD COLUMN version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本' AFTER deleted_by;
-
-ALTER TABLE project_fact_event
-    ADD COLUMN deleted_at DATETIME COMMENT '软删时间(逻辑标记, 仍不可物理删)' AFTER resolution_note,
-    ADD COLUMN deleted_by BIGINT COMMENT '软删操作者' AFTER deleted_at;
-
-ALTER TABLE user
-    ADD COLUMN deleted_at DATETIME COMMENT '软删时间' AFTER updated_at,
-    ADD COLUMN deleted_by BIGINT COMMENT '软删操作者' AFTER deleted_at,
-    ADD COLUMN version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本' AFTER deleted_by;
-
-CREATE INDEX idx_deleted_at ON project(deleted_at);
-
--- =============================================================================
--- I-RI-33: 乐观锁默认值
--- =============================================================================
-
-ALTER TABLE project MODIFY COLUMN version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本';
-ALTER TABLE proposal MODIFY COLUMN version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本';
-ALTER TABLE material MODIFY COLUMN version INT NOT NULL DEFAULT 1 COMMENT '乐观锁版本';
-
--- =============================================================================
--- I-RI-34: RBAC 5 角色 + user_role / project_member
--- =============================================================================
-
-UPDATE role SET code = 'pm', name = '项目经理', description = '负责项目的项目经理,可创建项目、编辑材料、触发规则'
-WHERE code = 'project_owner';
-
-UPDATE role SET code = 'user', name = '普通用户', description = 'v1.0 兼容普通用户,基础查询、提交流转'
-WHERE code = 'employee';
-
-INSERT IGNORE INTO role (code, name, description, permissions) VALUES
-('committee', '投委会委员', '审议、查看所有项目、查询知识库、查阅议案', JSON_ARRAY('project:read', 'proposal:read', 'qa:ask', 'task:view')),
-('legal', '法务', '法务审查权限', JSON_ARRAY('project:read', 'legal:review')),
-('secretary', '投委会秘书', '议案登记与秘书事务', JSON_ARRAY('project:read', 'proposal:write', 'task:write'));
-
-CREATE TABLE IF NOT EXISTS user_role (
-    user_id BIGINT NOT NULL,
-    role_id BIGINT NOT NULL,
-    assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id, role_id),
-    CONSTRAINT fk_ur_user FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
-    CONSTRAINT fk_ur_role FOREIGN KEY (role_id) REFERENCES role(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户-角色多对多';
-
-CREATE TABLE IF NOT EXISTS project_member (
-    project_id BIGINT NOT NULL,
-    user_id BIGINT NOT NULL,
-    role_in_project VARCHAR(64) NOT NULL DEFAULT 'member' COMMENT 'member/owner/legal',
-    assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (project_id, user_id),
-    CONSTRAINT fk_pm_project FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE,
-    CONSTRAINT fk_pm_user FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='项目成员';
-
--- =============================================================================
--- I-RI-35: 审计日志 5 类 type
--- =============================================================================
-
-ALTER TABLE audit_log
-    ADD COLUMN type VARCHAR(32) COMMENT 'WRITE/LOGIN/SENSITIVE_VIEW/EXPORT/LLM' AFTER action,
-    ADD COLUMN entity_subtype VARCHAR(32) COMMENT '实体子类型' AFTER entity_type;
-
-UPDATE audit_log SET type = CASE
-    WHEN action IN ('LOGIN', 'LOGOUT') THEN 'LOGIN'
-    WHEN action LIKE 'EXPORT%' THEN 'EXPORT'
-    WHEN action LIKE 'LLM%' THEN 'LLM'
-    WHEN action LIKE 'SENSITIVE%' THEN 'SENSITIVE_VIEW'
-    ELSE 'WRITE'
-END WHERE type IS NULL;
-
-CREATE INDEX idx_type ON audit_log(type, created_at);
-
--- =============================================================================
--- I-RI-37: 失败兜底日志
--- =============================================================================
-
-CREATE TABLE IF NOT EXISTS failure_log (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    path VARCHAR(512) NOT NULL COMMENT '失败路径/端点',
-    failure_type VARCHAR(64) NOT NULL COMMENT '失败类型枚举',
-    error_msg TEXT COMMENT '错误信息',
-    stack_trace TEXT COMMENT '堆栈',
-    resolved TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已解决',
-    occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发生时间',
-    resolved_at DATETIME COMMENT '解决时间',
-    INDEX idx_path_resolved (path, resolved, occurred_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='失败兜底日志';
-
--- =============================================================================
--- I-RI-39: 通知中心 (is_read 对齐 Java 实体)
--- =============================================================================
-
-CREATE TABLE IF NOT EXISTS notification (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id BIGINT NOT NULL,
-    type VARCHAR(32) NOT NULL COMMENT 'TODO/FACT/PROPOSAL/SYSTEM',
-    title VARCHAR(256) NOT NULL,
-    content TEXT,
-    link VARCHAR(512) COMMENT '跳转链接',
-    is_read TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已读',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_user_read (user_id, is_read, created_at),
-    CONSTRAINT fk_notif_user FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户通知';
-
--- 若曾跑过旧 I-RI-39 (列名 read), 重命名为 is_read
-SET @has_read_col := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notification' AND COLUMN_NAME = 'read'
-);
-SET @has_is_read_col := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notification' AND COLUMN_NAME = 'is_read'
-);
-SET @fix_notif_sql := IF(
-    @has_read_col > 0 AND @has_is_read_col = 0,
-    'ALTER TABLE notification CHANGE COLUMN `read` is_read TINYINT(1) NOT NULL DEFAULT 0',
-    'SELECT ''notification column OK'' AS msg'
-);
-PREPARE fix_notif_stmt FROM @fix_notif_sql;
-EXECUTE fix_notif_stmt;
-DEALLOCATE PREPARE fix_notif_stmt;
-
--- =============================================================================
--- I-RI-43: 业务术语英文对照
--- =============================================================================
-
-ALTER TABLE business_term
-    ADD COLUMN english_name VARCHAR(128) COMMENT '英文名称(可选)' AFTER name;
-
--- =============================================================================
--- I-RI-44: 旧系统导入批次
--- =============================================================================
-
-CREATE TABLE IF NOT EXISTS import_batch (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    type VARCHAR(64) NOT NULL COMMENT '导入类型: project/proposal/...',
-    total INT NOT NULL DEFAULT 0,
-    success INT NOT NULL DEFAULT 0,
-    failed INT NOT NULL DEFAULT 0,
-    created_by BIGINT COMMENT '操作者',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_type_created (type, created_at),
-    CONSTRAINT fk_ib_user FOREIGN KEY (created_by) REFERENCES user(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='数据导入批次';
-
-CREATE TABLE IF NOT EXISTS import_error (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    batch_id BIGINT NOT NULL,
-    row_num INT NOT NULL COMMENT 'Excel 行号',
-    column_name VARCHAR(128) COMMENT '列名',
-    error_msg VARCHAR(1000) NOT NULL,
-    INDEX idx_batch (batch_id),
-    CONSTRAINT fk_ie_batch FOREIGN KEY (batch_id) REFERENCES import_batch(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='导入错误明细';
-
--- =============================================================================
--- I-RI-45: 脱敏视图开关
--- =============================================================================
-
-ALTER TABLE user
-    ADD COLUMN sensitive_view_enabled TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否允许查看脱敏原始值' AFTER version;
-
-UPDATE user SET sensitive_view_enabled = 1 WHERE username = 'admin' AND sensitive_view_enabled = 0;
+DROP PROCEDURE IF EXISTS sp_add_column_if_missing;
+DROP PROCEDURE IF EXISTS sp_add_index_if_missing;
 
 -- =============================================================================
 -- 验证
 -- =============================================================================
 
-SELECT 'failure_log' AS tbl, COUNT(*) AS cnt FROM information_schema.TABLES
- WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'failure_log'
-UNION ALL
-SELECT 'user_role', COUNT(*) FROM information_schema.TABLES
- WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_role'
-UNION ALL
-SELECT 'notification', COUNT(*) FROM information_schema.TABLES
- WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notification'
-UNION ALL
-SELECT 'import_batch', COUNT(*) FROM information_schema.TABLES
- WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'import_batch';
+SELECT '--- 旧表关键列 ---' AS section;
+SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE()
+  AND (
+    (TABLE_NAME = 'project' AND COLUMN_NAME IN ('customer_name','deleted_at','version','archive_status'))
+    OR (TABLE_NAME = 'proposal' AND COLUMN_NAME IN ('condition_status','reserved_at','version','deleted_at'))
+    OR (TABLE_NAME = 'material' AND COLUMN_NAME IN ('version','deleted_at','archived_at'))
+    OR (TABLE_NAME = 'user' AND COLUMN_NAME IN ('version','sensitive_view_enabled','failed_login_count'))
+    OR (TABLE_NAME = 'audit_log' AND COLUMN_NAME IN ('type','version','deleted_at'))
+    OR (TABLE_NAME = 'material_version' AND COLUMN_NAME = 'parsed_text')
+  )
+ORDER BY TABLE_NAME, COLUMN_NAME;
+
+SELECT '--- v1.1 新表 ---' AS section;
+SELECT TABLE_NAME FROM information_schema.TABLES
+WHERE TABLE_SCHEMA = DATABASE()
+  AND TABLE_NAME IN (
+    'failure_log','user_role','project_member','notification',
+    'import_batch','import_error','proposal_series',
+    'project_fact','project_fact_event','business_term'
+  )
+ORDER BY TABLE_NAME;
 
 SELECT 'migrate_260611_01 done' AS status, NOW() AS finished_at;
