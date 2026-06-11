@@ -28,6 +28,10 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
 
     long countByProposalId(Long proposalId);
 
+    @Query("SELECT COUNT(m) FROM Material m WHERE m.proposalId IN "
+           + "(SELECT pr.id FROM Proposal pr WHERE pr.projectId = :projectId)")
+    long countByProjectId(@Param("projectId") Long projectId);
+
     long countByCategory(String category);
 
     @Query("SELECT m FROM Material m WHERE " +

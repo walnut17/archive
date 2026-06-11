@@ -2,6 +2,7 @@ package com.archive.agent.tool;
 
 import com.archive.agent.AgentContext;
 import com.archive.entity.Project;
+import com.archive.repository.MaterialRepository;
 import com.archive.repository.ProjectRepository;
 import com.archive.repository.TodoRepository;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -18,6 +19,7 @@ public class GetProjectBusinessDataTool implements AgentTool {
 
     private final ProjectRepository projectRepo;
     private final TodoRepository todoRepo;
+    private final MaterialRepository materialRepo;
 
     @Override
     public String name() {
@@ -26,7 +28,7 @@ public class GetProjectBusinessDataTool implements AgentTool {
 
     @Override
     public String description() {
-        return "获取项目的聚合业务数据(金额、状态、待办数等)。需先通过 find_project 锁定 projectCode。";
+        return "获取项目的聚合业务数据(金额、状态、待办数、材料份数等)。需先通过 find_project 锁定 projectCode。";
     }
 
     @Override
@@ -54,6 +56,7 @@ public class GetProjectBusinessDataTool implements AgentTool {
         data.put("category", project.getCategory());
         data.put("customerName", project.getCustomerName());
         data.put("todoCount", todoRepo.countByProjectIdAndStatus(project.getId(), "pending"));
+        data.put("materialCount", materialRepo.countByProjectId(project.getId()));
         return ToolResult.ok(data);
     }
 

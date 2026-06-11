@@ -26,6 +26,7 @@ backend/tools/apache-maven-3.9.9/
 backend/tools/certs/
 backend/tools/*.deb
 backend/tools/*.tar.gz
+backend/tools/*.zip
 # ! 显式允许: mvn-tools.sh 和 README.md 即使在 tools/ 下也进仓库
 !backend/tools/mvn-tools.sh
 !backend/tools/README.md

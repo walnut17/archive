@@ -27,12 +27,13 @@
 ```text
 <repo-root>/
 ├── README.md                        ← 项目入口：角色导航、SOP
-├── TASKS.md                         ← 任务占用真相表（开发 + 自动化测试）
-├── MULTI-AGENT-REPO-ARCHITECTURE.md ← 本文件：多 Agent 协作框架（可套用）
+├── TASKS.md                         ← Coder 任务路由 + 占用
+├── CODE-REVIEWER.md                 ← 代码审查员 SOP
+├── MULTI-AGENT-REPO-ARCHITECTURE.md ← 本文件
 │
 ├── docs/                  ← 长期文档（需求/架构/评审/运维/交接）
 ├── test_task/             ← 自动化测试案例 + PASS 执行历史
-├── test-to-settle/                  ← 仅 bug：round、test_bug、complexity
+├── test-to-settle/                  ← DEBUG 详情：round、test_bug、complexity
 │   ├── round-*.md / test_bug-*.md / complexity.md
 │   ├── old/               ← 历史验收文档（只读）
 │   └── logs/
@@ -50,11 +51,13 @@
 | 架构、表结构 | `docs/architecture/` | `TASKS.md` |
 | 代码/MOD 评审、对线 | `docs/reviews/review-*.md` | `test-to-settle/round` |
 | 部署**操作**步骤 | `docs/operations/deployment_log.md` | `test-to-settle/round` |
+| **Co-test 联调**（Guide 指挥 + Operator 执行） | 操作 → `deployment_log`；bug → `test-to-settle` | 混在 round 里记「拉代码成功」 |
 | 自动化测试**案例** | `test_task/*.md` | `test-to-settle/round` |
 | 测试**通过**结果 | `test_task/*.md` §执行历史 | `test-to-settle/round` |
-| **缺陷** | `test-to-settle/round-*.md` 或 `test-to-settle/test_bug-*.md` | `test_task/` |
-| 大改需 PM 拍板 | `test-to-settle/complexity.md` | round 里硬改 |
-| 谁在做哪个任务 | `TASKS.md` | 各案例文件里自拟状态 |
+| **缺陷（DEBUG 详情）** | `test-to-settle/round-*.md` 或 `test-to-settle/test_bug-*.md` | `test_task/` |
+| 大改暂挂（**不进 TASKS**） | `test-to-settle/complexity.md` | round 里硬改、TASKS 误挂行 |
+| **升级（UPGRADE 详情）** | `upgrade_to_settle/plan-*.md` | `test-to-settle/round` |
+| 谁在做哪个任务 | `TASKS.md` **🎯 任务路由** | 各详情文件里自拟占用 |
 
 ---
 
@@ -76,12 +79,23 @@ handoff/        → 怎么交（版本交付指南）
 
 ## 4. 任务层 — `TASKS.md`
 
-**两种任务类型，共用同一占用机制：**
+**`TASKS.md` = 路由表 + 占用表**，不是任务详情。新 agent **先占本表一行**，再按「详情路径」打开 `test-to-settle/` 或 `upgrade_to_settle/` 读全文开工。
 
-| 类型 | ID 前缀 | 案例/规格位置 | 完工标志 |
+| 类型 | ID 前缀 | 详情位置 | 本表何时挂行 |
 |---|---|---|---|
-| **开发** | RI / MOD / T-* | `docs/requirements/`、`docs/architecture/` | 代码 commit + 本节 `已完成` |
-| **自动化测试** | **AT-*** | `test_task/<案例>.md`（有案例时才建） | 案例 §3 有 PASS + 本节 `已完成` |
+| **DEBUG**（修 bug） | **T-*** | `test-to-settle/round-*.md` 或 `test_bug-*.md` | 需 coder 修 / VERIFY |
+| **UPGRADE**（新能力） | **UP-*** | `upgrade_to_settle/plan-*.md` | plan 定稿、待 Implement |
+| **自动化测试** | **AT-*** | `test_task/<案例>.md` | 有真实 AT 案例 |
+| *complexity 中转* | **C-*** | `test-to-settle/complexity.md` | **不挂行**，直到升格 UPGRADE |
+
+```text
+TASKS.md（挑 + 占）
+    ├─ DEBUG  → test-to-settle/（小修 round §2～§4）
+    │              大改 → complexity 加一行 → 分析 → docs/plan → TASKS UPGRADE → 删 complexity 行
+    └─ UPGRADE → upgrade_to_settle/plan-*.md → done/
+```
+
+历史 Plan I / MOD 占表见 TASKS **📜 历史占表**，新工作只用 **🎯 任务路由**。
 
 ### 4.1 占用 SOP（通用）
 
@@ -129,7 +143,8 @@ handoff/        → 怎么交（版本交付指南）
     → §2 Analyst（根因+建议）
     → §3 Fix（小修+commit）
     → §4 Reviewer（审 diff → CLOSED / REOPEN）
-         ↘ 大改 → complexity.md → PM/架构
+         ↘ 大改 → complexity.md 加一行（不进 TASKS）
+                      → 分析 → docs + upgrade_to_settle/plan → TASKS UPGRADE → 删 complexity 行
 ```
 
 **轮次 CLOSED 条件**：§1 每条 bug 都 `CLOSED`（修完+审完）或 `ESCALATED → complexity`（已转交）；两条都没完成的 = 还不能关。
@@ -141,6 +156,47 @@ handoff/        → 怎么交（版本交付指南）
 详见 [`test-to-settle/README.md`](test-to-settle/README.md)。
 
 **上手索引**：bug 状态变 → 同步 [`test-to-settle/STATUS.md`](test-to-settle/STATUS.md)，方便接手 agent 快速找到自己要处理的文件。
+
+---
+
+## 6.5 功能升级层 — `upgrade_to_settle/`（含 `done/`）
+
+**UPGRADE 类 coder 工作**（新工具、新模块）。详情在 plan 文件；**占用在 TASKS.md UPGRADE 行**。
+
+| 阶段 | 位置 |
+|---|---|
+| complexity 升格 / 主动立项 | [`upgrade_to_settle/plan-YYYY-MM-DD-*.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) + **TASKS UPGRADE 行** |
+| 活跃索引 | [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md) |
+| Implement §5 → Review §6 → 验收 §7 | 同文件 |
+| **CLOSED** | `git mv` → [`upgrade_to_settle/done/`](upgrade_to_settle/done/README.md) |
+
+**Plan ID**：`UP-MMDD-NN` · **必须**链需求章节 + 架构章节（见 plan §1～§2）。
+
+```text
+§0～§3 需求/架构/PM 定稿 → §4 开发说明 → §5 Implement → §6 Review → §7 CLOSED → done/
+```
+
+详见 [`upgrade_to_settle/README.md`](upgrade_to_settle/README.md)。
+
+---
+
+## 6.6 代码审查员 — `CODE-REVIEWER.md` + 两目录 `STATUS.md`
+
+**与 §7 `docs/reviews/` 独立**；统一审 DEBUG 修复与 UPGRADE 实现。
+
+```text
+接手 → test-to-settle/STATUS.md + upgrade_to_settle/STATUS.md（待审查）
+    → round §4 / plan §6 写意见
+    → Fix/Implement §3.3 / §5.2 回复
+    → APPROVED → CLOSED → git mv done/ → 更新索引 + TASKS
+```
+
+| 目录 | 索引 | 归档 |
+|---|---|---|
+| `test-to-settle/` | [`STATUS.md`](test-to-settle/STATUS.md) | [`test-to-settle/done/`](test-to-settle/done/README.md) |
+| `upgrade_to_settle/` | [`STATUS.md`](upgrade_to_settle/STATUS.md) | [`upgrade_to_settle/done/`](upgrade_to_settle/done/README.md) |
+
+详见 [`CODE-REVIEWER.md`](CODE-REVIEWER.md)。
 
 ---
 
@@ -160,16 +216,67 @@ Review Agent 新建 review-*.md（OPEN）
 
 ---
 
+## 7.5 Co-test 双人联调（Guide + Operator）
+
+> **场景**：人在 **125 / 浏览器 / 终端**上操作，**Guide Agent** 在对话里**一步一步指挥**；Operator 把结果贴回对话。  
+> **与四轮次 bug 流程配合**，但不替代 Recorder/Analyst/Fix/Reviewer。
+
+### 7.5.1 两个角色
+
+| 角色 | 是谁 | 做什么 | 不做什么 |
+|---|---|---|---|
+| **Co-test Guide Agent** | 对话里的 AI（如本 session） | 拆步骤、给命令/点击路径、根据反馈给下一步；口述 bug 该记哪；**可代写** `deployment_log` / round §1 草稿 | 默认**不擅自改业务代码**（除非用户明确 hotfix） |
+| **Co-test Operator** | 你（人类） | 在目标环境**执行**步骤；把结果（✅/❌/截图/控制台）**原文反馈**给 Guide | 不要跳过步骤；有 bug 先**记文件**再私下改代码 |
+
+### 7.5.2 记到哪里
+
+| 内容 | 写哪里 | 示例 |
+|---|---|---|
+| **做了什么**（pull、重启、点了哪、命令输出） | [`docs/operations/deployment_log.md`](docs/operations/deployment_log.md) | 「Step 3: pull 到 dd7caae，jar 重启 OK」 |
+| **测过了没问题** | 同上 `deployment_log` 对应步骤旁标 ✅ | 不建 round 行 |
+| **缺陷 / 与预期不符** | [`test-to-settle/`](test-to-settle/README.md) | 当前轮 [`round-*.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) **§1.3** 追加 `T-MMDD-NN`，**来源 `DEPLOY`**；或 `test_bug-*.md` 再收入 round |
+| **大改 / 搞不定** | [`test-to-settle/complexity.md`](test-to-settle/complexity.md) | `C-MMDD-NN`（**不进 TASKS**；出 plan 后挂 UPGRADE 行） |
+
+```text
+Guide 出 Step N → Operator 执行 → 反馈结果
+        ├─ 正常 → Guide/Operator 更新 deployment_log
+        └─ bug  → Guide 起草 round §1 行 → Operator 或 Recorder 写入 test-to-settle
+                      → 后续 Analyst / Fix / Reviewer（非 co-test 当场硬修，除非用户授权）
+```
+
+### 7.5.3 Co-test 会话留痕
+
+每次联调在 `deployment_log` 开一小节，至少含：
+
+| 字段 | 说明 |
+|---|---|
+| **日期 / 环境** | 如 125、`main` commit |
+| **Guide** | Agent 名 |
+| **Operator** | 你的名字 |
+| **目标** | 如「VERIFY T-0611-08/12/16」 |
+| **步骤表** | Step / 操作 / 结果 / 时间 |
+
+bug 写入 round 后，同步 [`test-to-settle/STATUS.md`](test-to-settle/STATUS.md)（若该轮 OPEN bug 数变化）。
+
+### 7.5.4 与 DEPLOY 来源的关系
+
+Co-test 里发现的 bug，round §1 **来源一律 `DEPLOY`**（见 §6.1），与 `test_task` FAIL（`AUTO`）区分。
+
+---
+
 ## 8. Agent 角色总表
 
 | 角色 | 主要写 | 边界 |
 |---|---|---|
+| **Co-test Guide Agent** | 对话指挥 + 代拟 `deployment_log` / round §1 | 默认不改代码 |
+| **Co-test Operator** | 执行步骤；反馈结果；确认落盘 | 有 bug 先记 `test-to-settle` |
 | 需求开发 / 审核 / 架构师 | `docs/requirements/` | 不写代码（架构师示范除外） |
 | 程序员 | 代码 + `TASKS.md` 开发任务 | 不擅自改需求 |
 | **测试 Agent** | `test_task/` + `TASKS.md` AT-* | FAIL 时不擅自改业务代码 |
 | **Recorder** | `test-to-settle/round` §1 | 只记 bug |
 | **Analyst** | `test-to-settle/round` §2 | 默认不改代码 |
-| **Fix** | `test-to-settle/round` §3 + 代码 | 大改 → complexity |
+| **Fix** | `test-to-settle/round` §3 + 代码；§3.3 回审查员 | 大改 → complexity |
+| **代码审查员** | 两目录 `STATUS.md` + `CODE-REVIEWER.md` | round §4 / plan §6；CLOSED → **done/** |
 | **Reviewer**（round） | `test-to-settle/round` §4 | 不偷偷改代码 |
 | **Review Agent**（reviews） | `docs/reviews/` | 唯一可 CLOSED 评审 |
 | **Subject Agent** | reviews 回复块 | 不可自行 CLOSED |

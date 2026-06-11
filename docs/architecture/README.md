@@ -17,6 +17,7 @@
 | [`AGENT-RESEARCH.md`](AGENT-RESEARCH.md) | Agent 方案调研 |
 | [`ARCH-REUSE-AUDIT.md`](ARCH-REUSE-AUDIT.md) | 可复用模块审计 |
 | [`01-arch-overview.md`](01-arch-overview.md) ~ [`06-requirements-gap-analysis.md`](06-requirements-gap-analysis.md) | 分章架构 |
+| [`07-archive-fs-agent-tools.md`](07-archive-fs-agent-tools.md) | Agent 只读 archive 磁盘工具 (UP-0611-01) |
 | [`history/`](history/) | 历史架构 v1 / v2-lite / v3-final |
 
 ---
@@ -29,6 +30,7 @@
 | MOD/RI **开发占用** | 根 [`TASKS.md`](../../TASKS.md) |
 | 架构/MOD **代码评审** | [`../reviews/`](../reviews/README.md) |
 | 实现 **缺陷** | [`../../test-to-settle/`](../../test-to-settle/README.md) |
+| **功能升级 plan** | [`../../upgrade_to_settle/`](../../upgrade_to_settle/README.md)（含 [`done/`](../../upgrade_to_settle/done/README.md)） |
 | 集成测试案例 | [`../../test_task/`](../../test_task/README.md) |
 
 ---

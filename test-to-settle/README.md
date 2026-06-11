@@ -1,12 +1,14 @@
 # Bug 跟踪与修复 — `test-to-settle/`
 
-> **`test-to-settle/` 只记 bug。** 没有缺陷、只是「测过了没问题」或「部署步骤」——**不要**写进 `round-*.md`。
+> **`test-to-settle/` 存 DEBUG 类任务的详情**（现象、根因、改法、评审）。**接手 coder 不要只读这里** — 先到根 [`TASKS.md`](../TASKS.md) **🎯 任务路由** 占 `DEBUG` 行，再按路径打开本目录具体文件。
 >
 > **Bug 从哪来**（二选一或兼有，记入 round §1）：
 > 1. **交互式 deploy** — 上环境、点页面、走验收时**发现**的异常
 > 2. **Agent 自主跑用例** — 按 [`test_task/`](../test_task/README.md) 案例、`mvn test` 等**失败**
 >
-> **导航**：根 [`README.md` §8`](../README.md#-8-bug-跟踪与修复-test) · [`test_task/`](../test_task/README.md) · [`MULTI-AGENT-REPO-ARCHITECTURE.md`](../MULTI-AGENT-REPO-ARCHITECTURE.md)
+> **导航**：根 [`README.md` §8`](../README.md#-8-bug-跟踪与修复-test) · [`test_task/`](../test_task/README.md) · [`MULTI-AGENT-REPO-ARCHITECTURE.md` §7.5](../MULTI-AGENT-REPO-ARCHITECTURE.md#75-co-test-双人联调guide--operator)
+
+> **Co-test**：Guide 指挥 + Operator 在环境上执行 → 操作 [`deployment_log`](../docs/operations/deployment_log.md)，bug 本目录 round §1（来源 `DEPLOY`）。
 
 ---
 
@@ -19,7 +21,9 @@ test-to-settle/
 ├── round-YYYY-MM-DD-*.md     ← 当轮 bug 主文件（§1～§5）
 ├── test_bug-TEMPLATE.md      ← 自动化案例 FAIL 入口（复制）
 ├── test_bug-YYYY-MM-DD-*.md  ← FAIL 实例（收入 round §1）
-├── complexity.md             ← 大改 / PM 拍板升级
+├── done/                     ← CLOSED 的 round 归档
+│   └── README.md
+├── complexity.md             ← 大改中转路由
 ├── logs/                     ← mvn 原始日志（gitignore）
 └── old/                      ← 历史验收文档（只读，见 old/README.md）
 ```
@@ -28,7 +32,9 @@ test-to-settle/
 |---|---|
 | **`round-*.md`** | **有 bug 才记** — 四轮次 Agent 主文件 |
 | [`test_bug-TEMPLATE.md`](test_bug-TEMPLATE.md) | 案例 FAIL → 复制为 `test_bug-*.md` |
-| [`complexity.md`](complexity.md) | 当轮搞不定、需 PM/架构决策 |
+| [`complexity.md`](complexity.md) | 大改中转路由（出站删行） |
+| [`STATUS.md`](STATUS.md) | **索引**：coder 队列 + **审查员待审** |
+| [`done/`](done/README.md) | CLOSED 的 `round-*.md` 归档 |
 | [`logs/`](logs/README.md) | `mvn-*.log`（gitignore） |
 | [`old/`](old/README.md) | 旧版 ACCEPTANCE-GUIDE、M1/V2、VERIFICATION-REPORT |
 
@@ -39,7 +45,8 @@ test-to-settle/
 | 进 `round-*.md` §1 | 不进 round（去别处） |
 |---|---|
 | 复现步骤明确的 **缺陷** | 纯部署操作 → [`docs/operations/deployment_log.md`](../docs/operations/deployment_log.md) |
-| 交互式 deploy 发现的 bug | 功能需求 → [`TASKS.md`](../TASKS.md) |
+| 交互式 deploy 发现的 bug | **小修** → [`TASKS.md`](../TASKS.md) DEBUG 行 + 本目录 round |
+| 大改 / 新能力方案 | complexity → [`upgrade_to_settle/`](../upgrade_to_settle/README.md) → TASKS UPGRADE |
 | `test_task` / 用例失败 | 代码评审 → [`docs/reviews/`](../docs/reviews/README.md) |
 | | **测过且通过** → [`test_task/`](../test_task/README.md) §3 |
 | | 历史验收清单 → [`old/ACCEPTANCE-GUIDE.md`](old/ACCEPTANCE-GUIDE.md)（只读） |
@@ -70,12 +77,18 @@ test-to-settle/
 
 ---
 
-## 4. 小修 vs complexity
+## 4. 小修 vs complexity vs upgrade
 
-| 类型 | 位置 |
-|---|---|
-| 小修 | round §2～§4 |
-| 大改 / 搞不定 | [`complexity.md`](complexity.md)（`C-MMDD-NN`） |
+| 类型 | 位置 | TASKS 路由 |
+|---|---|---|
+| 小修（coder 当轮修） | round §2～§4 | **DEBUG 行** |
+| 大改（暂挂路由） | [`complexity.md`](complexity.md) | **无**（出站删行） |
+| 大改方案已定 | [`upgrade_to_settle/`](../upgrade_to_settle/README.md) plan | **UPGRADE 行** |
+
+```text
+小修 → TASKS DEBUG → round §3 Fix
+大改 → complexity 加一行 → 分析 → docs + plan + TASKS UPGRADE → 删 complexity 行
+```
 
 ---
 
@@ -105,7 +118,8 @@ cp test-to-settle/round-TEMPLATE.md test-to-settle/round-2026-06-12-v1.1-regress
 | Analyst | 同上 | **§2** |
 | Fix | 同上 | **§3** + 代码 |
 | Reviewer | 同上 + diff | **§4** |
-| PM / 架构 | `complexity.md` | 决策列 |
+| **代码审查员** | [`STATUS.md`](STATUS.md) + [`CODE-REVIEWER.md`](../CODE-REVIEWER.md) | **§4**；CLOSED → [`done/`](done/README.md) |
+| PM / 架构 | [`complexity.md`](complexity.md) | 分析 → docs/plan → 删 §2 行 |
 
 ---
 

@@ -42,15 +42,14 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     List<Object[]> searchByNameOrCustomerFulltext(@Param("q") String q, @Param("topN") int topN);
 
     /**
-     * LIKE 模糊兜底: 搜 name / code / summary / customer_name 四字段, 任意一个 LIKE 命中即返回.
-     * 用于 FULLTEXT 漏掉的情况 (如简称、拼音首字母、错别字).
-     * 优先级低于 FULLTEXT, 仅在 FULLTEXT 返回空时调用.
+     * LIKE 模糊兜底: 搜 name / code / summary / customer_name / remark 五字段.
      */
     @Query("SELECT p FROM Project p WHERE " +
            "(LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            " OR LOWER(p.code) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            " OR (p.summary IS NOT NULL AND LOWER(p.summary) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-           " OR (p.customerName IS NOT NULL AND LOWER(p.customerName) LIKE LOWER(CONCAT('%', :keyword, '%')))) " +
+           " OR (p.customerName IS NOT NULL AND LOWER(p.customerName) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           " OR (p.remark IS NOT NULL AND LOWER(p.remark) LIKE LOWER(CONCAT('%', :keyword, '%')))) " +
            "ORDER BY p.createdAt DESC")
     List<Project> searchByKeywordAsList(@Param("keyword") String keyword, org.springframework.data.domain.Pageable pageable);
 

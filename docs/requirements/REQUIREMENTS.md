@@ -585,6 +585,7 @@ Prompt 模板(预置):
 | `search_fulltext(query, topN, projectCode)` | MySQL FULLTEXT 检索材料 | 找材料内容时 |
 | `query_mysql(table, where, columns, limit)` | 查业务数据 (白名单 6 表) | 找数据时 |
 | `get_project_business_data(projectCode)` | 项目业务汇总 | 已知 projectCode 时 |
+| `archive_fs(action, …)` **(v1.2 规划)** | `D:/archive` 只读 ls/grep/read | MySQL 搜不到 / 需对原件目录时；见 §5.6.7 |
 
 #### 5.6.3 find_project 4 级兜底链 (核心设计)
 
@@ -632,6 +633,35 @@ Prompt 模板(预置):
 - [ ] 死循环保护: 模拟 LLM 死循环 (mock tool 返回同 obs), 第 3 步强制 FINAL_ANSWER
 - [ ] 5 步预算: 单次 qa-ask 调用 LLM ≤ 5 次 (稳态), < 7 次 (含死循环保护)
 - [ ] 响应时间: Agent 模式 < 30s (P95)
+
+#### 5.6.7 Archive 本地只读文件工具 (v1.2 · UP-0611-01)
+
+> **Plan**：[`upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md`](../../upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md)  
+> **架构**：[`docs/architecture/07-archive-fs-agent-tools.md`](../architecture/07-archive-fs-agent-tools.md)
+
+**背景**：材料原始件与解析副本在 `D:/archive/files`、`D:/archive/parsed`；Agent 当前仅查 MySQL，无法 ls/grep 磁盘最底层材料。
+
+**新增工具**：`archive_fs(action, zone, materialVersionId|relativePath, …)`
+
+| action | 作用 | 安全 |
+|---|---|---|
+| `list` | 列材料目录下一层 | 仅 `files` / `parsed` 根下 |
+| `grep` | 文本文件按行搜关键词 | 同上 + 大小/行数上限 |
+| `read` | 读文本前 N 字节 | 同上 |
+
+**原则**：
+
+1. **只读**；禁止 write/delete/shell。
+2. **白名单根**：仅 `app.storage.file-root`、`app.storage.parsed-root`（默认 `D:/archive/files`、`D:/archive/parsed`）；**不含** `logs/`、`config/`。
+3. **路径优先 DB**：推荐 `materialVersionId` → 查 `material_version.storage_path` / `parsed_text_path`，防 LLM 编造路径。
+4. **与 MySQL 并存**：`search_fulltext` 仍为默认全文检索；`archive_fs` 用于目录浏览、parsed 未入库、对照原件结构。
+5. **多模态预留**：`ArchiveFsAction` 插件注册；PDF/图像另开 RI-71。
+
+**验收**：
+
+- [ ] Path traversal（`../`）一律拒绝并审计
+- [ ] 锁定项目后 grep 该项目材料成功
+- [ ] Agent prompt 含工具说明；5 步内可完成 list/grep 场景
 
 ---
 

@@ -14,22 +14,26 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Component
 public class FindProjectTool implements AgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(FindProjectTool.class);
+    private static final Pattern LATIN_OR_DIGIT_TOKEN = Pattern.compile("[a-zA-Z0-9]{2,}");
 
     private final ProjectRepository projectRepo;
     private final GlmService glmService;
 
     /** LLM 兜底阈值: 项目总数 < 此值才走 LLM, 避免项目多了 token 爆炸. 可配 (默认 300). */
     @Value("${spring.ai.agent.find-project.llm-fallback-max-total:300}")
-    private long llmFallbackMaxTotal;
+    private long llmFallbackMaxTotal = 300;
 
     public FindProjectTool(ProjectRepository projectRepo, GlmService glmService) {
         this.projectRepo = projectRepo;
@@ -58,10 +62,59 @@ public class FindProjectTool implements AgentTool {
         FindProjectArgs args = (FindProjectArgs) argsObj;
         String q = args.query == null ? "" : args.query.trim();
         int topN = args.topN == null || args.topN <= 0 ? 5 : args.topN;
-        if (q.isEmpty()) return ToolResult.ok(List.of());
+        if (q.isEmpty()) {
+            return ToolResult.ok(List.of());
+        }
 
-        // 1) 精确匹配 projectCode
-        Optional<Project> exact = projectRepo.findByCode(q);
+        List<String> variants = buildSearchVariants(q);
+        log.info("[find_project] query='{}', search variants={}", q, variants);
+
+        for (String variant : variants) {
+            Optional<ToolResult> dbHit = tryDbMatch(variant, topN, ctx);
+            if (dbHit.isPresent()) {
+                return dbHit.get();
+            }
+        }
+
+        return tryLlmFallback(q, topN, ctx);
+    }
+
+    /**
+     * 从用户口头语生成多组 MySQL 检索词 (单次 tool 调用内全部尝试, 避免 Agent 死循环重试).
+     * 例: "lmz项目" → ["lmz项目", "lmz"]
+     */
+    static List<String> buildSearchVariants(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+        LinkedHashSet<String> variants = new LinkedHashSet<>();
+        String q = raw.trim();
+        variants.add(q);
+
+        String noSuffix = q.replaceAll("(项目|工程|案件|业务|计划|那个|这笔)$", "").trim();
+        if (!noSuffix.isEmpty()) {
+            variants.add(noSuffix);
+        }
+
+        Matcher matcher = LATIN_OR_DIGIT_TOKEN.matcher(q);
+        if (!looksLikeProjectCode(q)) {
+            while (matcher.find()) {
+                String token = matcher.group();
+                if (!token.chars().allMatch(Character::isDigit)) {
+                    variants.add(token);
+                }
+            }
+        }
+
+        return new ArrayList<>(variants);
+    }
+
+    private static boolean looksLikeProjectCode(String q) {
+        return q.matches("(?i)PRJ[-_\\s]?\\d.*");
+    }
+
+    private Optional<ToolResult> tryDbMatch(String variant, int topN, AgentContext ctx) {
+        Optional<Project> exact = projectRepo.findByCode(variant);
         if (exact.isPresent()) {
             FindProjectMatch match = new FindProjectMatch(
                     exact.get().getCode(),
@@ -69,50 +122,52 @@ public class FindProjectTool implements AgentTool {
                     exact.get().getCustomerName(),
                     1.0
             );
-            return finalizeWithSwitchRule(List.of(match), ctx, "EXACT");
+            return Optional.of(finalizeWithSwitchRule(List.of(match), ctx, "EXACT"));
         }
 
-        // 2) FULLTEXT 模糊 (name / customer_name) — H2 无 MATCH, 失败时降级 LIKE
         List<Object[]> fulltextRows = List.of();
         try {
-            fulltextRows = projectRepo.searchByNameOrCustomerFulltext(q, topN);
+            fulltextRows = projectRepo.searchByNameOrCustomerFulltext(variant, topN);
         } catch (Exception ex) {
-            log.debug("[find_project] FULLTEXT unavailable, fallback LIKE: {}", ex.getMessage());
+            log.debug("[find_project] FULLTEXT unavailable for variant='{}': {}", variant, ex.getMessage());
         }
         if (!fulltextRows.isEmpty()) {
-            return finalizeMatches(fulltextRows, ctx, "FULLTEXT");
+            return Optional.of(finalizeMatches(fulltextRows, ctx, "FULLTEXT"));
         }
 
-        // 3) LIKE 模糊兜底 (name / code / summary / customer_name 四字段)
-        log.info("[find_project] FULLTEXT miss for q='{}', trying LIKE fallback", q);
-        List<Project> likeRows = projectRepo.searchByKeywordAsList(q, PageRequest.of(0, topN));
+        List<Project> likeRows = projectRepo.searchByKeywordAsList(variant, PageRequest.of(0, topN));
         if (!likeRows.isEmpty()) {
-            return finalizeFromEntities(likeRows, ctx, "LIKE");
+            log.info("[find_project] LIKE hit for variant='{}', count={}", variant, likeRows.size());
+            return Optional.of(finalizeFromEntities(likeRows, ctx, "LIKE"));
         }
 
-        // 4) LLM 兜底 (项目总数 < 配置阈值才调, 避免 token 爆炸)
+        return Optional.empty();
+    }
+
+    private ToolResult tryLlmFallback(String originalQuery, int topN, AgentContext ctx) {
         long total = projectRepo.count();
-        if (total > 0 && total <= llmFallbackMaxTotal) {
-            log.info("[find_project] LIKE miss for q='{}' (total={}), trying LLM semantic fallback", q, total);
-            List<Project> all = projectRepo.findAll();
-            List<String> matchedCodes = glmService.semanticMatchProjects(q, all, topN);
-            if (matchedCodes.isEmpty()) {
-                return ToolResult.ok(List.of());
-            }
-            Map<String, Project> byCode = all.stream()
-                    .collect(Collectors.toMap(Project::getCode, p -> p, (a, b) -> a));
-            List<Project> matched = matchedCodes.stream()
-                    .map(byCode::get)
-                    .filter(p -> p != null)
-                    .toList();
-            if (matched.isEmpty()) {
-                return ToolResult.ok(List.of());
-            }
-            return finalizeFromEntities(matched, ctx, "LLM");
+        if (total <= 0 || total > llmFallbackMaxTotal) {
+            log.info("[find_project] No match for q='{}' (total={}, LLM fallback skipped)", originalQuery, total);
+            return ToolResult.ok(List.of());
         }
 
-        log.info("[find_project] No match for q='{}' (total={}, LLM fallback skipped)", q, total);
-        return ToolResult.ok(List.of());
+        log.info("[find_project] DB miss for all variants of q='{}' (total={}), trying LLM semantic fallback", originalQuery, total);
+        List<Project> all = projectRepo.findAll();
+        List<String> matchedCodes = glmService.semanticMatchProjects(originalQuery, all, topN);
+        if (matchedCodes.isEmpty()) {
+            return ToolResult.ok(List.of());
+        }
+
+        Map<String, Project> byCode = all.stream()
+                .collect(Collectors.toMap(Project::getCode, p -> p, (a, b) -> a));
+        List<Project> matched = matchedCodes.stream()
+                .map(byCode::get)
+                .filter(p -> p != null)
+                .toList();
+        if (matched.isEmpty()) {
+            return ToolResult.ok(List.of());
+        }
+        return finalizeFromEntities(matched, ctx, "LLM");
     }
 
     private ToolResult finalizeMatches(List<Object[]> rows, AgentContext ctx, String source) {

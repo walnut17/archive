@@ -2,6 +2,7 @@ package com.archive.agent.tool;
 
 import com.archive.agent.AgentContext;
 import com.archive.entity.Project;
+import com.archive.repository.MaterialRepository;
 import com.archive.repository.ProjectRepository;
 import com.archive.repository.TodoRepository;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,9 @@ class GetProjectBusinessDataToolTest {
     private TodoRepository todoRepo;
 
     @Mock
+    private MaterialRepository materialRepo;
+
+    @Mock
     private AgentContext ctx;
 
     @InjectMocks
@@ -44,6 +48,7 @@ class GetProjectBusinessDataToolTest {
                 .build();
         when(projectRepo.findByCode("PRJ-2026-001")).thenReturn(Optional.of(project));
         when(todoRepo.countByProjectIdAndStatus(1L, "pending")).thenReturn(3L);
+        when(materialRepo.countByProjectId(1L)).thenReturn(12L);
 
         var args = new GetProjectBusinessDataTool.GetBusinessDataArgs();
         args.projectCode = "PRJ-2026-001";
@@ -59,5 +64,6 @@ class GetProjectBusinessDataToolTest {
         assertEquals("股权类", data.get("category"));
         assertEquals("宁德时代", data.get("customerName"));
         assertEquals(3L, data.get("todoCount"));
+        assertEquals(12L, data.get("materialCount"));
     }
 }

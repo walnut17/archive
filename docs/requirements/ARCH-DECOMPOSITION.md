@@ -819,3 +819,23 @@
 - **估算**: BE 0.5d / FE 0.5d / 测试 0.3d
 - **对应 §X.Y**: REQUIREMENTS §13.3.8
 - **对应 MOD**: MOD-04 + MOD-02
+
+### RI-70: Archive 本地只读文件 Agent 工具 (§5.6.7 · UP-0611-01)
+
+- **业务**: Agent 在 `D:/archive/files` 与 `D:/archive/parsed` 内只读 list/grep/read；路径 DB 绑定 + PathGuard
+- **影响**: `agent/tool/archive/*`、`ArchiveFsTool`、`AgentSystemPrompt`
+- **Plan**: [`upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md`](../../upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md)
+- **架构**: [`docs/architecture/07-archive-fs-agent-tools.md`](../architecture/07-archive-fs-agent-tools.md)
+- **验收**: traversal 拒绝；grep 项目材料成功；audit_log；单测
+- **依赖**: RI-1 (Agent 基座)、StorageService 路径约定
+- **估算**: BE 2.5d / 测试 0.5d
+- **状态**: `未开发`（plan `DRAFT`）
+
+### RI-71: Archive 多模态读取 (扩展 · 占位)
+
+- **业务**: PDF 单页 / 图像 → vision 或 OCR 管道（`ArchiveFsAction` 扩展）
+- **影响**: 新 `ReadPdfPageAction` 等；可能依赖外部 API
+- **验收**: TBD（另开 plan）
+- **依赖**: RI-70
+- **估算**: TBD
+- **状态**: `未规划`（仅 RI 占位）

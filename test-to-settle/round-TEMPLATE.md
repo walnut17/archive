@@ -103,13 +103,19 @@
 |---|---|---|---|---|
 | T-MMDD-01 | | | `abc1234` | `FIXED` / `SKIPPED` / `ESCALATED` |
 
-**状态（§3）**：`FIXED` → 交给 §4 评审
+**状态（§3）**：`FIXED` → 交给 §4 评审；审查员打回 → `REOPEN`
+
+### 3.3 审查反馈回复（Fix Agent，审查员 `REQUEST_CHANGES` / `REOPEN` 后填写）
+
+| 轮次 | 审查员意见摘要 | Fix 回复 / 措施 | Commit | 时间 |
+|---|---|---|---|---|
+| R1 | | | | |
 
 ---
 
-## 4. 修改评审（Reviewer Agent）
+## 4. 修改评审（代码审查员）
 
-> **职责**：对 §3 的 diff 做代码评审：是否修对、有无副作用、是否需回归。**可打回 Fix agent 重做。**
+> **职责**：对 §3 的 diff 做代码评审。**入口**：[`CODE-REVIEWER.md`](../CODE-REVIEWER.md) · [`STATUS.md`](STATUS.md) 待审查队列。
 
 ### 4.1 Agent 留痕
 
@@ -123,9 +129,20 @@
 
 | Bug ID | 结论 | 意见 | 状态 |
 |---|---|---|---|
-| T-MMDD-01 | `APPROVED` / `REJECTED` | | `CLOSED` / `REOPEN` |
+| T-MMDD-01 | `APPROVED` / `REQUEST_CHANGES` / `REOPEN` | | `CLOSED` / `REOPEN` |
 
-**状态（§4）**：`CLOSED` = 本条 bug 在本轮结束；`REOPEN` = 回到 §3 由 Fix agent 再改
+**状态（§4）**：`CLOSED` = 本条 bug 结束，同步 §1.3 + TASKS；`REOPEN` / `REQUEST_CHANGES` = Fix 填 §3.3 后重审
+
+### 4.3 审查对线（可选，意见较多时用）
+
+#### Round 1 — 审查员
+
+- **时间**：
+- **意见**：
+
+#### Round 1 — Fix 回复
+
+见 §3.3 表 R1 行。
 
 ---
 
