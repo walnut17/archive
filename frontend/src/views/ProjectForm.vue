@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -7,6 +7,8 @@ import {
   type Project,
   projectStatusOptions, projectCategoryOptions,
 } from '../api/archive'
+
+type FailureType = 'API_ERROR' | 'PARSE_ERROR' | 'FIELD_MISSING' | 'VALUE_INVALID' | 'TIMEOUT'
 
 const route = useRoute()
 const router = useRouter()
@@ -21,6 +23,28 @@ const form = ref<Project>({
   remark: '',
 })
 const loading = ref(false)
+const failureType = ref<FailureType | null>(null)
+const failureMessage = ref('')
+const retryable = ref(false)
+
+const failureTitle = computed(() => {
+  const map: Record<FailureType, string> = {
+    API_ERROR: 'LLM 服务异常',
+    PARSE_ERROR: 'LLM 返回解析失败',
+    FIELD_MISSING: '必填字段缺失',
+    VALUE_INVALID: '字段值异常',
+    TIMEOUT: '调用超时',
+  }
+  return failureType.value ? (map[failureType.value] || '提交失败') : '提交失败'
+})
+
+function extractFailure(err: any) {
+  const body = err?.response?.data
+  const payload = body?.data ?? body
+  failureType.value = payload?.failureType ?? null
+  failureMessage.value = payload?.message ?? body?.message ?? err?.message ?? '提交失败'
+  retryable.value = payload?.retryable ?? false
+}
 
 onMounted(async () => {
   const id = route.params.id
@@ -40,6 +64,9 @@ async function onSubmit() {
     ElMessage.error('编号和名称必填')
     return
   }
+  failureType.value = null
+  failureMessage.value = ''
+  retryable.value = false
   loading.value = true
   try {
     if (isEdit.value) {
@@ -50,9 +77,18 @@ async function onSubmit() {
       ElMessage.success('创建成功')
     }
     router.push({ name: 'project-list' })
+  } catch (e: any) {
+    extractFailure(e)
   } finally {
     loading.value = false
   }
+}
+
+function retry() {
+  failureType.value = null
+  failureMessage.value = ''
+  retryable.value = false
+  onSubmit()
 }
 
 function onCancel() {
@@ -61,8 +97,24 @@ function onCancel() {
 </script>
 
 <template>
-  <div>
+  <div class="project-form">
     <h2>{{ isEdit ? '编辑项目' : '新建项目' }}</h2>
+
+    <el-alert
+      v-if="failureType"
+      :title="failureTitle"
+      :type="failureType === 'VALUE_INVALID' ? 'error' : 'warning'"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 16px; position: sticky; top: 0; z-index: 10"
+    >
+      <template #default>
+        <p style="margin: 0 0 8px">{{ failureMessage }}</p>
+        <el-button v-if="retryable" type="primary" size="small" @click="retry">
+          重试
+        </el-button>
+      </template>
+    </el-alert>
 
     <el-form :model="form" label-width="120px" style="max-width: 800px" v-loading="loading">
       <el-form-item label="项目编号" required>

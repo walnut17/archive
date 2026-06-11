@@ -91,5 +91,34 @@
     "healthCheckCron": "0 */10 * * * ?",
     "alertMailTo": "you@example.com",
     "diskAlertThresholdPercent": 10
+  },
+
+  "archive": {
+    "_comment": "v1.1 新增配置 — 全部可空, 沿用 application.yml 默认值",
+    "networkDict": {
+      "enabledSources": ["baidu_baike", "wiki"],
+      "timeout": 5000,
+      "cacheTtl": 3600
+    },
+    "queryMysql": {
+      "maxResultRows": 1000,
+      "maxAmount": 1.0e8,
+      "allowedFilterKeys": ["region", "industry", "stage", "factType", "timeBucket"]
+    },
+    "optimisticLock": {
+      "strict": false
+    },
+    "retention": {
+      "recycleDays": 30,
+      "archiveYears": 1,
+      "longArchiveYears": 5
+    },
+    "audit": {
+      "enabledTypes": ["WRITE", "LOGIN", "SENSITIVE_VIEW", "EXPORT", "LLM"]
+    },
+    "notification": {
+      "pollingInterval": "30s",
+      "pageSize": 20
+    }
   }
 }

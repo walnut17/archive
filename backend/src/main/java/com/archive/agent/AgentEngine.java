@@ -3,6 +3,7 @@ package com.archive.agent;
 import com.archive.agent.prompt.AgentSystemPrompt;
 import com.archive.agent.tool.AgentTool;
 import com.archive.agent.tool.ToolResult;
+import com.archive.common.SwitchDecision;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -142,7 +143,24 @@ public class AgentEngine {
         response.setSteps(ctx.getSteps());
         response.setSources(sources);
         response.setAgentMode(true);
+        populateV11Fields(response, ctx);
         return response;
+    }
+
+    /** v1.1: 从 find_project 隐式切换判定填充前端 hint / 置信度徽章. */
+    private void populateV11Fields(AgentResponse response, AgentContext ctx) {
+        SwitchDecision decision = ctx.getLastSwitchDecision();
+        if (decision == null) {
+            return;
+        }
+        if (decision != SwitchDecision.SAME_CONFIRMED) {
+            response.setProjectSwitchHint(decision.name());
+        }
+        switch (decision) {
+            case SAME_PROBABLY, DIFFERENT_PROBABLY -> response.setConfidenceBadge("AI_INFERRED");
+            case UNCLEAR -> response.setConfidenceBadge("PENDING_REVIEW");
+            default -> { /* SAME_CONFIRMED: 高置信无徽章 */ }
+        }
     }
 
     /**

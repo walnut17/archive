@@ -162,6 +162,27 @@ curl -X POST http://localhost:8080/api/qa/ask \
 
 ---
 
+## v1.1 网络查字典 API Key 配置（D-2）
+
+D-2 拍板：v1.1 实施只配 2 候选（百度百科 + 维基百科），金融百科/互动百科留占位。
+
+### 百度百科 API（v1.1 启用）
+
+1. 申请：https://baike.baidu.com/api
+2. 配置：`config.json` 的 `archive.networkDict.cacheTtl` 设值
+3. 启用：application.yml `archive.network-dict.enabled-sources` 加 `baidu_baike`
+
+### 维基百科 API（v1.1 启用）
+
+1. 申请：https://www.mediawiki.org/wiki/API:Main_page
+2. 配置：同上
+
+### 金融百科 / 互动百科（v1.1 停用占位）
+
+D-2 决策：金融百科 / 互动百科留 "已停用" 占位 entry，业务方后续确认出网策略再启用。
+
+---
+
 ## 6. 相关文档
 
 - [V2-TEST-TASKS.md](V2-TEST-TASKS.md) — 端到端验收清单

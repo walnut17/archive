@@ -133,3 +133,33 @@ logging:
     name: D:/archive/logs/backend.log
     max-size: 100MB
     max-history: 30
+
+# === v1.1 新增（零回归: 全部新 key, 沿用默认值）===
+archive:
+  # RI-26 网络查字典
+  network-dict:
+    enabled-sources: baidu_baike,wiki
+    timeout: 5000
+    cache-ttl: 3600
+  # RI-27 QueryMysql 白名单 + 行数截断 + 数值上限
+  query-mysql:
+    max-result-rows: 1000
+    max-amount: 1.0E8
+    allowed-filter-keys: region,industry,stage,fact_type,time_bucket
+  # RI-33 乐观锁 v1.1 灰度 (D-3)
+  optimistic-lock:
+    strict: false  # v1.1 灰度, v2 多用户切 true
+  # RI-36/60 数据生命周期
+  retention:
+    recycle-days: 30
+    archive-years: 1
+    long-archive-years: 5
+    scan-cron: "0 2 * * *"
+  # RI-35/59 审计加强
+  audit:
+    enabled-types: WRITE,LOGIN,SENSITIVE_VIEW,EXPORT,LLM
+    log-stack-trace: false  # 默认 false, debug 时切 true
+  # RI-39 通知中心
+  notification:
+    polling-interval: 30s
+    page-size: 20

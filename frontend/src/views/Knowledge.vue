@@ -35,6 +35,8 @@ interface QaResponse {
   agentMode?: boolean | null
   steps?: AgentStep[] | null
   toolCalls?: number | null
+  projectSwitchHint?: string | null
+  confidenceBadge?: string | null
 }
 
 const question = ref('')
@@ -42,6 +44,39 @@ const loading = ref(false)
 const useRerank = ref(true)
 const agentMode = ref(true)
 const result = ref<QaResponse | null>(null)
+
+function switchHintText(hint: string) {
+  const map: Record<string, string> = {
+    SAME_PROBABLY: '当前问题可能仍属于当前锁定项目, 请确认',
+    DIFFERENT_PROBABLY: '检测到不同项目, 是否切换?',
+    UNCLEAR: '项目上下文不清晰, 请明确说明',
+  }
+  return map[hint] || hint
+}
+
+function hintType(hint: string): 'success' | 'warning' | 'info' {
+  if (hint === 'DIFFERENT_PROBABLY') return 'warning'
+  if (hint === 'UNCLEAR') return 'info'
+  return 'success'
+}
+
+function confidenceTagType(badge: string): 'success' | 'warning' | 'info' | '' {
+  const map: Record<string, 'success' | 'warning' | 'info'> = {
+    CONFIRMED: 'success',
+    AI_INFERRED: 'warning',
+    PENDING_REVIEW: 'info',
+  }
+  return map[badge] || ''
+}
+
+function confidenceBadgeText(badge: string) {
+  const map: Record<string, string> = {
+    CONFIRMED: '高置信',
+    AI_INFERRED: 'AI 推测',
+    PENDING_REVIEW: '待人工确认',
+  }
+  return map[badge] || badge
+}
 
 async function onAsk() {
   if (!question.value.trim()) {
@@ -105,6 +140,15 @@ const exampleQuestions = [
     </div>
 
     <div v-if="result" v-loading="loading">
+      <div v-if="result.projectSwitchHint" class="switch-hint-bar" style="margin-bottom: 16px">
+        <el-alert
+          :title="switchHintText(result.projectSwitchHint)"
+          :type="hintType(result.projectSwitchHint)"
+          :closable="false"
+          show-icon
+        />
+      </div>
+
       <el-card v-if="result.answer" style="margin-bottom: 16px">
         <template #header>
           <div style="display: flex; justify-content: space-between; align-items: center">
@@ -116,6 +160,11 @@ const exampleQuestions = [
           </div>
         </template>
         <div style="white-space: pre-wrap">{{ result.answer }}</div>
+        <div v-if="result.confidenceBadge" class="confidence-badge" style="margin-top: 12px">
+          <el-tag :type="confidenceTagType(result.confidenceBadge)">
+            {{ confidenceBadgeText(result.confidenceBadge) }}
+          </el-tag>
+        </div>
         <AgentStepsPanel v-if="result.steps" :steps="result.steps" />
       </el-card>
 

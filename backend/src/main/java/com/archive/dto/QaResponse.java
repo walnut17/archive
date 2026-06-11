@@ -45,6 +45,12 @@ public class QaResponse {
     /** Agent 工具调用次数(老路径时 null). */
     private Integer toolCalls;
 
+    /** v1.1: 隐式项目切换 hint (SAME_PROBABLY / DIFFERENT_PROBABLY / UNCLEAR). */
+    private String projectSwitchHint;
+
+    /** v1.1: 置信度徽章 (CONFIRMED / AI_INFERRED / PENDING_REVIEW). */
+    private String confidenceBadge;
+
     /**
      * 从 AgentResponse 转换为 QaResponse(兼容老前端).
      */
@@ -57,6 +63,8 @@ public class QaResponse {
                 .agentMode(true)
                 .steps(ar.getSteps())
                 .toolCalls(ar.getSteps() != null ? ar.getSteps().size() : 0)
+                .projectSwitchHint(ar.getProjectSwitchHint())
+                .confidenceBadge(ar.getConfidenceBadge())
                 .build();
     }
 }
