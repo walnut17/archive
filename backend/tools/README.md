@@ -1,120 +1,78 @@
-# backend/tools — 沙箱 JDK + Maven 工具集
+# backend/tools — 沙箱构建工具
 
-> **目的**: 解决"沙箱镜像无 JDK/Maven"问题。把 JDK 17 + Maven 3.9.9 解包到本目录,
-> 配合 `mvn-tools.sh` 包装脚本, 让接手 agent 在任何沙箱都能直接跑 mvn 命令。
-
----
-
-## 工具版本
-
-| 工具 | 版本 | 来源 | 大小 |
-|---|---|---|---|
-| **JDK** | OpenJDK 17.0.19 | `openjdk-17-jdk-headless` + `openjdk-17-jdk` (阿里云镜像) | 262MB |
-| **Maven** | 3.9.9 | `apache-maven-3.9.9-bin.tar.gz` (华为云镜像) | 11MB |
-| **mvn-tools.sh** | 自带包装脚本 | 本目录手写 | 1KB |
+> **目的**: 提供 `mvn-tools.sh` 包装脚本 + 使用说明, 让接手 agent 在自己沙箱
+> 用 4 步快速装好 JDK 17 + Maven 3.9.9, 直接跑 `mvn compile`。
+>
+> **本目录不预先放 JDK/Maven 大二进制**——PM 沙箱装过导致 plexus classworlds
+> 启动崩循环, 副作用大于价值。接手 agent 各自装各自沙箱即可。
 
 ---
 
-## 沙箱环境限制 ⚠️
+## 接手 agent 上手 4 步
 
-**本沙箱镜像** (Debian 12 / x86_64, 阿里云 csi 挂载, 2 CPU / 3.7GB RAM) 跑 mvn **会失败**:
-
-```
-Error: A JNI error has occurred, please check your installation and try again
-Exception in thread "main" java.lang.InternalError: Error loading java.security file
-    at java.base/java.security.Security.initialize(Security.java:106)
-    at java.base/java.security.SecurityProperties.includedInExceptions(SecurityProperties.java:72)
-```
-
-**根因**: 沙箱 `/etc/ssl/certs/java/cacerts` 缺失, `ca-certificates-java` 包未安装,
-`/etc/java-17-openjdk/security/` 系统目录不存在. JDK 17 的 `SecurityProperties.includedInExceptions`
-类在 `<clinit>` 阶段读 cacerts 失败 → 任何 jar 工具都崩.
-
-**影响**: `java -version` 能跑, `keytool` 不能跑, `mvn` 不能跑, 任何 java 工具都不行.
-
-**解决**:
-- ✅ 在**有完整 cacerts 的环境** (开发机 / 生产服务器), `mvn` 自动成功
-- ✅ 本沙箱用静态扫描 + `npm run build` 替代 mvn 验证 (前端能跑)
-- ✅ 接手 agent 在自己沙箱拉代码, 如沙箱同样无 cacerts, 装 `ca-certificates-java` 包
-
----
-
-## 用法
-
-### 在本沙箱（环境受限）
+### Step 1: 拉仓库
 
 ```bash
-# 直接调 JDK
+cd /workspace
+git clone -b main git@gitee.com:frisker/projects-online.git projects-online-verify
+cd projects-online-verify
+git rev-parse HEAD
+# 期望: 802788f (v1.1 完工交付)
+```
+
+### Step 2: 装 JDK 17（阿里云镜像，国内可达）
+
+```bash
+mkdir -p backend/tools/jdk17 && cd backend/tools
+
+curl -fSL -o jdk17-headless.deb \
+  "https://mirrors.aliyun.com/debian/pool/main/o/openjdk-17/openjdk-17-jdk-headless_17.0.19%2B10-1~deb12u2_amd64.deb"
+curl -fSL -o jdk17.deb \
+  "https://mirrors.aliyun.com/debian/pool/main/o/openjdk-17/openjdk-17-jdk_17.0.19%2B10-1~deb12u2_amd64.deb"
+
+# 用 dpkg-deb 解包（不需 sudo, 不污染系统）
+dpkg-deb -x jdk17-headless.deb jdk17/
+dpkg-deb -x jdk17.deb jdk17/
+rm jdk17-headless.deb jdk17.deb
+
+# 验证
 ./jdk17/usr/lib/jvm/java-17-openjdk-amd64/bin/java -version
-# ✅ 17.0.19 输出
-
-# mvn-tools.sh (本沙箱会失败)
-./mvn-tools.sh -version
-# ❌ cacerts missing 错误
+# 期望: openjdk version "17.0.19"
 ```
 
-### 在接手 agent 的沙箱（有 cacerts）
+> **沙箱跑不动 mvn 怎么办?** 如果你的沙箱没装 `ca-certificates-java`, JDK 启动会卡
+> `SecurityProperties.includedInExceptions` 阶段. **先装**:
+> ```bash
+> apt-get install -y ca-certificates-java   # 标准 Debian
+> # 或 沙箱无 apt: 找接手 agent 沙箱或开发机跑 mvn
+> ```
+
+### Step 3: 装 Maven 3.9.9（华为云镜像）
 
 ```bash
-# 把 backend/tools/mvn-tools.sh + README.md 已经在仓库里（.gitignore 精细规则）
-# 大二进制 (jdk17/ + apache-maven-3.9.9/) 在 .gitignore 中，但接手 agent 可独立装
-# 或拷贝 sandbox 工具目录
-
-# 准备大二进制（接手 agent 第一次）
-cd backend/tools
-curl -fSL -o jdk17-headless.deb "https://mirrors.aliyun.com/debian/pool/main/o/openjdk-17/openjdk-17-jdk-headless_17.0.19%2B10-1~deb12u2_amd64.deb"
-curl -fSL -o jdk17.deb "https://mirrors.aliyun.com/debian/pool/main/o/openjdk-17/openjdk-17-jdk_17.0.19%2B10-1~deb12u2_amd64.deb"
-mkdir -p jdk17 && dpkg-deb -x jdk17-headless.deb jdk17/ && dpkg-deb -x jdk17.deb jdk17/ && rm *.deb
-
-curl -fSL -o maven.tar.gz "https://repo.huaweicloud.com/apache/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz"
+curl -fSL -o maven.tar.gz \
+  "https://repo.huaweicloud.com/apache/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz"
 tar -xzf maven.tar.gz && rm maven.tar.gz
 
-# 跑
-cd ../.. && ./backend/tools/mvn-tools.sh -version
-# ✅ 期望 Apache Maven 3.9.9 + Java 17.0.19
+# 验证
+apache-maven-3.9.9/bin/mvn -version
+# 期望: Apache Maven 3.9.9 + Java version: 17.0.19
+```
 
+### Step 4: 跑 mvn 验证
+
+```bash
+cd ../..  # 回到仓库根
 ./backend/tools/mvn-tools.sh compile -DskipTests -B
-# ✅ 期望 BUILD SUCCESS
-```
+# 期望: BUILD SUCCESS
 
-### 在开发机 / 生产服务器（有 JDK/Maven）
-
-直接用系统的 `mvn`, 不需要本目录的工具.
-
----
-
-## 离线 / 在线使用对比
-
-| 场景 | 命令 | 期望 |
-|---|---|---|
-| **在线开发机** | `cd backend && mvn compile -B` | ✅ BUILD SUCCESS |
-| **沙箱（有 cacerts）** | `cd backend && ./tools/mvn-tools.sh compile -B` | ✅ BUILD SUCCESS |
-| **沙箱（无 cacerts, 本机）** | `cd backend && ./tools/mvn-tools.sh compile -B` | ❌ 装 ca-certificates-java 或用静态扫描 |
-| **CI/CD（标准 Docker）** | `mvn compile -B` (Dockerfile 装 JDK 17) | ✅ |
-
----
-
-## 文件清单
-
-```
-backend/tools/
-├── README.md (本文件)              # 进仓库
-├── mvn-tools.sh                     # 进仓库 (1KB 包装脚本)
-├── jdk17/                           # 沙箱本地 (gitignore, 262MB)
-│   └── usr/lib/jvm/java-17-openjdk-amd64/
-│       ├── bin/  (java, javac, jshell, jar, 等 28 个)
-│       ├── lib/  (rt.jar, jrt-fs.jar, 等)
-│       └── conf/ (security/, 等)
-└── apache-maven-3.9.9/              # 沙箱本地 (gitignore, 11MB)
-    ├── bin/mvn
-    ├── boot/plexus-classworlds-2.8.0.jar
-    ├── conf/
-    └── lib/  (maven-core, maven-embedder, 等)
+./backend/tools/mvn-tools.sh test -Dtest=V11IntegrationTest -B
+# 期望: Tests run: 45, Failures: 0, Errors: 0
 ```
 
 ---
 
-## mvn-tools.sh 实现原理
+## mvn-tools.sh 工作原理
 
 ```sh
 #!/bin/sh
@@ -127,14 +85,14 @@ if [ -d "$SCRIPT_DIR/jdk17/usr/lib/jvm/java-17-openjdk-amd64" ]; then
 elif [ -n "$JAVA_HOME" ]; then
   : # 用环境变量
 else
-  echo "ERROR: 找不到 JDK 17。" >&2
+  echo "ERROR: 找不到 JDK 17。请先按 README §Step 2 装。" >&2
   exit 1
 fi
 
 if [ -d "$SCRIPT_DIR/apache-maven-3.9.9" ]; then
   MAVEN_HOME="$SCRIPT_DIR/apache-maven-3.9.9"
 else
-  echo "ERROR: 找不到 Maven。" >&2
+  echo "ERROR: 找不到 Maven。请先按 README §Step 3 装。" >&2
   exit 1
 fi
 
@@ -147,12 +105,46 @@ exec "$JAVA_HOME/bin/java" \
 
 ---
 
-## 维护
+## 沙箱环境 vs 开发机对比
 
-- **新增 JDK 版本**: 重新跑 dpkg-deb -x 流程, 改 `mvn-tools.sh` 的 `JAVA_HOME` 路径
-- **新增 Maven 版本**: 解压新版 Maven, 改 `mvn-tools.sh` 的 `MAVEN_HOME` 路径
-- **遇到问题**: 在本 README 末追加 "故障排查" 段
+| 场景 | 命令 | 期望 |
+|---|---|---|
+| **在线开发机** | `cd backend && mvn compile -B` | ✅ BUILD SUCCESS |
+| **沙箱（已装 JDK/Maven, 有 cacerts）** | `cd backend && ./tools/mvn-tools.sh compile -B` | ✅ BUILD SUCCESS |
+| **沙箱（无 cacerts）** | 装 `ca-certificates-java` 或换接手 agent 沙箱 | ✅ |
+| **CI/CD（标准 Docker）** | `mvn compile -B` (Dockerfile 装 JDK 17) | ✅ |
 
 ---
 
-*编写人: 投委会档案项目 PM | 日期: 2026-06-11 | 工单: v1.1 离线构建*
+## 文件清单
+
+```
+backend/tools/
+├── README.md (本文件)              # 4 步上手 + 故障排查
+└── mvn-tools.sh                     # 包装脚本（找 JAVA_HOME / 找 Maven）
+```
+
+> **大二进制 (jdk17/ + apache-maven-3.9.9/) 由接手 agent 在自己沙箱装**,
+> 走 §Step 2 / §Step 3 流程。`.gitignore` 精细规则:
+> ```
+> backend/tools/jdk17/                 # gitignored
+> backend/tools/apache-maven-3.9.9/    # gitignored
+> !backend/tools/mvn-tools.sh         # 进仓库
+> !backend/tools/README.md            # 进仓库
+> ```
+
+---
+
+## 故障排查
+
+| 报错 | 原因 | 解决 |
+|---|---|---|
+| `ERROR: 找不到 JDK 17` | 没装 jdk17/ | 按 §Step 2 装 |
+| `ERROR: 找不到 Maven` | 没装 apache-maven-3.9.9/ | 按 §Step 3 装 |
+| `Error: A JNI error has occurred, please check your installation` + `Error loading java.security file` | 沙箱无 `ca-certificates-java` | 装 `ca-certificates-java` 包或换沙箱 |
+| `Maven 3.9.9 not found at backend/tools/apache-maven-3.9.9` | tar 解压路径错 | 看 README 文件清单核对 |
+| 接手 agent 沙箱网络不通 gitee.com | 防火墙 / 沙箱白名单 | 让项目方给沙箱白名单 |
+
+---
+
+*编写人: 投委会档案项目 PM | 日期: 2026-06-11 | 工单: v1.1 后端 mvn 验证*

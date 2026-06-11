@@ -11,8 +11,8 @@
 # Per-sandbox scratch / cache / tools
 # - .version/, scratch/ 是沙箱临时文件，不进仓库
 # - backend/tools/ 是沙箱离线工具集（JDK + Maven 大二进制），
-#   但 mvnw / README.md 这些小文档可以 commit
-#   （接手 agent 在有完整 cacerts 的沙箱拉代码就能用 mvnw）
+#   但 mvn-tools.sh / README.md 这些小文档可以 commit
+#   （JDK/Maven 大二进制由接手 agent 在自己沙箱装，按 README §Step 2/3）
 .version/
 NOTES.md
 scratch/
@@ -22,8 +22,8 @@ backend/tools/apache-maven-3.9.9/
 backend/tools/certs/
 backend/tools/*.deb
 backend/tools/*.tar.gz
-# ! 显式允许: mvnw 和 README.md 即使在 tools/ 下也进仓库
-!backend/tools/mvnw
+# ! 显式允许: mvn-tools.sh 和 README.md 即使在 tools/ 下也进仓库
+!backend/tools/mvn-tools.sh
 !backend/tools/README.md
 
 # Plan engine runtime state (board.md, outputs/, etc.) — only the curated
