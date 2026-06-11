@@ -42,7 +42,19 @@
 - 非档案类问题**礼貌拒答**，引导用户回到正题
 - 模糊问题（如"那个项目怎么样"）走已有 `ask_clarification` 工具
 
-### 1.2 验收场景
+### 1.2 需求锚点
+
+| 文档 | 章节 | 要点 |
+|---|---|---|
+| [`REQUIREMENTS.md`](../docs/requirements/REQUIREMENTS.md) | §5.6.7 | 智能问答 Agent 行为约束 |
+| [`AGENT-REQUIREMENTS.md`](../docs/requirements/AGENT-REQUIREMENTS.md) | §4.3 | Agent 回答范围限定为档案管理域 |
+
+### 1.3 验收标准（产品）
+
+- [ ] 非档案问题（天气、编程等）礼貌拒答
+- [ ] 档案问题正常走 Agent 流程
+- [ ] 问候类（你好、谢谢）允许正常响应
+- [ ] 拒答文案经 PM 确认
 
 | # | 用户问题 | 期望行为 |
 |---|---------|---------|
@@ -67,7 +79,18 @@
 - **AgentEngine.java**: 首步 LLM 调用后可加意图分类逻辑（或直接在 prompt 中约束）
 - **AgentResponse.java**: 不变（拒答也走正常 answer 返回）
 
-### 2.2 方案选择
+### 2.1 架构锚点
+
+| 文档 | 章节 | 设计决策 |
+|---|---|---|
+| [`02-backend-layer-architecture.md`](../docs/architecture/02-backend-layer-architecture.md) | §9 | Agent 层：AgentEngine + AgentSystemPrompt |
+| [`06-requirements-gap-analysis.md`](../docs/architecture/06-requirements-gap-analysis.md) | §2.2 | Agent 兼容性分析，方案 A（prompt 约束）vs B（IntentGuard）
+
+### 2.2 与现有系统关系
+
+- 不改 AgentEngine 核心循环（方案 A）或仅加前置拦截（方案 B）
+- 不改变 AgentResponse / QaResponse 契约
+- 不改前端
 
 **方案 A（推荐）— Prompt 级约束**
 
@@ -102,13 +125,20 @@
 
 ---
 
-## 3. PM 范围
+## 3. PM 范围与决策
 
 | 字段 | 内容 |
 |---|---|
 | **Agent** | （待 PM 拍板） |
 | **时间** | |
-| **决策** | |
+| **摘要** | |
+
+| 项 | 决策 |
+|---|---|
+| **做** | Agent 域约束 + 拒答规则；方案 A（prompt 级）先行 |
+| **不做** | 方案 B（IntentGuard 工具）暂不做，除非方案 A 效果不达标 |
+| **风险** | prompt 级约束依赖 LLM 遵从度，GLM 可能不严格执行 |
+| **估时** | BE 0.5d · FE 0d · 测试 0.3d |
 
 ### 3.1 待 PM 拍板
 

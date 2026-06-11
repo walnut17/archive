@@ -45,6 +45,19 @@
 | C-0611-05 | T-0611-03 | I-RI-39 `read`→`is_read` 源文件修正 | 修 I-RI-39 |
 | C-0611-09 | T-0611-05 | healthcheck 不带 JWT vs 浏览器 | 文档 gap |
 
+### 1.2 需求锚点
+
+| 文档 | 章节 | 要点 |
+|---|---|---|
+| [`DEPLOYMENT.md`](../docs/operations/DEPLOYMENT.md) | §2 | 部署流程标准化 |
+| [`ENVIRONMENT-DEPENDENCIES.md`](../docs/operations/ENVIRONMENT-DEPENDENCIES.md) | §3 | 生产配置要求 |
+
+### 1.3 验收标准（产品）
+
+- [ ] 生产 `ddl-auto: validate` 配置生效
+- [ ] `I-RI-39-notification.sql` 源文件 `read`→`is_read` 改名完成
+- [ ] 升级流程文档可指导新手完成一次完整升级
+
 ---
 
 ## 2. 架构追溯
@@ -89,14 +102,20 @@ spring:
 
 ---
 
-## 3. PM 范围
+## 3. PM 范围与决策
 
 | 字段 | 内容 |
 |---|---|
 | **Agent** | （待 PM 拍板） |
 | **时间** | |
+| **摘要** | |
 
-### 3.1 待 PM 拍板
+| 项 | 决策 |
+|---|---|
+| **做** | ① 修 I-RI-39 源文件；② application.yml 加 `ddl-auto: validate`；③ 写 `v1.1-DEPLOY-GUIDE.md` |
+| **不做** | Flyway 迁移工具本次不引入（留 v2） |
+| **风险** | `ddl-auto` 从 `update` 改 `validate` 后，启动时如果 schema 不一致会报错退出 |
+| **估时** | BE 0.5d · 文档 0.5d · 测试 0.3d |
 
 - 升级流程是否要求**强制 backup** 还是允许跳过的宽松策略
 - `v1.1-DEPLOY-GUIDE.md` 的维护归属

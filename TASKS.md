@@ -1,15 +1,76 @@
-# Plan I 任务分块清单(物理并行开发协调表)
+# 任务路由与占用 — `TASKS.md`
 
-> **本文档是"谁占用了哪个任务"的实时真相表**。每个任务独占 1 个 section,**多人同时开发互不覆盖**。
-> **任务类型**：**开发**（RI / MOD / T-*）与 **自动化测试**（**AT-***，案例在 [`test_task/`](test_task/README.md)）。  
-> **协作架构说明**：[`MULTI-AGENT-REPO-ARCHITECTURE.md`](MULTI-AGENT-REPO-ARCHITECTURE.md)
-
-> **2026-06-09 20:42 Mavis 沙箱 额外同步**: minimax → main 同步 TASKS.md 状态 (Plan I 13/13 完工, P0 fix 已合并), 接手 AI 可拉 main 看最新任务状态.
-> **同步规则**: **状态变更立即 commit + push 到 main 分支**(10 秒内完成)。**push 成功 = 占用成功**。
-> **冲突解决**: **谁先 push 谁占**。别人看到 push 通知就放弃,找下一个 `未开发` 任务。
-> **任务粒度**: 1 个任务 = 1 个 commit + 1 个 push(典型 1-3 小时工作量,接手 AI 一次完成)
+> **本文档 = 接手 Agent 的入口路由表**：列出当前有哪些**待开发**工作（**DEBUG 修 bug** + **UPGRADE 新能力**）。新 agent **先占本表一行**，再按「详情路径」打开 [`test-to-settle/`](test-to-settle/README.md) 或 [`upgrade_to_settle/`](upgrade_to_settle/README.md) 读全文开工。
 >
-> **2026-06-09 项目方新口径**: 多人多 agent 推 **main 分支**(开发中, 代码未经审核), Mavis 沙箱 审核后 推到 **minimax 分支**(成品, 生产用)。接手 AI 推 main 是 OK 的(项目方授权过)。
+> **详情不在本文件**：两目录存具体任务；本表只存 **ID + 路径 + 占用状态**。  
+> **协作架构**：[`MULTI-AGENT-REPO-ARCHITECTURE.md`](MULTI-AGENT-REPO-ARCHITECTURE.md)
+
+> **占用规则**：状态变更 **10 秒内 commit + push main**。**谁先 push 谁占**。
+
+---
+
+## 🎯 任务路由（接手 Agent 看这里）
+
+### 三种路径
+
+```text
+TASKS.md（挑任务、占坑）
+    │
+    ├─ DEBUG ──→ test-to-settle/round-*.md 或 test_bug-*.md
+    │              小修：round §2～§4 当轮闭环
+    │              大改：ESCALATED → complexity.md（暂挂，不进本表）
+    │
+    └─ UPGRADE ─→ upgrade_to_settle/plan-YYYY-MM-DD-*.md
+                   完工 → upgrade_to_settle/done/
+
+complexity.md（大改中转路由，不在 TASKS）
+    → 分析 → 更新 docs + upgrade_to_settle/plan → TASKS UPGRADE
+    → 删 complexity 对应行（全文在 docs/plan，防膨胀）
+```
+
+| 类型 | 详情目录 | 本表何时挂行 |
+|---|---|---|
+| **DEBUG** | [`test-to-settle/`](test-to-settle/README.md) | 需 coder 修 bug / VERIFY |
+| **UPGRADE** | [`upgrade_to_settle/`](upgrade_to_settle/README.md) | plan 已定稿、待 Implement |
+| **AT-*** | [`test_task/`](test_task/README.md) | 有真实 AT 案例 |
+| *complexity* | [`test-to-settle/complexity.md`](test-to-settle/complexity.md) | **不**挂行，直到升格 UPGRADE |
+
+### 活跃路由表（2026-06-11）
+
+> **不在本表** = 已 ESCALATED 见 [`complexity.md`](test-to-settle/complexity.md)；已 VERIFY 待 Reviewer CLOSED 见 round §1.3。
+
+| 路由 ID | 类型 | 详情路径 | 状态 | 占用人 | 摘要 |
+|---|---|---|---|---|---|
+| **T-0611-08** | DEBUG | [`test-to-settle/round-2026-06-11-v1.1-deploy.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) §1.3 · `LlmUsage.vue` | `VERIFY` | — | 125 pull 后 AI 用量无双 `/api` |
+| **T-0611-09** | DEBUG | 同上 §1.3 · `LlmUsageService` | `未开发` | — | recent 查询 userId=null |
+| **T-0611-18** | DEBUG | 同上 §1.3 · `LlmUsageController` | `未开发` | — | admin `stats` 403 |
+| **T-0611-20** | DEBUG | 同上 §1.9 · `FindProjectTool` | `VERIFY` | — | lmz find_project；125 rebuild |
+| **UP-0611-01** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) | `未开发` | — | archive_fs ls/grep/read |
+
+**complexity 中转（不进本表）**：T-0611-15→C-0611-01 · T-0611-19→C-0611-08 · T-0611-05/06/10/11→C-0611-04/09/10/11 · 架构 A-1～A-6→C-0611-02～07
+
+> 索引：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)
+
+### 占用 SOP
+
+1. 选 `未开发` → 改 `占用-<名>` → push TASKS.md  
+2. 打开详情路径读全文  
+3. DEBUG → round/plan §3 Fix；UPGRADE → plan §5 Implement  
+4. 完工 → 本表 `已完成`；UPGRADE plan 移 `upgrade_to_settle/done/`
+
+### 维护：何时加路由行
+
+| 事件 | 操作 |
+|---|---|
+| 新 bug 要修 | round 记 `T-MMDD-NN` + **TASKS DEBUG 行** |
+| complexity 出 plan + docs 已更 | **upgrade_to_settle/plan-*.md** + **TASKS UPGRADE** + **删 complexity 行** |
+| 大改暂不做 | 只写 complexity，**不加** TASKS 行 |
+
+---
+
+## 📜 历史占表（Plan I / v1.1 MOD — 已完成，仅供追溯）
+
+> 新工作用上面 **🎯 任务路由**，勿占下面 T-I-* / MOD-*。
 
 ---
 
@@ -636,6 +697,29 @@ MOD-01 (DB 迁移, 1.7d)
 | 总工时 | ~28.7d（4 路并行 ≈ 5 周） |
 | 关键路径 | ~12.2d |
 | 集成测试 | 30+ 测例 |
+
+---
+
+## 🆙 UPGRADE 任务（来自 complexity 升级）
+
+> **来源**：`test-to-settle/complexity.md` 大改分析完成后升格  
+> **完整 plan**：`upgrade_to_settle/plan-*.md`（§0～§7）  
+> **流程**：改本节 `状态` → `占用-<名字>` → 读 plan 开工 → `已完成`
+
+| Plan ID | 文件 | 摘要 | 优先级 | 状态 |
+|---------|------|------|--------|------|
+| UP-0611-01 | [`plan-2026-06-11-archive-local-fs-tools.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) | Agent 只读 `D:/archive` 材料：ls/grep/read + 多模态 | P1 | `未开发` |
+| UP-0611-02 | [`plan-2026-06-11-agent-intent-classification.md`](upgrade_to_settle/plan-2026-06-11-agent-intent-classification.md) | Agent 离题拒答 + 业务域意图分类（C-0611-01） | P1 | `未开发` |
+| UP-0611-03 | [`plan-2026-06-11-deploy-pipeline.md`](upgrade_to_settle/plan-2026-06-11-deploy-pipeline.md) | 部署 SOP / I-RI-39 源文件修复 / `ddl-auto: validate`（C-0611-02/03/04/05/09） | P1 | `未开发` |
+| UP-0611-04 | [`plan-2026-06-11-chat-ui.md`](upgrade_to_settle/plan-2026-06-11-chat-ui.md) | 知识库聊天式 UI 重构（C-0611-08） | P2 | `未开发` |
+| UP-0611-05 | [`plan-2026-06-11-test-governance.md`](upgrade_to_settle/plan-2026-06-11-test-governance.md) | 测试治理：补测例 + H2/MySQL 策略文档（C-0611-10/11） | P2 | `未开发` |
+
+### 抢先 SOP
+
+1. **读** `upgrade_to_settle/README.md` + 对应 `plan-*.md`（§0～§7）
+2. **改** `状态: 未开发` → `占用-<你的名字>`
+3. **10 秒内** `git add TASKS.md && git commit && git push origin main`
+4. **干完** 按 plan §4 验收 → 改 `状态` → `已完成` + commit + push
 
 ---
 
