@@ -57,8 +57,8 @@ async function load() {
   loading.value = true
   try {
     const url = scope.value === 'all' && isAdmin.value
-      ? '/api/llm/stats?recentLimit=50'
-      : '/api/llm/my-usage?recentLimit=50'
+      ? '/llm/stats?recentLimit=50'
+      : '/llm/my-usage?recentLimit=50'
     const resp = await http.get<any, any>(url)
     stats.value = resp.data?.data || resp.data
   } catch (e: any) {
@@ -86,7 +86,7 @@ function statusType(status: string): string {
 onMounted(async () => {
   // 试一下能不能调 /api/llm/stats(admin 接口)判断角色
   try {
-    const r = await http.get<any, any>('/api/llm/stats?recentLimit=1')
+    const r = await http.get<any, any>('/llm/stats?recentLimit=1')
     if (r.data?.code === 0) {
       isAdmin.value = true
       scope.value = 'all'

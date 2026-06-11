@@ -201,6 +201,26 @@ mysql -u archive_app -p archive_db < D:\projects-online\deploy\sql\migrate_26061
 
 ---
 
+### Step 8 — 「AI 用量」500：前端路径双 `/api` ✅ 已修
+
+**现象：** 控制台请求 `api/api/llm/my-usage` → 500。
+
+**根因：** `http.ts` 的 `baseURL` 已是 `/api`，`LlmUsage.vue` 又写了 `/api/llm/...`，拼成 `/api/api/llm/...`。
+
+**修复：** `frontend/src/views/LlmUsage.vue` 改为 `/llm/my-usage`、`/llm/stats`（commit 待 push）。
+
+**125 上：**
+
+```powershell
+cd D:\projects-online
+git pull origin main
+# npm run dev 若未自动热更新，Ctrl+C 后重新 npm run dev
+```
+
+浏览器再点「AI 用量」，Network 里应是 **`/api/llm/my-usage`**（只有一个 api）。
+
+---
+
 ### Step 7 附录 — 迁移脚本踩坑（已解决）
 
 **PowerShell 整段粘贴一行报错：** 不要用一行 `$files=...foreach`；改用 `source migrate_260611_01.sql` 或 `run-v11-migrations.ps1`。
@@ -211,6 +231,7 @@ mysql -u archive_app -p archive_db < D:\projects-online\deploy\sql\migrate_26061
 
 - [x] 确认 `migrate_260611_01.sql` 在 125 执行成功（**112 queries OK**）
 - [ ] 浏览器登录无 500，通知/待办/health 正常
+- [ ] **AI 用量** — 已修 `LlmUsage.vue` 双 `/api` 路径（`/api/api/llm` → `/api/llm`），125 需 `git pull` 后刷新
 - [ ] 跑 `v1.1-DEPLOY-GUIDE.md` **7 大场景** + v1.0 零回归 4 项
 - [ ] 改 `admin` 默认密码、配真实 GLM API key
 - [ ] （可选）正式对外：`npm run build` + Caddy/IIS 托管 `dist`，统一 `:80` 入口
@@ -226,6 +247,7 @@ mysql -u archive_app -p archive_db < D:\projects-online\deploy\sql\migrate_26061
 | log: `failure_log doesn't exist` | 未跑 I-RI-37 / 合并迁移 | 同上 |
 | log: `user_role doesn't exist` | 未跑 I-RI-34 | 同上 |
 | notification 500 | 列 ``read`` vs `is_read` | 迁移脚本末尾自动 rename |
+| AI 用量 500，URL 为 `/api/api/llm/...` | `LlmUsage.vue` 路径重复 `/api` | 改为 `/llm/my-usage`；`git pull` 刷新前端 |
 | `5173` 打不开 | dev 未起 / 防火墙 | `npm run dev`；放行 5173 |
 | `http://125/` 无 Vue 页 | Caddy `:80` 仅反代 8080，未托管 dist | 验收用 `:5173`；正式再 build+Caddy |
 | PowerShell 迁移脚本语法错误 | 多行粘成一行 | 用 `source xxx.sql` |
@@ -268,6 +290,7 @@ A：healthcheck 无 token；浏览器带 token 会走 RBAC，DB 未迁移时在 
 | 日期 | 记录人 | 变更 |
 |---|---|---|
 | 2026-06-11 | 阿根廷 | 创建本文件，记录 0611 v1.1 引导部署全过程 |
+| 2026-06-11 | 用户 | Step 7：`migrate_260611_01.sql` 执行成功，112 queries 全部 OK |
 
 ---
 
