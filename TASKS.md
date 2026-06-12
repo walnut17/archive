@@ -31,6 +31,8 @@ TASKS.md
 ### 路由表
 
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
+| **plan-2026-06-12-qa-agent-streaming-multiturn** | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-agent-streaming-multiturn.md`](upgrade_to_settle/plan-2026-06-12-qa-agent-streaming-multiturn.md) | `未开发` | — | 2026-06-12 | qa-agent 流式 SSE + 多轮项目锁 |
+| **plan-2026-06-12-qa-agent-tool-recovery** | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-agent-tool-recovery.md`](upgrade_to_settle/plan-2026-06-12-qa-agent-tool-recovery.md) | `未开发` | — | 2026-06-12 | qa-agent 冷启动降级 + 死循环自愈 + find_project 4 级链 |
 |---|---|---|---|---|---|---|
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
