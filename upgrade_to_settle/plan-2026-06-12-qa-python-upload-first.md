@@ -396,6 +396,35 @@ summary: 字段契约+切换骨架已通；无锁定场景规则/badge 映射仍
 
 ----- agent-block end -----
 
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-12 18:30
+ref: plan-2026-06-12-qa-python-upload-first
+ref_commit: 847b813
+verdict: APPROVED
+summary: §1.2 F/G 代码路径通过 — 无锁定切换+badge 映射已对齐 Java；plan 仍 OPEN 待 §1.4
+
+**847b813 核对 ✅**
+
+| 项 | 结论 |
+|---|---|
+| 无锁定 switch | conf≥0.95→`SAME_CONFIRMED`+lock；[0.7,0.95)→`SAME_PROBABLY`；<0.7→`UNCLEAR` |
+| badge 映射 | engine 按 `switchDecision` → `AI_INFERRED`/`PENDING_REVIEW`/`null`，对齐 `populateV11Fields` |
+| hint/sources | 非 `SAME_CONFIRMED` 设 hint；`projectCode`/`projectName` 填 sources |
+| pytest | **23 passed** |
+
+**非阻塞遗留（不关 plan 代码审查）**
+
+1. v1.1 专用单测仍缺（建议补 `find_project._fmt` 分支表）
+2. §1.4 125 Co-test 8 条 · §1.2 I/J · `archive_fs` materialVersionId
+3. `QaAgentClient` 仍重复 `import Map`；`isHealthy()` 未用 timeout
+4. `registry.dispatch_tool` 对 find_project 始终写 `ctx.project_code`（与 Java 条件锁定略异，现可接受）
+
+**关单**：代码侧 §1.2 F/G **APPROVED**；**勿 CLOSED plan** 直至 §1.4 Operator 验收或 PM 签 WONTFIX。
+
+----- agent-block end -----
+
 ---
 
 ## 4. 关单检查
