@@ -26,8 +26,14 @@ import javax.sql.DataSource;
  *
  * @author Mavis (修 Sisyphus P0-15)
  */
+/**
+ * Agent 配置（已退役）.
+ *
+ * @deprecated Java Agent 已由 Python qa-agent 微服务取代。保留仅用于降级路径。
+ */
 @Configuration
-@ConditionalOnProperty(name = "spring.ai.agent.enabled", havingValue = "true", matchIfMissing = true)
+@Deprecated
+@ConditionalOnProperty(name = "spring.ai.agent.enabled", havingValue = "true", matchIfMissing = false)
 public class AgentConfig {
 
     /**

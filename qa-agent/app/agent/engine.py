@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import time
 from typing import Any
 
 from app.agent.parser import FINAL_ANSWER, final_answer_from_args, parse_agent_step
@@ -71,6 +72,18 @@ def build_user_prompt(question: str, session_id: str | None, steps: list[dict]) 
     return "\n".join(parts)
 
 
+def _log_llm_call(scenario: str, status: str, duration_ms: int, model: str = settings.glm_chat_model) -> None:
+    """写入 llm_call_log 表。"""
+    try:
+        with db_cursor() as cur:
+            cur.execute(
+                "INSERT INTO llm_call_log (username, scenario, model, duration_ms, status) VALUES (%s, %s, %s, %s, %s)",
+                ("qa-agent", scenario, model, duration_ms, status),
+            )
+    except Exception:
+        logger.exception("写入 llm_call_log 失败")
+
+
 def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
     steps: list[dict[str, Any]] = []
     ctx: dict[str, Any] = {"project_code": None}
@@ -82,8 +95,19 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
     for i in range(1, settings.agent_max_iterations + 1):
         user_prompt = build_user_prompt(question, session_id, steps)
         try:
+            t0 = time.time()
             llm_raw = glm_client.chat(SYSTEM_PROMPT, user_prompt)
+            ms = int((time.time() - t0) * 1000)
+            _log_llm_call("AGENT_STEP", "OK", ms)
         except Exception as e:
+            ms = 0
+            try:
+                t0 = time.time()
+                _ = glm_client.chat(SYSTEM_PROMPT, user_prompt)  # 重试计时
+                ms = int((time.time() - t0) * 1000)
+            except Exception:
+                pass
+            _log_llm_call("AGENT_STEP", "ERROR", ms)
             logger.exception("GLM call failed")
             final_answer = f"LLM 服务暂不可用: {e}"
             steps.append(

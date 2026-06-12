@@ -19,8 +19,13 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 核心 Agent 引擎:手写 5 步 ReAct 循环.
  * MAX_ITERATIONS 硬编码 = 5,无配置项.
+ *
+ * @deprecated 自 v1.1 起 Java Agent 不再维护，由 Python qa-agent 微服务取代。
+ *     保留仅用于降级路径（spring.ai.agent.enabled=true 时加载）。
+ *     后续版本将移除此实现。
  */
 @Service
+@Deprecated
 @ConditionalOnProperty(name = "spring.ai.agent.enabled", havingValue = "true", matchIfMissing = true)
 public class AgentEngine {
 
