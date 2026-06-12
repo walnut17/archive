@@ -9,10 +9,11 @@
   <name>qa-agent (投委会档案 QA 微服务)</name>
   <description>Python FastAPI 智能问答微服务，由 Java BFF 转发调用</description>
 
-  <executable>D:\projects-online\qa-agent\.venv\Scripts\python.exe</executable>
+  <executable>D:\archive\apps\qa-agent\.venv\Scripts\python.exe</executable>
   <arguments>-m uvicorn app.main:app --host 127.0.0.1 --port 8001 --log-level info</arguments>
 
-  <workingdirectory>D:\projects-online\qa-agent</workingdirectory>
+  <!-- 生产路径 D:\archive\apps\qa-agent；开发机可改为 D:\projects-online\qa-agent -->
+  <workingdirectory>D:\archive\apps\qa-agent</workingdirectory>
 
   <onfailure action="restart" delay="30 sec"/>
   <onfailure action="restart" delay="1 min"/>

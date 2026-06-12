@@ -407,7 +407,39 @@ A：healthcheck 无 token；浏览器带 token 会走 RBAC，DB 未迁移时在 
 | 2026-06-12 | Auto (Co-test Guide) | §10 Step 2d：多轮第 2 问 lmz → 500（T-0612-04）；后续同会话全 500 |
 | 2026-06-12 | Auto (Co-test Guide) | §10 Step 2e：新建项目仍手工表单入口 — T-0612-05 vs RI-16 上传优先 |
 | 2026-06-12 | Auto (Co-test Guide) | 任务分流：DEBUG [`round-2026-06-12-qa-regression`](../../test-to-settle/round-2026-06-12-qa-regression.md) + UPGRADE plan + complexity C-0612-01 |
+| 2026-06-12 | Sisyphus | **§11 qa-agent 交付**：Python 8 工具 + 二期全量 · Java BFF QaAgentClient/health · WinSW qa-agent.xml · Java Agent @Deprecated |
 
 ---
 
-*下次部署或排错：先看 §0 状态表 + §5 速查表，再 pull 最新 `main`（当前 Co-test 基线 `5408bee`）。*
+## 11. qa-agent 微服务交付（2026-06-12）
+
+### 交付物
+
+| 模块 | 文件 | 说明 |
+|------|------|------|
+| Python 服务 | `qa-agent/` | FastAPI 8 工具 + ReAct + pytest 20 passed |
+| Java BFF | `QaAgentClient.java` | HTTP 调用 Python，带 agentSources 映射 |
+| Java BFF | `QaAgentHealthIndicator.java` | Actuator 健康检查 |
+| Java BFF | `MultiTurnController.java` | 3 降级路径（Python→Java→503） |
+| 部署 | `deploy/winsw/qa-agent.xml` | WinSW 第 5 进程 |
+| 部署 | `deploy/scripts/register-services.bat` | 注册脚本（已含 qa-agent） |
+| 运维 | `docs/operations/RUNBOOK.md` §1.2 | qa-agent 启停/日志/环境变量 |
+| 架构 | `docs/architecture/08-qa-agent-python-service.md` | 架构说明 |
+
+### 状态
+
+- ✅ Python 二期 4 工具（archive_fs/network/get/ask）已实现
+- ✅ v1.1 prompts 含 8 工具 + 置信度 + 5 级切换
+- ✅ LLM 调用写入 `llm_call_log`（AGENT_STEP）
+- ✅ Java Agent `@Deprecated`，默认关闭
+- ✅ pytest 20 passed · `mvn compile` 待 125 验证
+
+### 待 125 部署后验证
+
+- §1.4 验收 8 条
+- WinSW qa-agent 启动 + 健康检查
+- 7 大端到端场景
+
+---
+
+*下次部署或排错：先看 §0 状态表 + §5 速查表，再 pull 最新 `main`。*

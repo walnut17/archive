@@ -100,14 +100,7 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
             ms = int((time.time() - t0) * 1000)
             _log_llm_call("AGENT_STEP", "OK", ms)
         except Exception as e:
-            ms = 0
-            try:
-                t0 = time.time()
-                _ = glm_client.chat(SYSTEM_PROMPT, user_prompt)  # 重试计时
-                ms = int((time.time() - t0) * 1000)
-            except Exception:
-                pass
-            _log_llm_call("AGENT_STEP", "ERROR", ms)
+            _log_llm_call("AGENT_STEP", "ERROR", 0)
             logger.exception("GLM call failed")
             final_answer = f"LLM 服务暂不可用: {e}"
             steps.append(
@@ -129,6 +122,7 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
             steps.append(step)
             break
 
+        obs: Any = None
         try:
             obs = dispatch_tool(tool, step["toolArgs"], ctx)
             step["observation"] = _truncate(obs if isinstance(obs, str) else json.dumps(obs, ensure_ascii=False))
@@ -137,6 +131,11 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
             step["observation"] = _truncate(f"ERROR: {e}")
 
         steps.append(step)
+
+        # ask_clarification 中断 ReAct 循环
+        if ctx.get("interrupted") and isinstance(obs, dict):
+            final_answer = json.dumps({"clarification": True, "question": obs.get("question", "")}, ensure_ascii=False)
+            break
 
         # 死循环：连续相同 tool+args
         if len(steps) >= 2:

@@ -24,8 +24,8 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> list[dict[str, Any]]:
     clauses: list[str] = []
     params: list[Any] = []
     for w in where:
-        field = w.get("field")
-        op = w.get("op", "=")
+        field = w.get("column") or w.get("field")
+        op = w.get("operator") or w.get("op", "=")
         value = w.get("value")
         if not field or op not in ALLOWED_OPS:
             continue

@@ -30,18 +30,18 @@ public class QaAgentClient {
     private final ObjectMapper mapper = new ObjectMapper();
 
     public AgentResponse ask(String question, String sessionId) {
-        if (sessionId != null && !sessionId.isBlank()) {
-            PythonAskResponse resp = post(
-                    "/v1/turn/" + sessionId,
-                    Map.of("question", question),
-                    PythonAskResponse.class);
+        try {
+            PythonAskResponse resp;
+            if (sessionId != null && !sessionId.isBlank()) {
+                resp = post("/v1/turn/" + sessionId, Map.of("question", question), PythonAskResponse.class);
+            } else {
+                resp = post("/v1/ask", Map.of("question", question), PythonAskResponse.class);
+            }
             return toAgentResponse(resp);
+        } catch (RestClientException e) {
+            log.warn("qa-agent ask failed: {}", e.getMessage());
+            throw e;
         }
-        PythonAskResponse resp = post(
-                "/v1/ask",
-                Map.of("question", question),
-                PythonAskResponse.class);
-        return toAgentResponse(resp);
     }
 
     public ExtractionResult extractProjectFields(long materialVersionId) {
@@ -104,6 +104,12 @@ public class QaAgentClient {
             ar.setSteps(steps);
         } else {
             ar.setSteps(Collections.emptyList());
+        }
+        // agentSources 映射（Java 侧 Source 结构，由 Python 返回的 agent_sources 透传）
+        if (resp.getAgentSources() != null) {
+            ar.setAgentSources(resp.getAgentSources().stream()
+                    .map(obj -> mapper.convertValue(obj, com.archive.dto.Source.class))
+                    .toList());
         }
         return ar;
     }

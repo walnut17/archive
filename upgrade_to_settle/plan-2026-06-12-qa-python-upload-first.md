@@ -237,6 +237,26 @@ fix(qa-agent,plan-2026-06-12-qa-python-upload-first): …
 > Coder 占 [`TASKS.md`](../TASKS.md) **`plan-2026-06-12-qa-python-upload-first`** → 按 [`CASE-FORMAT.md`](../CASE-FORMAT.md) 追加 **Coder** 块；完工 → **待审**。
 
 ----- agent-block begin -----
+role: Coder
+agent: Sisyphus
+time: 2026-06-12
+ref: plan-2026-06-12-qa-python-upload-first
+verdict: 已实现
+
+**一期**：核对骨架→commit（`ef8be2d`/`3d88a57`）
+- Java BFF：QaAgentClient try/catch + agentSources 映射
+- MultiTurnController 第 3 降级路径（503 文案）（`e167257`）
+- QaAgentHealthIndicator · WinSW · RUNBOOK §1.2
+
+**二期**：8 工具全（`archive_fs`/`network_dict_lookup`/`get_project_business_data`/`ask_clarification`）
+- v1.1 prompts · LLM call logging · Java Agent `@Deprecated`
+- query_mysql 参数双兼容（column/field + operator/op）
+- ask_clarification ReAct 中断
+- GLM 失败去重试
+
+----- agent-block end -----
+
+----- agent-block begin -----
 role: Reviewer
 agent: Auto
 time: 2026-06-12 17:00
