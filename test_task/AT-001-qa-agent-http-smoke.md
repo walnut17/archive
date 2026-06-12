@@ -1,6 +1,6 @@
 # AT-001 — qa-agent 直连 HTTP 冒烟（125 部署 · 本机发起）
 
-> **TASKS.md**：`AT-001`  
+> **TASKS.md**：~~AT-001~~（PASS 后已删行）  
 > **案例状态**：`已通过`  
 > **关联**：[`08-qa-agent-python-service.md`](../docs/architecture/08-qa-agent-python-service.md) · 父 plan [`done/plan-2026-06-12-qa-python-upload-first.md`](../upgrade_to_settle/done/plan-2026-06-12-qa-python-upload-first.md)（CLOSED）· Coder 遗留 → [`plan-2026-06-12-qa-agent-followups`](../upgrade_to_settle/plan-2026-06-12-qa-agent-followups.md)
 
@@ -73,7 +73,7 @@ cd D:\projects_new\projects-online\qa-agent
 
 | 字段 | 内容 |
 |---|---|
-| **TASKS 条目** | `AT-001` |
+| **TASKS 条目** | ~~AT-001~~（PASS 后已从 TASKS 删行） |
 | **状态** | 与 TASKS.md 一致 |
 
 ---

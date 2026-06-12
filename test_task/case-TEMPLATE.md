@@ -36,8 +36,8 @@ cd backend && mvn test -Dtest=… -B
 
 | 字段 | 内容 |
 |---|---|
-| **TASKS 条目** | `AT-XXX` |
-| **状态** | 与 TASKS.md 一致 |
+| **TASKS 条目** | `AT-XXX`（PASS 后**删行**） |
+| **状态** | 执行中见 TASKS；PASS 后仅本文件 §3 留痕 |
 
 ---
 

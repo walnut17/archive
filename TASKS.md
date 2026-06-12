@@ -61,19 +61,8 @@ TASKS.md
 
 ## 🤖 自动化测试（AT-*）
 
+> **当前：无 AT 任务。** 有真实案例时再在本节追加一行；**PASS 后删本节条目**（历史见 `test_task/<案例>.md` §3）。  
 > 流程：[`test_task/README.md`](test_task/README.md) · 模板 [`test_task/case-TEMPLATE.md`](test_task/case-TEMPLATE.md)
-
-#### AT-001: qa-agent 直连 HTTP 冒烟（125 · 本机发起）
-
-- **状态**: 已完成
-- **占用者**: —
-- **案例文件**: `test_task/AT-001-qa-agent-http-smoke.md`
-- **工作量**: ~1h
-- **依赖**: **125** 已部署 qa-agent（`182.168.1.125:8001` 对本机可达）+ MySQL `archive_db`
-- **执行**: 开发机 `qa-agent/scripts/run_remote_smoke.ps1`（用户叫「开始实测」后跑）
-- **验收**: live + smoke 全绿 → 案例 §3 PASS + 本节 `已完成`；FAIL → test_bug + round
-- **覆盖**: 原 plan `plan-2026-06-12-qa-python-upload-first` **§1.4** Co-test 8 条（plan 已 CLOSED）
-- **commit 模板**: `test(at-001): qa-agent remote smoke PASS by <Agent>`
 
 ---
 
@@ -84,6 +73,7 @@ TASKS.md
 | Plan I / v1.1 MOD / 旧 UPGRADE 占表、冲突 SOP、Mavis 沙箱记录 | [`docs/reviews/archive/tasks-history-routing.md`](docs/reviews/archive/tasks-history-routing.md) |
 | 已 CLOSED DEBUG case | [`test-to-settle/done/`](test-to-settle/done/) |
 | 已 CLOSED UPGRADE plan | [`upgrade_to_settle/done/`](upgrade_to_settle/done/) |
+| 已 PASS 自动化案例 AT-* | [`test_task/`](test_task/README.md) 案例 §3（**不在本表占行**） |
 | 代码/架构评审对线 | [`docs/reviews/`](docs/reviews/) |
 
 *本表只保留 Case 路由与操作流程；历史追溯请点上方链接。*

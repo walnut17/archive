@@ -338,7 +338,7 @@ Review Agent Round 2：CONTINUE 续提要求 或 CLOSED 宣布评审结束
 **你要读**：[`test_task/README.md`](test_task/README.md) · [`TASKS.md`](TASKS.md) **AT-*** 节 · 对应案例文件
 
 **你要写**：
-- **PASS**：案例文件 **§3 执行历史** 追加（Agent、时间、基线、**已成功**）+ TASKS 标 `已完成`
+- **PASS**：案例文件 **§3 执行历史** 追加（Agent、时间、基线、**已成功**）→ **删除 TASKS AT 行** → push
 - **FAIL**：[`test-to-settle/test_bug-TEMPLATE.md`](test-to-settle/test_bug-TEMPLATE.md) → `test_bug-*.md`；案例 §3 记 FAIL；**不要**自己修 bug
 
 **你不能**：FAIL 时擅自改业务代码（交给 round §2～§4）；通过结果写进 `test-to-settle/` round（那是 bug 专用）
@@ -770,7 +770,7 @@ coder 开工：TASKS 占行 → 读 test-to-settle 或 upgrade_to_settle 详情 
 
 ## 🤖 9. 自动化测试任务 (`test_task/`)
 
-> **案例在 `test_task/`**（有案例才有文件；模板 [`case-TEMPLATE.md`](test_task/case-TEMPLATE.md)）。**占用**：有案例时在 `TASKS.md` AT 节追加，**当前无 AT 任务**。
+> **案例在 `test_task/`**（有案例才有文件；模板 [`case-TEMPLATE.md`](test_task/case-TEMPLATE.md)）。**占用**：有**未完成**案例时在 `TASKS.md` AT 节追加一行；**PASS 后删 TASKS 行**，本节恢复空白（**当前无 AT 任务**）。
 > **细节以 [`test_task/README.md`](test_task/README.md) 为准。**
 
 ### 9.1 三分工
@@ -778,7 +778,7 @@ coder 开工：TASKS 占行 → 读 test-to-settle 或 upgrade_to_settle 详情 
 | 位置 | 内容 |
 |---|---|
 | **`test_task/*.md`** | 步骤、预期、**通过**时的执行历史 |
-| **`TASKS.md` AT-*** | 谁占用 / 谁完工 |
+| **`TASKS.md` AT-*** | **仅未完成**案例占坑；PASS 后**删行** |
 | **`test-to-settle/test_bug-*.md`** | **失败** bug 单 → 进 case **§1** |
 
 ### 9.2 工作流
@@ -787,7 +787,7 @@ coder 开工：TASKS 占行 → 读 test-to-settle 或 upgrade_to_settle 详情 
 抢 AT-*（TASKS.md push 占坑）
         ↓
 执行 test_task/<案例>.md
-        ├─ PASS → 案例 §3 追加「已成功」+ TASKS 已完成 + push
+        ├─ PASS → 案例 §3 追加「已成功」+ **删 TASKS AT 行** + push
         └─ FAIL → test-to-settle/test_bug-*.md → Recorder 收入 round §1 → 其他 Agent 处理
 ```
 
@@ -796,7 +796,7 @@ coder 开工：TASKS 占行 → 读 test-to-settle 或 upgrade_to_settle 详情 
 1. 确认 `TASKS.md` AT 节已有真实 **AT-XXX**（无则先按 [`test_task/README.md`](test_task/README.md) 建案例 + 条目）
 2. `占用-<名字>` → 10 秒内 push
 3. 跑案例 → 按结果写 **test_task** 或 **test_bug**
-4. PASS 时：`已完成` + push
+4. PASS 时：案例 §3 留痕 → **删 TASKS AT 行** → push
 
 ### 9.4 文件
 

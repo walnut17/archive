@@ -124,8 +124,8 @@ TASKS 首列 = §0 路由 ID = 文件名（无 .md）
 | 项 | 规则 |
 |---|---|
 | **内容** | 步骤、预期、关联 RI/MOD |
-| **占用** | 有案例时在 `TASKS.md` 追加 **AT-*** |
-| **PASS** | 案例文件 **§3 执行历史** 末尾追加：时间、Agent、环境、基线、**已成功** |
+| **占用** | 有**未完成**案例时在 `TASKS.md` 追加 **AT-*** |
+| **PASS** | 案例 **§3 执行历史** 追加 → **删 TASKS AT 行** |
 | **FAIL** | 新建 `test-to-settle/test_bug-*.md`，**不在此目录修 bug** |
 
 详见 [`test_task/README.md`](test_task/README.md)。
