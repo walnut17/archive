@@ -17,7 +17,9 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,6 +58,24 @@ public class QaController {
     public QaController(KnowledgeSearchService searchService, GlmService glmService) {
         this.searchService = searchService;
         this.glmService = glmService;
+    }
+
+    /**
+     * v1.2: 流式单轮问答 (SSE).
+     * 路径: POST /api/qa/ask/stream
+     * 返回: Flux<StreamEvent> (前端用 fetch + ReadableStream 消费)
+     */
+    @PostMapping(value = "/ask/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<QaAgentClient.StreamEvent> askStream(@Valid @RequestBody QaRequest req) {
+        if (qaAgentProperties.isEnabled() && qaAgentClient != null) {
+            return qaAgentClient.streamAsk(req.getQuestion(), null)
+                    .onErrorResume(e -> {
+                        log.warn("Python qa-agent stream 失败: {}", e.getMessage());
+                        return Flux.empty();
+                    });
+        }
+        // 不走 Python 时返空流 (前端拿 done 事件收尾)
+        return Flux.empty();
     }
 
     @PostMapping("/ask")
