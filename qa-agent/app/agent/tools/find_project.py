@@ -63,10 +63,15 @@ def _fmt(row: dict, conf: float, ctx: dict[str, Any] | None = None) -> dict:
         else:
             switch_decision = "UNCLEAR"
     else:
-        # 无锁定：高置信自动锁定
-        if conf >= 0.7 and ctx is not None:
+        # 无锁定（对齐 Java applyImplicitSwitchRule）
+        if conf >= 0.95:
             switch_decision = "SAME_CONFIRMED"
-            ctx["project_code"] = code
+            if ctx is not None:
+                ctx["project_code"] = code
+        elif conf >= 0.7:
+            switch_decision = "SAME_PROBABLY"
+        else:
+            switch_decision = "UNCLEAR"
 
     return {
         "id": row["id"],

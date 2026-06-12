@@ -138,16 +138,16 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
             for item in obs[:1]:
                 if isinstance(item, dict):
                     sd = item.get("switchDecision")
-                    if sd and sd != "SAME_CONFIRMED":
-                        project_switch_hint = sd
-                    conf = item.get("confidence", 0)
-                    if isinstance(conf, (int, float)):
-                        if conf >= 0.85:
-                            confidence_badge = "CONFIRMED"
-                        elif conf >= 0.60:
+                    if sd:
+                        # 非 SAME_CONFIRMED 才设 hint
+                        if sd != "SAME_CONFIRMED":
+                            project_switch_hint = sd
+                        # badge 根据 switchDecision 映射（对齐 Java populateV11Fields）
+                        if sd in ("SAME_PROBABLY", "DIFFERENT_PROBABLY"):
                             confidence_badge = "AI_INFERRED"
-                        elif conf > 0:
+                        elif sd == "UNCLEAR":
                             confidence_badge = "PENDING_REVIEW"
+                        # SAME_CONFIRMED → badge 为 None（不显示）
                     agent_sources.append({
                         "type": "PROJECT",
                         "id": item.get("projectCode") or item.get("code", ""),
