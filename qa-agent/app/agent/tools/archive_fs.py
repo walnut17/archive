@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+from app.db.connection import db_cursor
+
 logger = logging.getLogger(__name__)
 
 # 白名单扩展名
@@ -18,6 +20,40 @@ def _get_roots(ctx: dict[str, Any]) -> tuple[Path, Path]:
     file_root = Path(os.environ.get("FILE_ROOT", "D:/archive/files"))
     parsed_root = Path(os.environ.get("PARSED_ROOT", "D:/archive/parsed"))
     return file_root.resolve(), parsed_root.resolve()
+
+
+def _resolve_material_version(material_version_id: int, zone: str) -> str | None:
+    """materialVersionId → SQL 查存储路径（对齐 Java ArchiveMaterialPathResolver）."""
+    try:
+        with db_cursor() as cur:
+            if zone == "files":
+                cur.execute(
+                    """SELECT mv.id, m.id AS material_id, p.id AS proposal_id,
+                              mv.version_no, mv.original_filename
+                       FROM material_version mv
+                       JOIN material m ON m.id = mv.material_id
+                       JOIN proposal p ON p.id = m.proposal_id
+                       WHERE mv.id = %s""",
+                    (material_version_id,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None
+                filename = row["original_filename"] or "unknown"
+                return f"{row['proposal_id']}/{row['material_id']}/v{row['version_no']}_{filename}"
+            else:  # parsed
+                cur.execute(
+                    """SELECT mv.id, mv.material_id, mv.version_no
+                       FROM material_version mv WHERE mv.id = %s""",
+                    (material_version_id,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None
+                return f"{row['material_id']}/v{row['version_no']}_parsed.txt"
+    except Exception as e:
+        logger.warning("materialVersionId 查询失败: %s", e)
+        return None
 
 
 def _resolve(zone: str, relative: str, ctx: dict[str, Any]) -> Path | None:
@@ -37,11 +73,18 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
     action = args.get("action")
     zone = args.get("zone", "parsed")
     relative_path = args.get("relativePath")
+    material_version_id = args.get("materialVersionId")
     pattern = args.get("pattern", "")
     max_lines = min(args.get("maxLines", 100), MAX_GREP_LINES)
 
+    # materialVersionId → 自动解析相对路径（优先）
+    if material_version_id and not relative_path:
+        relative_path = _resolve_material_version(int(material_version_id), zone)
+        if not relative_path:
+            return {"error": f"materialVersion {material_version_id} 不存在或无存储路径"}
+
     if not relative_path:
-        return {"error": "缺少 relativePath 参数"}
+        return {"error": "缺少 relativePath 或 materialVersionId 参数"}
 
     resolved = _resolve(zone, relative_path, ctx)
     if resolved is None:

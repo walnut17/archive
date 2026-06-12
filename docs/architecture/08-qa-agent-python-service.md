@@ -89,18 +89,29 @@
 
 ---
 
-## 5. 配置
+## 5. 配置（共用 `config/config.json`）
 
-| 变量 | 说明 |
-|---|---|
-| `GLM_API_KEY` | 智谱 key（与 Java `config.json` 一致） |
-| `GLM_CHAT_URL` | 默认智谱 v4 completions |
-| `GLM_CHAT_MODEL` | `glm-4-flash` |
-| `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE` | 与 archive 同库 |
-| `QA_AGENT_HOST` | `127.0.0.1` |
-| `QA_AGENT_PORT` | `8001` |
+**与 Java `ConfigJsonLoader` 同文件、同路径规则**，不单独维护 `qa-agent/.env`。
 
-Java 侧：`app.qa-agent.enabled` · `app.qa-agent.base-url`
+| JSON 路径 | qa-agent | Java |
+|---|---|---|
+| `glm.*` | LLM | `app.glm.*` |
+| `database.*` | MySQL | `spring.datasource.*` |
+| `storage.*` | archive 磁盘根 | `app.storage.*` |
+| `archive.networkDict.*` | 网络字典工具 | `archive.network-dict.*` |
+| `archive.queryMysql.*` | SQL 上限 | `archive.query-mysql.*` |
+| `qaAgent.host` / `port` / `maxIterations` | uvicorn 绑定 / ReAct | `app.qa-agent.base-url` |
+
+**路径解析**（Python `app/config_loader.py` 与 Java 一致）：
+
+1. 环境变量 `CONFIG_JSON_PATH`
+2. `D:/archive/config/config.json`
+3. `./config/config.json` · `../config/config.json`
+4. 仓库根 `config/config.json`（开发）
+
+可选 env **仅覆盖**单项（如 `GLM_API_KEY`），生产推荐只改 config.json。
+
+Java：`application.yml` → `app.qa-agent.base-url: http://${app.qa-agent.host}:${app.qa-agent.port}`
 
 ---
 
@@ -143,17 +154,50 @@ WinSW / `llm_call_log` / health indicator — 见 plan §1.2 G～H。
 
 ---
 
+## 7. Java Agent 退役说明
+
+自 v1.1 起，Java `AgentEngine` / `AgentConfig` 已标注 `@Deprecated`，**默认关闭**（`spring.ai.agent.enabled=false`）。
+
+| 组件 | 状态 | 说明 |
+|------|------|------|
+| `AgentEngine.java` | `@Deprecated` | 保留仅用于降级路径（显式开启 `enabled=true`） |
+| `AgentConfig.java` | `@Deprecated` | 同上 |
+| `AgentIntegrationTest.java` | `@Deprecated` | 降级回归，新功能走 Python qa-agent |
+| `GLMChatModel.java` | 保留 | 由 Python 侧 GLM 调用取代 |
+
+**保留的 Java 降级组件**：
+- `QaController.legacyAsk()` — FULLTEXT 检索（无 LLM）
+- `MultiTurnController` 第 3 路径 — 503 友好文案
+- `AgentEngine` — 仅在 `spring.ai.agent.enabled=true` 时加载
+
+---
+
 ## 8. 部署 SOP（125）
 
+> **阶段**：验收期 **手工启动**；WinSW / 开机自启 **后续一体化**时再上（`deploy/winsw/qa-agent.xml` 已预留）。
+
+**目录约定**（与 Java 后端一致）：
+
+| 路径 | 用途 |
+|---|---|
+| `D:\projects-online` | Git 源码；`qa-agent/` 代码 + 本地 `.venv`（不进 Git） |
+| `D:\archive\config\config.json` | 生产配置（GLM、MySQL、storage、qaAgent） |
+| `D:\archive\files` / `parsed` / `logs` | 材料、解析结果、服务日志 |
+
 ```powershell
-cd D:\archive\apps\qa-agent
+cd D:\projects-online
+git pull
+
+cd qa-agent
 python -m venv .venv
 .\.venv\Scripts\pip install -r requirements.txt
-# 环境变量从 D:\archive\config\config.json 同步 GLM + MySQL
-.\.venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8001
+
+# 确认 D:\archive\config\config.json 已就绪（与 backend 同文件）
+cd D:\projects-online
+.\deploy\scripts\start-qa-agent.ps1
 ```
 
-WinSW 注册见 `qa-agent/README.md`（本 plan 不阻塞上线）。
+WinSW（后续）：[`deploy/winsw/qa-agent.xml`](../../deploy/winsw/qa-agent.xml) · [`register-services.bat`](../../deploy/scripts/register-services.bat)。
 
 ---
 

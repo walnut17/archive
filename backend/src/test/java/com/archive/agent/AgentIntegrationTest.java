@@ -4,6 +4,7 @@ import com.archive.agent.tool.AgentTool;
 import com.archive.dto.QaRequest;
 import com.archive.dto.QaResponse;
 import com.archive.controller.QaController;
+import com.archive.qaagent.QaAgentClient;
 import com.archive.service.KnowledgeSearchService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,9 +22,14 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * 端到端集成测试(10 用例).
  * 工具调用真实,ChatClient 用 MockBean 避免真实 GLM 调用.
+ *
+ * @deprecated Java Agent 已退役, 由 Python qa-agent 取代.
+ *     本测试保留仅用于降级回归 (spring.ai.agent.enabled=true).
+ *     新测试请基于 Python qa-agent (见 test_task/AT-001).
  */
 @SpringBootTest
 @ActiveProfiles("test")
+@Deprecated
 class AgentIntegrationTest {
 
     @Autowired
@@ -34,6 +40,9 @@ class AgentIntegrationTest {
 
     @Autowired
     private List<AgentTool> agentTools;
+
+    @MockBean
+    private QaAgentClient qaAgentClient;
 
     // 注: 之前用 @MockBean mock 了 GlmService 导致 chat() 返 null
     // 现在测例用真 GLM (GLM_API_KEY 环境变量), 不要 mock
