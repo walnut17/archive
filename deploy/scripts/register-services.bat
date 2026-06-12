@@ -9,6 +9,7 @@ setlocal
 
 set BACKEND_DIR=D:\archive\apps\backend
 set CADDY_DIR=D:\archive\apps\caddy
+set QA_AGENT_DIR=D:\projects-online\qa-agent
 set WINSW_DIR=D:\archive\apps\backend
 set WINSW_EXE=%WINSW_DIR%\archive-backend-service.exe
 
@@ -27,7 +28,7 @@ if not exist "%WINSW_EXE%" (
 )
 
 REM 2. 注册后端服务
-echo [1/2] 注册 archive-backend 服务 ...
+echo [1/3] 注册 archive-backend 服务 ...
 cd /d "%WINSW_DIR%"
 "%WINSW_EXE%" install
 if %errorlevel% neq 0 (
@@ -41,15 +42,29 @@ sc config archive-backend start= auto
 net start archive-backend
 echo.
 
-REM 4. Caddy 服务(可选,内网 HTTP 阶段可暂时不开)
+REM 4. 注册 qa-agent 服务（Python 微服务）
+if exist "%QA_AGENT_DIR%\.venv\Scripts\python.exe" (
+    echo [2/3] 注册 qa-agent 服务 ...
+    copy /Y "..\deploy\winsw\qa-agent.xml" "%QA_AGENT_DIR%\"
+    cd /d "%QA_AGENT_DIR%"
+    qa-agent-service.exe install
+    sc config qa-agent start= auto
+    net start qa-agent
+) else (
+    echo [2/3] 跳过 qa-agent 服务注册(未找到 Python .venv)
+    echo 手动启动: cd qa-agent ^&^& .venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8001
+)
+echo.
+
+REM 5. Caddy 服务(可选,内网 HTTP 阶段可暂时不开)
 if exist "%CADDY_DIR%\caddy.exe" (
-    echo [2/2] 注册 caddy 服务 ...
+    echo [3/3] 注册 caddy 服务 ...
     cd /d "%CADDY_DIR%"
     caddy.exe service install --config Caddyfile
     sc config caddy start= auto
     net start caddy
 ) else (
-    echo [2/2] 跳过 caddy 服务注册(未找到 caddy.exe)
+    echo [3/3] 跳过 caddy 服务注册(未找到 caddy.exe)
     echo 直接运行:caddy.exe run --config Caddyfile
 )
 
@@ -57,9 +72,11 @@ echo.
 echo === 完成 ===
 echo 服务列表:
 sc query archive-backend
+sc query qa-agent
 if exist "%CADDY_DIR%\caddy.exe" sc query caddy
 echo.
 echo 卸载服务:
 echo   sc stop archive-backend ^&^& sc delete archive-backend
+echo   sc stop qa-agent ^&^& sc delete qa-agent
 echo.
 pause

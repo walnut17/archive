@@ -18,7 +18,40 @@
 
 **服务配置**: `D:\archive\apps\backend\backend.xml` (WinSW)
 
-### 1.2 前端服务
+### 1.2 QA 微服务 (qa-agent)
+
+Python FastAPI 微服务，专司智能问答 + 字段抽取。
+
+| 项目 | 内容 |
+|------|------|
+| **服务名** | `qa-agent` |
+| **可执行文件** | `D:\projects-online\qa-agent\.venv\Scripts\python.exe -m uvicorn app.main:app` |
+| **配置文件** | `D:\projects-online\qa-agent\.env`（或环境变量） |
+| **端口** | `127.0.0.1:8001`（仅 localhost，不对外暴露） |
+| **日志** | WinSW 滚动日志，10MB×10 文件 |
+| **启停** | `net start/stop qa-agent` |
+| **健康检查** | `curl http://127.0.0.1:8001/health` 或 Spring Boot `/actuator/health` |
+
+**环境变量**：
+
+```
+GLM_API_KEY=your_key
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_DATABASE=archive_db
+MYSQL_USER=archive_app
+MYSQL_PASSWORD=your_password
+FILE_ROOT=D:/archive/files
+PARSED_ROOT=D:/archive/parsed
+```
+
+**手动启动（调试）**：
+```powershell
+cd D:\projects-online\qa-agent
+.venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload
+```
+
+### 1.3 前端服务
 
 由 Caddy 托管静态文件，无独立进程。
 

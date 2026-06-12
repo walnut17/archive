@@ -2,7 +2,16 @@ import json
 import logging
 from typing import Any
 
-from app.agent.tools import find_project, llm_summarize, query_mysql, search_fulltext
+from app.agent.tools import (
+    archive_fs,
+    ask_clarification,
+    find_project,
+    get_project_business_data,
+    llm_summarize,
+    network_dict_lookup,
+    query_mysql,
+    search_fulltext,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +20,10 @@ _TOOLS = {
     "search_fulltext": search_fulltext.run,
     "query_mysql": query_mysql.run,
     "llm_summarize": llm_summarize.run,
+    "get_project_business_data": get_project_business_data.run,
+    "archive_fs": archive_fs.run,
+    "network_dict_lookup": network_dict_lookup.run,
+    "ask_clarification": ask_clarification.run,
 }
 
 
