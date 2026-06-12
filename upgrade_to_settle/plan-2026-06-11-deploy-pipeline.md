@@ -179,6 +179,23 @@ curl http://localhost:8080/api/health
 
 ## 6. 评审（Reviewer Agent）
 
+| Agent | 时间 | 结论 |
+|---|---|---|
+| 投委会档案项目PM | 2026-06-11 23:59 | `APPROVED` |
+
+### 6.1 意见清单
+
+无问题。
+
+### 6.2 总评
+
+- I-RI-39 `read`→`is_read` 源文件 + `init.sql` 同步修，避免双轨
+- `application-prod.yml` `ddl-auto: validate` 是生产标准做法
+- `docs/v1.1-DEPLOY-GUIDE.md`（root）覆盖 v1.0/v2 → v1.1 升级路径完整
+
+### 6.3 建议（非阻塞）
+
+- `docs/v1.1-DEPLOY-GUIDE.md`（root，190 行） 与 `docs/handoff/v1.1-DEPLOY-GUIDE.md`（PM 之前写的） 同名不同内容；建议 v1.2 收一收，按场景分文件名（如 `v1.1-upgrade-guide.md` vs `v1.1-deploy-guide.md`）
 | 字段 | 内容 |
 |---|---|
 | **Agent** | （待 Review） |

@@ -263,13 +263,28 @@ public interface ArchiveFsAction {
 
 | 字段 | 内容 |
 |---|---|
-| **Agent** | *待填写* |
-| **时间** | |
-| **摘要** | |
+| **Agent** | 投委会档案项目PM（代码审查员） |
+| **时间** | 2026-06-11 23:59 |
+| **摘要** | 全套实现 7 项提交到位，PathGuard + 3 Action 安全考虑到位；**4 处缺陷需修后通过** |
 
 | 结论 | 意见 |
 |---|---|
-| `PENDING` | |
+| `REQUEST_CHANGES` | 3 P0 + 1 P1，修完再审 |
+
+### 6.1 意见清单
+
+| # | 严重度 | 意见 | 依据/位置 |
+|---|---|---|---|
+| R1-1 | **P0** | `ArchiveMaterialPathResolver.java` 未实现 | plan §4.1 列了但 commit `2ac9226` 没建；导致 `materialVersionId` 走不通，LLM 只能用 `relativePath`（违反 §4.2 推荐） |
+| R1-2 | **P0** | `ArchivePathGuardTest.java` 未实现 | plan §4.1 列了，缺单测覆盖 `..` 越界、双 root |
+| R1-3 | **P0** | `ArchiveFsToolTest.java` 未实现 | plan §4.1 列了，缺 list/grep/read 集成测 |
+| R1-4 | **P1** | `AgentSystemPrompt.java` "7 个工具"应为"8 个" | commit `2ac9226` 加了 archive_fs（编号 7），但头部写"7 个"——数字与列表不一致，会误导 LLM 期望 |
+
+### 6.2 修复要求
+
+- 必做：R1-1（补 `ArchiveMaterialPathResolver`） + R1-2 + R1-3（2 个单测）
+- 必做：R1-4（修正工具数到 8）
+- 修完改 plan §5 加 4 行 `DONE`，§6.1 逐条标 ✅ 后重提审
 
 ---
 

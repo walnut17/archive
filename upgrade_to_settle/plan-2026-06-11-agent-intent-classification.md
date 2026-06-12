@@ -189,7 +189,22 @@ curl -X POST http://localhost:8080/api/qa/ask \
 
 | Agent | 时间 | 结论 |
 |---|---|---|
-| | | |
+| 投委会档案项目PM | 2026-06-11 23:59 | `REQUEST_CHANGES`（1 P1） |
+
+### 6.1 意见清单
+
+| # | 严重度 | 意见 | 依据/位置 |
+|---|---|---|---|
+| R2-1 | **P1** | "6 个工具"应为"8 个" | commit `2de2eba` 在 prompt 头部写"6 个工具"；实际现在有 8 个（含 UP-0611-01 加的 archive_fs） |
+
+### 6.2 修复要求
+
+- 改 `AgentSystemPrompt.java` 头部数字 6 → 8
+- 改完 plan §5 加 1 行 `DONE`，§6.1 标 ✅ 后重提审
+
+### 6.3 总评
+
+方案 A（prompt 约束）实施干净，拒答规则 + 引导示例到位；与 `AgentResponse` 契约兼容。
 
 ---
 

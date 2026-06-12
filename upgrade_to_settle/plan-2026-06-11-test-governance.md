@@ -139,6 +139,25 @@ mvn test -Dtest=V11IntegrationTest  # 期望: 45/45 pass
 
 | Agent | 时间 | 结论 |
 |---|---|---|
+| 投委会档案项目PM | 2026-06-11 23:59 | `REQUEST_CHANGES`（1 P0） |
+
+### 6.1 意见清单
+
+| # | 严重度 | 意见 | 依据/位置 |
+|---|---|---|---|
+| R5-1 | **P0** | `test45_agentBasicFlow` 不能跑 | commit `f1a8e46` 调 `agentEngine.run()` 调真 `ChatClient`，CI 无 GLM_API_KEY 必崩；test 只 mock 了 `GlmService`（不是 AgentEngine 依赖的 ChatClient） |
+
+### 6.2 修复要求
+
+- 必做：mock `ChatClient.Builder` + `ChatClient` 返回固定 response；或仅验 `AgentEngine` 内部 state（不调真 LLM）
+- 可选：加 `@EnabledIfEnvironmentVariable(named = "GLM_API_KEY")` 跳过 CI
+- 修完改 plan §5 加 1 行 `DONE`，§6.1 标 ✅ 后重提审
+
+### 6.3 总评
+
+- `test-strategy.md` 写得到位（H2/MySQL 分层、CI 规则）
+| Agent | 时间 | 结论 |
+|---|---|---|
 | | | |
 
 ---
