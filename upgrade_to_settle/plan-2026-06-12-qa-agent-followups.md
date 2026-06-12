@@ -97,6 +97,46 @@ summary: F-03/04/05 大体 OK；F-01 零代码 commit；F-02 路径应用 DB 列
 
 ----- agent-block end -----
 
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-12 20:00
+ref: plan-2026-06-12-qa-agent-followups
+ref_commit: ebffe78,6deeea3
+verdict: REQUEST_CHANGES
+summary: F-02/05 已过；F-01 只 commit 了 loader，config.py 等 wiring 仍缺
+
+**本轮已修 ✅**
+
+| 项 | commit | 结论 |
+|---|---|---|
+| F-02 materialVersionId | `ebffe78` | SELECT `storage_path` / `parsed_text_path`，对齐 Java |
+| F-01 loader | `ebffe78` | `config_loader.py` + `test_config_loader.py`（3 cases） |
+| F-05 import | `6deeea3` | 重复 `import Map` 已删 |
+| pytest（本机，含未 commit wiring） | — | **40 passed** |
+
+**仍阻塞 F-01 关单（P0）**
+
+`ebffe78` **未包含** F-01 核心接线，**main HEAD 仍为**：
+
+| 文件 | HEAD 状态 | plan 要求 |
+|---|---|---|
+| `qa-agent/app/config.py` | pydantic `.env` | `Settings.load()` 读 config.json |
+| `qa-agent/app/api/routes.py` | `/health` 无 `config_json` | 回显路径 |
+| `qa-agent/app/main.py` | 无 config 日志 | 启动 log config 路径 |
+| `application.yml` | `QA_AGENT_BASE_URL` | `http://${app.qa-agent.host}:${port}` |
+| `config/config.example.json` | 无 `qaAgent` 段 | 模板补齐 |
+
+工作区有上述改动**未 commit**；且 `test_config_loader.test_settings_loads_glm_from_json` 依赖 `Settings.load()`，**干净 checkout 会挂**。
+
+**非阻塞**
+
+- F-03 turn/ask 层 `agent_sources` contract test 仍缺（`_fmt` 单测已够 MVP）
+
+**修序**：一次性 commit F-01 全套（config.py + routes + main + yml + example.json）→ 再 `待审`；通过即可 **CLOSED** followups plan。
+
+----- agent-block end -----
+
 ---
 
 ## 4. 关单检查
