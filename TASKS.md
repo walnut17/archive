@@ -32,7 +32,8 @@ TASKS.md
 
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
 |---|---|---|---|---|---|---|
-| _(无活跃 case — 0612 两份 plan 已 CLOSED，见 [`upgrade_to_settle/done/`](upgrade_to_settle/done/README.md))_ | — | — | — | — | — | — |
+| `plan-2026-06-12-qa-python-upload-first` | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md`](upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md) | `未开发` | 架构师 | 2026-06-12 | Python qa-agent 一期收尾+二期全量+RI-16+125部署+Java Agent退役 |
+| `round-2026-06-12-qa-regression` | DEBUG | [`test-to-settle/round-2026-06-12-qa-regression.md`](test-to-settle/round-2026-06-12-qa-regression.md) | `待审` | Sisyphus | 2026-06-12 | 0612 Co-test：多轮 QA 500（T-0612-04）、思考链 P2；编译 fix 留痕 |
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
 > **不在本表**：complexity 中转 · AT-* 自动化 · 已 CLOSED（见各 `done/`）

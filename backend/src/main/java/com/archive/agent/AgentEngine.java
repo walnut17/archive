@@ -222,8 +222,8 @@ public class AgentEngine {
         JsonNode node = parseJson(json);
 
         if (node == null) {
-            // 解析失败,直接用原文作为最终答案
-            step.setThought("无法解析 LLM 输出,直接返回原文");
+            // 解析失败 → 直接返回 LLM 原文（如离题拒答场景）
+            step.setThought("直接返回结果");
             step.setTool(FINAL_ANSWER);
             step.setToolArgs("{\"answer\":\"" + escapeJson(llmOutput) + "\"}");
             return step;
