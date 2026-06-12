@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   WinSW 配置 — Python qa-agent 微服务
-  安装: qa-agent-service.exe install
+  125 约定：代码 D:\projects-online\qa-agent · 配置/数据 D:\archive\*
+  安装: 复制本文件 + qa-agent-service.exe 到 D:\projects-online\qa-agent，再 qa-agent-service.exe install
   启停: net start/stop qa-agent
 -->
 <service>
@@ -9,27 +10,21 @@
   <name>qa-agent (投委会档案 QA 微服务)</name>
   <description>Python FastAPI 智能问答微服务，由 Java BFF 转发调用</description>
 
-  <executable>D:\archive\apps\qa-agent\.venv\Scripts\python.exe</executable>
+  <executable>D:\projects-online\qa-agent\.venv\Scripts\python.exe</executable>
   <arguments>-m uvicorn app.main:app --host 127.0.0.1 --port 8001 --log-level info</arguments>
 
-  <!-- 生产路径 D:\archive\apps\qa-agent；开发机可改为 D:\projects-online\qa-agent -->
-  <workingdirectory>D:\archive\apps\qa-agent</workingdirectory>
+  <workingdirectory>D:\projects-online\qa-agent</workingdirectory>
 
   <onfailure action="restart" delay="30 sec"/>
   <onfailure action="restart" delay="1 min"/>
   <resetsfailure after="1 hour"/>
 
+  <logpath>D:\archive\logs\qa-agent</logpath>
   <log mode="roll">
     <sizeThreshold>10240</sizeThreshold>
     <keepFiles>10</keepFiles>
   </log>
 
-  <env name="GLM_API_KEY" value="%GLM_API_KEY%"/>
-  <env name="MYSQL_HOST" value="127.0.0.1"/>
-  <env name="MYSQL_PORT" value="3306"/>
-  <env name="MYSQL_DATABASE" value="archive_db"/>
-  <env name="MYSQL_USER" value="%MYSQL_USER%"/>
-  <env name="MYSQL_PASSWORD" value="%MYSQL_PASSWORD%"/>
-  <env name="FILE_ROOT" value="D:/archive/files"/>
-  <env name="PARSED_ROOT" value="D:/archive/parsed"/>
+  <!-- 与 backend 共用 config.json；storage.* 指向 D:/archive/files 等 -->
+  <env name="CONFIG_JSON_PATH" value="D:\archive\config\config.json"/>
 </service>

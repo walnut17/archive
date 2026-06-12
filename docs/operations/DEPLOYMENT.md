@@ -71,8 +71,8 @@ CREATE USER 'archive_app'@'localhost' IDENTIFIED BY 'Archive@2026';
 GRANT ALL PRIVILEGES ON archive_db.* TO 'archive_app'@'localhost';
 FLUSH PRIVILEGES;
 
--- 2. 跑 v2 迁移(含 M0-M2 所有表)
-mysql -u root -p archive_db < D:\projects_new\projects-online\backend\src\main\resources\db\migration\v2-schema.sql
+-- 2. 跑 init.sql（新库全量建表；已有库升级见 deploy/sql/migrate_260611_01.sql）
+mysql -u root -p archive_db < D:\projects_new\projects-online\deploy\sql\init.sql
 
 -- 3. 验证
 USE archive_db;

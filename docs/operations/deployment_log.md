@@ -230,7 +230,7 @@ git pull origin main
 
 ### Step 7 附录 — 迁移脚本踩坑（已解决）
 
-**PowerShell 整段粘贴一行报错：** 不要用一行 `$files=...foreach`；改用 `source migrate_260611_01.sql` 或 `run-v11-migrations.ps1`。
+**PowerShell 整段粘贴一行报错：** 不要用一行 `$files=...foreach`；在 MySQL 客户端 `source deploy/sql/migrate_260611_01.sql`。
 
 ---
 
@@ -270,11 +270,13 @@ git pull origin main
 ## 6. 关键路径备忘
 
 ```text
-D:\projects-online\              # 代码（git）
-D:\archive\config\config.json    # 生产密钥（不进 Git）
+D:\projects-online\              # 代码（git）；含 qa-agent/ 源码 + .venv（本地 pip，不进 Git）
+D:\archive\config\config.json    # 生产密钥（不进 Git）；Java + qa-agent 共用
+D:\archive\apps\backend\         # archive.jar（WinSW 后端）
 D:\archive\logs\backend.log      # 后端日志
+D:\archive\logs\qa-agent\        # qa-agent WinSW 日志
 D:\archive\files\                # 上传文件
-backend\target\archive.jar       # 后端产物
+backend\target\archive.jar       # 后端编译产物（copy 到 archive\apps\backend）
 frontend\dist\                   # 前端 build 产物（正式部署用）
 deploy\sql\migrate_260611_01.sql # v1.1 一次性 DB 迁移
 ```
@@ -434,10 +436,20 @@ A：healthcheck 无 token；浏览器带 token 会走 RBAC，DB 未迁移时在 
 - ✅ Java Agent `@Deprecated`，默认关闭
 - ✅ pytest 20 passed · `mvn compile` 待 125 验证
 
-### 待 125 部署后验证
+### 125 部署路径（2026-06-12 拍板）
+
+| 项 | 路径 |
+|---|---|
+| 源码 | `D:\projects-online\qa-agent` |
+| venv | `D:\projects-online\qa-agent\.venv`（125 本地 `pip install`，不进 Git） |
+| 配置 | `D:\archive\config\config.json` |
+| **当前启停** | 手工 `deploy/scripts/start-qa-agent.ps1` |
+| WinSW 日志（后续） | `D:\archive\logs\qa-agent\` |
+
+### 待 125 验证
 
 - §1.4 验收 8 条
-- WinSW qa-agent 启动 + 健康检查
+- 手工启动 qa-agent + `/health` 返回 `config_json`
 - 7 大端到端场景
 
 ---

@@ -6,7 +6,7 @@
 -- MySQL: 8.0+ (需要 FULLTEXT + ngram parser)
 --
 -- 用途:
---   1. 全新部署: 直接跑这个脚本建库
+--   1. 全新部署: MySQL 客户端 source deploy/sql/init.sql
 --   2. 重建: DROP 旧表, 重新跑这个脚本
 --
 -- 包含迁移:

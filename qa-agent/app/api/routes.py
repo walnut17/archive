@@ -9,6 +9,7 @@ from app.api.schemas import (
     ExtractResponse,
     TurnRequest,
 )
+from app.config import settings
 from app.services.extract import extract_project_fields
 
 router = APIRouter()
@@ -16,7 +17,11 @@ router = APIRouter()
 
 @router.get("/health")
 def health() -> dict:
-    return {"status": "ok", "service": "qa-agent"}
+    return {
+        "status": "ok",
+        "service": "qa-agent",
+        "config_json": settings.config_json_path or None,
+    }
 
 
 @router.post("/v1/ask", response_model=AskResponse)

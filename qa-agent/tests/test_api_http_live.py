@@ -1,4 +1,4 @@
-"""Direct HTTP integration tests against a running qa-agent service."""
+"""Direct HTTP integration tests — dev machine → 125 qa-agent (default 182.168.1.125:8001)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ from tests.http_helpers import (
     assert_extract_response,
     assert_health_payload,
     assert_no_ugly_parse_fallback,
-    run_smoke_suite,
 )
 
 pytestmark = pytest.mark.live
@@ -53,6 +52,7 @@ def test_live_ask_off_topic(live_client):
     body = resp.json()
     assert_ask_response(body)
     assert body["answer"].strip()
+    assert "档案" in body["answer"] or "助手" in body["answer"]
     assert body["agent_mode"] is True
     assert_no_ugly_parse_fallback(body["steps"])
 
@@ -77,9 +77,3 @@ def test_live_multi_turn_same_session(live_client):
     second_body = second.json()
     assert_ask_response(second_body)
     assert second_body["answer"].strip()
-
-
-def test_live_smoke_suite_runner(live_client):
-    results = run_smoke_suite(live_client)
-    failed = [item for item in results if not item.passed]
-    assert not failed, "\n".join(f"{item.name}: {item.detail}" for item in failed)

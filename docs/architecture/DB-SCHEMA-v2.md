@@ -1,6 +1,9 @@
 # 数据库 Schema v2
 
-> **基线**: [`history/architecture-v3-final.md`](history/architecture-v3-final.md) §6 + `backend/src/main/resources/db/init.sql`(M0~M1 已建)
+> ⚠️ **Agent 查表结构请优先读 [`DATABASE.md`](DATABASE.md)**（与 `init.sql` 同步的 28 表字段清单）。  
+> 本文侧重 **v2 迁移 SQL、种子数据、历史 ALTER**；§1 沿用表摘要可能不含 v1.1 全部列。
+
+> **基线**: [`history/architecture-v3-final.md`](history/architecture-v3-final.md) §6 + [`deploy/sql/init.sql`](../../deploy/sql/init.sql)（M0~M1 已建）
 > **配套**: `ARCHITECTURE-v2.md`
 > **原则**: 沿用表不改字段命名;新增表独立可执行;所有 FULLTEXT 索引加 ngram 解析器
 > **可执行性**: 本文 SQL **逐条**在 MySQL 8.0.16 上验证过语法,直接 `mysql -u root -p < v2-*.sql` 可跑
@@ -685,7 +688,7 @@ FROM trigger_rule WHERE code = 'PROPOSAL_AUTO_SUMMARY';
 ## 6. 完整 v2 迁移脚本(可执行)
 
 > 文件位置: `db/migration/v2-schema.sql`
-> 依赖: 先执行 `backend/src/main/resources/db/init.sql`(已存在)
+> 依赖: 先执行 [`deploy/sql/init.sql`](../../deploy/sql/init.sql)（新库）或 [`migrate_260611_01.sql`](../../deploy/sql/migrate_260611_01.sql)（已有库）
 > 顺序: **ALTER → CREATE NEW → SEED**(避免外键找不到)
 
 ```sql

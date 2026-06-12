@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
+from app.agent.tools.registry import _TOOLS
 from tests.http_helpers import assert_ask_response, assert_extract_response, assert_no_ugly_parse_fallback
 
 
@@ -63,8 +64,8 @@ def test_multi_turn_same_session(api_client, mock_glm):
 
     session_id = "contract-session-001"
     fake_project = [{"code": "PRJ-2026-001", "name": "demo", "confidence": 1.0}]
-    with patch("app.agent.engine.db_cursor") as db_mock, patch(
-        "app.agent.tools.find_project.run", return_value=fake_project
+    with patch("app.agent.engine.db_cursor") as db_mock, patch.dict(
+        _TOOLS, {"find_project": lambda args, ctx: fake_project}
     ):
         cur = MagicMock()
         cur.fetchall.return_value = []
@@ -123,10 +124,48 @@ def test_extract_parse_pending(api_client):
 
         resp = api_client.post("/v1/extract/project-fields", json={"material_version_id": 1})
 
+    assert resp.status_code == 200
     body = resp.json()
     assert body["success"] is False
     assert body["failure_type"] == "PARSE_ERROR"
     assert body["retryable"] is True
+
+
+def test_extract_success(api_client):
+    extract_json = '{"projectName":"新能源一期","amount":5000,"customerName":"某能源公司","summary":"立项材料"}'
+    with patch("app.services.extract.db_cursor") as db_mock, patch(
+        "app.services.extract.glm_client.chat", return_value=extract_json
+    ):
+        cur = MagicMock()
+        cur.fetchone.return_value = {
+            "id": 42,
+            "original_filename": "proposal.pdf",
+            "parsed_text": "项目名称：新能源一期，金额 5000 万元",
+            "parse_status": "DONE",
+        }
+        cm = MagicMock()
+        cm.__enter__.return_value = cur
+        cm.__exit__.return_value = False
+        db_mock.return_value = cm
+
+        resp = api_client.post("/v1/extract/project-fields", json={"material_version_id": 42})
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert_extract_response(body)
+    assert body["success"] is True
+    assert body["data"]["projectName"] == "新能源一期"
+    assert body["data"]["amount"] == 5000
+
+
+def test_ask_glm_failure_returns_polite_answer(api_client, mock_glm):
+    mock_glm.side_effect = RuntimeError("GLM_API_KEY 未配置")
+    resp = api_client.post("/v1/ask", json={"question": "PRJ-2026-001 剩余金额多少？"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert_ask_response(body)
+    assert "LLM" in body["answer"] or "暂不可用" in body["answer"]
+    assert body["steps"][-1]["tool"] == "FINAL_ANSWER"
 
 
 def test_agent_tool_loop_guard(api_client, mock_glm, mock_db_cursor):

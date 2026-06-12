@@ -2,7 +2,13 @@
 REM ==========================================================
 REM 投委会档案管理系统 - 注册 Windows 服务
 REM 用法:右键"以管理员身份运行"
-REM 假设你已经把 build-backend.bat 跑过,backend.jar 已经在 D:\archive\apps\backend\
+REM
+REM 125 目录约定:
+REM   D:\projects-online     代码(git)；qa-agent 源码 + .venv 在此
+REM   D:\archive\config      config.json(Java + qa-agent 共用)
+REM   D:\archive\apps\backend  archive.jar(WinSW 后端)
+REM   D:\archive\logs        各服务日志
+REM 假设 build-backend.bat 已跑过, archive.jar 已在 D:\archive\apps\backend\
 REM ==========================================================
 
 setlocal
@@ -42,18 +48,21 @@ sc config archive-backend start= auto
 net start archive-backend
 echo.
 
-REM 4. 注册 qa-agent 服务（Python 微服务）
+REM 4. qa-agent — 当前阶段手工启动，WinSW 留待一体化部署
+echo [2/3] qa-agent: 请手工启动 deploy\scripts\start-qa-agent.ps1 （WinSW 注册已跳过）
 if exist "%QA_AGENT_DIR%\.venv\Scripts\python.exe" (
-    echo [2/3] 注册 qa-agent 服务 ...
-    copy /Y "..\deploy\winsw\qa-agent.xml" "%QA_AGENT_DIR%\"
-    cd /d "%QA_AGENT_DIR%"
-    qa-agent-service.exe install
-    sc config qa-agent start= auto
-    net start qa-agent
+    echo       venv 已就绪；125 上: cd D:\projects-online ^&^& deploy\scripts\start-qa-agent.ps1
 ) else (
-    echo [2/3] 跳过 qa-agent 服务注册(未找到 Python .venv)
-    echo 手动启动: cd qa-agent ^&^& .venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8001
+    echo       未找到 %QA_AGENT_DIR%\.venv — 先 python -m venv .venv ^&^& pip install -r requirements.txt
 )
+REM --- WinSW 一体化（后续启用时取消注释）---
+REM if exist "%QA_AGENT_DIR%\.venv\Scripts\python.exe" (
+REM     copy /Y "%~dp0..\winsw\qa-agent.xml" "%QA_AGENT_DIR%\qa-agent-service.xml"
+REM     cd /d "%QA_AGENT_DIR%"
+REM     qa-agent-service.exe install
+REM     sc config qa-agent start= auto
+REM     net start qa-agent
+REM )
 echo.
 
 REM 5. Caddy 服务(可选,内网 HTTP 阶段可暂时不开)

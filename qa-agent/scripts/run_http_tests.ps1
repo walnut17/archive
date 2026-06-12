@@ -1,8 +1,7 @@
-# 直连 qa-agent 后台 HTTP 测试
-# 用法:
-#   cd qa-agent
-#   .\.venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8001
-#   .\scripts\run_http_tests.ps1
+# qa-agent HTTP 测试
+# - 开发机离线: .\scripts\run_http_tests.ps1 -UnitOnly
+# - 开发机 → 125 live: .\scripts\run_remote_smoke.ps1
+# - 125 本机 loopback: .\scripts\run_http_tests.ps1 -LiveOnly -BaseUrl http://127.0.0.1:8001
 
 param(
     [string]$BaseUrl = $env:QA_AGENT_BASE_URL,
@@ -14,9 +13,8 @@ $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
 if (-not $BaseUrl) {
-    $BaseUrl = "http://127.0.0.1:8001"
-}
-$env:QA_AGENT_BASE_URL = $BaseUrl
+    $BaseUrl = "http://182.168.1.125:8001"
+}$env:QA_AGENT_BASE_URL = $BaseUrl
 
 $pytest = ".\.venv\Scripts\pytest.exe"
 if (-not (Test-Path $pytest)) {

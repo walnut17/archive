@@ -1,5 +1,6 @@
 from typing import Any
 
+from app.config import settings
 from app.db.connection import db_cursor
 
 ALLOWED_TABLES = frozenset(
@@ -19,7 +20,7 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> list[dict[str, Any]]:
         columns = ["*"]
     col_sql = ", ".join(columns) if columns != ["*"] else "*"
 
-    limit = min(int(args.get("limit") or 50), MAX_LIMIT)
+    limit = min(int(args.get("limit") or 50), settings.query_mysql_max_rows)
     where = args.get("where") or []
     clauses: list[str] = []
     params: list[Any] = []

@@ -66,7 +66,7 @@ cp test_task/case-TEMPLATE.md test_task/AT-XXX-<简述>.md
 
 | AT ID | 案例文件 | 说明 |
 |---|---|---|
-| AT-001 | [`AT-001-qa-agent-http-smoke.md`](AT-001-qa-agent-http-smoke.md) | 直连 qa-agent HTTP 冒烟（部署后执行） |
+| AT-001 | [`AT-001-qa-agent-http-smoke.md`](AT-001-qa-agent-http-smoke.md) | 125 部署 qa-agent · **开发机**直连 `182.168.1.125:8001` |
 | — | [`case-TEMPLATE.md`](case-TEMPLATE.md) | 复制模板新建案例 |
 
 ---

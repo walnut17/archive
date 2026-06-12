@@ -167,7 +167,7 @@
 | 用户 | `archive_app`(主应用) / `root`(运维) |
 | 凭证 | `D:\archive\config\config.json`(`spring.datasource.password` 字段) |
 | 备份 | 每周一凌晨手动 `mysqldump` 到 `D:\archive\db_backup\` |
-| Schema 演进 | `backend/src/main/resources/db/migration/` 下的 `v2-schema.sql` / `G-llm-call-log.sql` 等,**不**用 Flyway/Liquibase(本期) |
+| Schema 演进 | [`deploy/sql/`](../../deploy/sql/)：`init.sql`（新库）· `migrate_260611_01.sql`（已有库升级），**不**用 Flyway/Liquibase(本期) |
 
 ---
 

@@ -52,7 +52,7 @@
 | 抢 coder 任务（DEBUG / UPGRADE） | 根 [`TASKS.md`](../TASKS.md) **🎯 任务路由** → 详情路径 |
 | 历史 RI / MOD | [`reviews/archive/tasks-history-routing.md`](reviews/archive/tasks-history-routing.md) + [`requirements/ARCH-DECOMPOSITION.md`](requirements/ARCH-DECOMPOSITION.md) |
 | 抢 AT 自动化测试 | [`TASKS.md`](../TASKS.md) AT 节 + [`../test_task/`](../test_task/README.md) |
-| 看表结构 / 加字段 | [`architecture/DB-SCHEMA-v2.md`](architecture/DB-SCHEMA-v2.md) |
+| 看表结构 / 加字段 | **[`architecture/DATABASE.md`](architecture/DATABASE.md)**（Agent 首读）→ [`deploy/sql/init.sql`](../deploy/sql/init.sql) |
 | 看系统架构 / 模块划分 | [`architecture/ARCHITECTURE-v2.md`](architecture/ARCHITECTURE-v2.md) |
 | Agent / Spring AI 怎么定的 | [`architecture/AGENT-FRAMEWORK-DECISION.md`](architecture/AGENT-FRAMEWORK-DECISION.md) |
 | 配 GLM API key | [`operations/GLM-KEY-SETUP.md`](operations/GLM-KEY-SETUP.md) |
@@ -89,8 +89,9 @@
 
 | 首读 | 文件 |
 |---|---|
+| **Agent / Coder 查表** | **`DATABASE.md`** — 28 表字段 + 关系 + JOIN |
 | 架构基线 | `ARCHITECTURE-v2.md` |
-| 数据库 | `DB-SCHEMA-v2.md` |
+| 数据库 | `DATABASE.md` + `DB-SCHEMA-v2.md`（迁移） |
 | Agent 实施 | `AGENT-IMPL-PLAN.md` + `AGENT-FRAMEWORK-DECISION.md` |
 | 分章细读 | `01-arch-overview.md` ~ `06-requirements-gap-analysis.md` |
 | 历史决策 | `history/architecture-v3-final.md` 等 |
@@ -140,7 +141,7 @@
 | 角色 | 顺序 |
 |---|---|
 | **新接手程序员** | 根 `README` §1 → [`MULTI-AGENT-REPO-ARCHITECTURE.md`](../MULTI-AGENT-REPO-ARCHITECTURE.md) → `reviews/LESSONS-LEARNED.md` → `TASKS.md` 抢任务 |
-| **架构师** | `requirements/REQUIREMENTS.md` → `architecture/ARCHITECTURE-v2.md` + `DB-SCHEMA-v2.md` → 写 RI |
+| **架构师** | `requirements/REQUIREMENTS.md` → `architecture/DATABASE.md` + `ARCHITECTURE-v2.md` → 写 RI |
 | **部署 / 联调** | `handoff/v1.1-DEPLOY-GUIDE.md` → `deployment_log.md` → bug 进 `test-to-settle/` |
 | **测试 Agent** | [`test_task/README.md`](../test_task/README.md) 抢 AT-*；FAIL → [`test-to-settle/README.md`](../test-to-settle/README.md) |
 | **Review Agent** | [`reviews/README.md`](reviews/README.md) · `cp review-TEMPLATE.md` |

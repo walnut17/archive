@@ -1,4 +1,9 @@
-"""Shared fixtures for qa-agent tests."""
+"""Shared fixtures for qa-agent tests.
+
+AT-001 live / smoke: qa-agent on 125, tests run from dev machine via
+http://182.168.1.125:8001 (override with QA_AGENT_BASE_URL).
+Offline: pytest -m "not live" on dev machine, no network required.
+"""
 
 from __future__ import annotations
 
@@ -12,10 +17,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.remote_target import resolve_base_url
 
-BASE_URL = os.environ.get("QA_AGENT_BASE_URL", "http://127.0.0.1:8001").rstrip("/")
+BASE_URL = resolve_base_url()
 HTTP_TIMEOUT = float(os.environ.get("QA_AGENT_HTTP_TIMEOUT", "120"))
-
 
 def qa_agent_reachable(base_url: str = BASE_URL) -> bool:
     try:

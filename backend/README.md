@@ -17,8 +17,8 @@
 ## 2. 准备数据库
 
 ```bash
-# 把 init.sql 跑一遍(Windows 用 deploy/sql/init-db.bat)
-mysql -u root -p < src/main/resources/db/init.sql
+# 把 init.sql 跑一遍（MySQL 客户端 source deploy/sql/init.sql）
+mysql -u root -p archive_db < ../deploy/sql/init.sql
 
 # 验证:能看到 archive_db 和 4 个角色 + 1 个 admin 账号
 mysql -u root -p -e "USE archive_db; SELECT * FROM role; SELECT id, username, display_name, role_id FROM user;"
@@ -150,7 +150,6 @@ backend/
     │   └── resources/
     │       ├── application.yml
     │       ├── logback-spring.xml
-    │       ├── db/init.sql
     │       └── META-INF/spring.factories  # 注册 ConfigJsonLoader
     └── test/
 ```

@@ -1,30 +1,68 @@
 # QA Agent (Python FastAPI)
 
-投委会档案智能问答 / LLM 抽取微服务。Java Spring Boot 通过 HTTP 调用。
+投委会档案智能问答 / LLM 抽取微服务。**与 Java 后端共用同一份 `config.json`**。
+
+## 配置（与主项目一致）
+
+| 优先级 | 来源 |
+|---|---|
+| 1 | **`config/config.json`**（与 Spring Boot 同文件） |
+| 2 | 环境变量 `CONFIG_JSON_PATH`（指定 json 路径，125 与 backend 相同） |
+| 3 | 可选 env 覆盖：`GLM_API_KEY`、`MYSQL_PASSWORD` 等（见 `.env.example`） |
+
+**查找顺序**（与 `ConfigJsonLoader.java` 一致）：
+
+1. `$CONFIG_JSON_PATH`
+2. `D:/archive/config/config.json`（125 生产）
+3. `./config/config.json`
+4. `../config/config.json`
+5. 仓库 `config/config.json`（从 `qa-agent/` 开发时）
+
+**从 config.json 读取的字段**：
+
+| JSON 路径 | qa-agent 用途 |
+|---|---|
+| `glm.*` | 智谱 LLM |
+| `database.*` | MySQL |
+| `storage.fileRoot` / `parsedRoot` | archive_fs（二期） |
+| `archive.networkDict.*` | network_dict_lookup（二期） |
+| `archive.queryMysql.*` | query_mysql 上限 |
+| `qaAgent.host` / `port` / `maxIterations` | 本服务监听与 ReAct 步数 |
+
+模板见 [`config/config.example.json`](../config/config.example.json) 末尾 **`qaAgent`** 段。复制为 `config/config.json` 后 **Java + qa-agent 共用**，无需单独 `.env`。
 
 ## 快速启动
 
 ```powershell
+# 1. 确保主项目 config 已就绪（与 backend 相同一步）
+copy config\config.example.json config\config.json
+# 编辑 config\config.json：glm.apiKey、database.password 等
+
+# 2. 启动 qa-agent
 cd qa-agent
 python -m venv .venv
 .\.venv\Scripts\pip install -r requirements.txt
-copy .env.example .env
-# 编辑 .env：GLM_API_KEY、MYSQL_*
-
 .\.venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload
 ```
 
-健康检查：`GET http://127.0.0.1:8001/health`
+**125 生产（当前：手工启动）**：
 
-## Java 侧配置
+- 代码：`D:\projects-online\qa-agent`（`git pull` → 本地建 `.venv`）
+- 配置：`D:\archive\config\config.json`（启动脚本设 `CONFIG_JSON_PATH`）
+- 启动：`.\deploy\scripts\start-qa-agent.ps1`（前台，见 [`RUNBOOK.md`](../docs/operations/RUNBOOK.md) §1.2）
+- **后续**：WinSW / 与 backend 一体化部署（`deploy/winsw/qa-agent.xml` 已预留，暂不必装）
 
-`application.yml` / `config.json`：
+健康检查：`GET /health` → 含 `config_json` 路径，便于确认读到的文件。
+
+## Java 侧
+
+`application.yml` 从同一 config 读 `qaAgent.port` 拼 `app.qa-agent.base-url`：
 
 ```yaml
 app:
   qa-agent:
     enabled: true
-    base-url: http://127.0.0.1:8001
+    base-url: http://${app.qa-agent.host:127.0.0.1}:${app.qa-agent.port:8001}
 spring:
   ai:
     agent:
@@ -35,40 +73,15 @@ spring:
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/health` | 健康检查 |
+| GET | `/health` | 健康检查 + config 路径 |
 | POST | `/v1/ask` | 单轮问答 |
 | POST | `/v1/turn/{session_id}` | 多轮问答 |
 | POST | `/v1/extract/project-fields` | 立项字段抽取 |
 
 ## 测试
 
-### 离线（mock GLM/DB，无需启动服务）
-
 ```powershell
-.\.venv\Scripts\pytest tests/ -q -m "not live"
+.\.venv\Scripts\pytest tests/ -q
 ```
 
-### 直连 qa-agent 后台（需先启动 uvicorn）
-
-```powershell
-# 终端 1
-.\.venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8001
-
-# 终端 2 — 任选其一
-.\scripts\run_http_tests.ps1
-# 或
-$env:QA_AGENT_BASE_URL = "http://127.0.0.1:8001"
-.\.venv\Scripts\pytest tests/test_api_http_live.py -q
-.\.venv\Scripts\python scripts/smoke_http.py
-```
-
-环境变量：
-
-| 变量 | 默认 | 说明 |
-|---|---|---|
-| `QA_AGENT_BASE_URL` | `http://127.0.0.1:8001` | live / smoke 测试目标 |
-| `QA_AGENT_HTTP_TIMEOUT` | `120` | HTTP 超时秒数 |
-
-自动化案例文档：[`test_task/AT-001-qa-agent-http-smoke.md`](../test_task/AT-001-qa-agent-http-smoke.md)
-
-架构说明：[`docs/architecture/08-qa-agent-python-service.md`](../docs/architecture/08-qa-agent-python-service.md)
+架构说明：[`docs/architecture/08-qa-agent-python-service.md`](../docs/architecture/08-qa-agent-python-service.md) · 库表：[`docs/architecture/DATABASE.md`](../docs/architecture/DATABASE.md)

@@ -10,8 +10,9 @@
 
 | 文件 | 用途 |
 |---|---|
+| **[`DATABASE.md`](DATABASE.md)** | **Agent 首读** — 全库 28 表、字段、关系、FULLTEXT、JOIN 示例（对齐 `init.sql`） |
 | [`ARCHITECTURE-v2.md`](ARCHITECTURE-v2.md) | 现行架构基线 (增补版) |
-| [`DB-SCHEMA-v2.md`](DB-SCHEMA-v2.md) | 现行数据库 schema |
+| [`DB-SCHEMA-v2.md`](DB-SCHEMA-v2.md) | v2 迁移脚本、种子数据（字段细节以 DATABASE.md / init.sql 为准） |
 | [`AGENT-IMPL-PLAN.md`](AGENT-IMPL-PLAN.md) | Plan I Agent 实施总方案 |
 | [`AGENT-FRAMEWORK-DECISION.md`](AGENT-FRAMEWORK-DECISION.md) | Spring AI 框架决策 |
 | [`AGENT-RESEARCH.md`](AGENT-RESEARCH.md) | Agent 方案调研 |

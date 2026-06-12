@@ -40,9 +40,13 @@ D:\archive\
 ## 3. 部署步骤(首次)
 
 ### 3.1 准备 MySQL
+
+详见 [`sql/README.md`](sql/README.md)。
+
 ```powershell
 # 安装 MySQL 8.0,记住 root 密码
-# 用 deploy\sql\init-db.bat 初始化数据库
+# 初始化：MySQL 客户端 source deploy\sql\init.sql（新库）
+# 已有库升级：source deploy\sql\migrate_260611_01.sql
 # 用 root 登录 MySQL,创建应用账号
 mysql -u root -p
 > CREATE USER 'archive_app'@'localhost' IDENTIFIED BY '强密码';

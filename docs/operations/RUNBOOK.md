@@ -22,34 +22,49 @@
 
 Python FastAPI 微服务，专司智能问答 + 字段抽取。
 
+**125 目录约定**：代码在 `D:\projects-online\qa-agent`；配置与业务数据在 `D:\archive\`（与 backend 相同）。
+
+> **部署阶段（2026-06）**：**先手工启动**（验收 / 联调）；**WinSW 一体化**与 backend 统一托管留待后续。
+
 | 项目 | 内容 |
 |------|------|
-| **服务名** | `qa-agent` |
-| **可执行文件** | `D:\projects-online\qa-agent\.venv\Scripts\python.exe -m uvicorn app.main:app` |
-| **配置文件** | `D:\projects-online\qa-agent\.env`（或环境变量） |
-| **端口** | `127.0.0.1:8001`（仅 localhost，不对外暴露） |
-| **日志** | WinSW 滚动日志，10MB×10 文件 |
-| **启停** | `net start/stop qa-agent` |
-| **健康检查** | `curl http://127.0.0.1:8001/health` 或 Spring Boot `/actuator/health` |
+| **当前启停** | 手工：`deploy/scripts/start-qa-agent.ps1`（前台）或下方命令；**Ctrl+C** 停止 |
+| **代码 / venv** | `D:\projects-online\qa-agent`（`git pull` 后本地 `python -m venv .venv` + `pip install -r requirements.txt`） |
+| **配置文件** | `D:\archive\config\config.json`（与 Java **同文件**；启动前设 `CONFIG_JSON_PATH`） |
+| **端口** | `127.0.0.1:8001`（`config.json` → `qaAgent.port`） |
+| **健康检查** | `curl http://127.0.0.1:8001/health`（响应含 `config_json` 路径） |
 
-**环境变量**：
+**后续一体化（未实施）**：WinSW `qa-agent-service.exe` · `deploy/winsw/qa-agent.xml` · `net start qa-agent` · 日志 `D:\archive\logs\qa-agent\`
 
-```
-GLM_API_KEY=your_key
-MYSQL_HOST=127.0.0.1
-MYSQL_PORT=3306
-MYSQL_DATABASE=archive_db
-MYSQL_USER=archive_app
-MYSQL_PASSWORD=your_password
-FILE_ROOT=D:/archive/files
-PARSED_ROOT=D:/archive/parsed
+**首次准备**：
+
+```powershell
+cd D:\projects-online
+git pull
+cd qa-agent
+python -m venv .venv
+.\.venv\Scripts\pip install -r requirements.txt
+# 确认 D:\archive\config\config.json 已存在（见 config/README.md）
 ```
 
-**手动启动（调试）**：
+**125 日常启动（推荐）**：
+
+```powershell
+cd D:\projects-online
+.\deploy\scripts\start-qa-agent.ps1
+```
+
+或一行：
+
 ```powershell
 cd D:\projects-online\qa-agent
-.venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload
+$env:CONFIG_JSON_PATH = "D:\archive\config\config.json"
+.\.venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8001
 ```
+
+本机开发加 `-Reload`：`.\deploy\scripts\start-qa-agent.ps1 -Reload`
+
+可选 env 覆盖（开发用）：`GLM_API_KEY`、`MYSQL_PASSWORD` 等 — 见 `qa-agent/.env.example`；**125 生产只改 config.json**。
 
 ### 1.3 前端服务
 
@@ -127,8 +142,8 @@ curl -X POST http://localhost:8080/actuator/loggers/com.archive \
 # 1. 备份
 mysqldump -u root -p archive_db > E:\backup\mysql\pre_migration_$(Get-Date -Format yyyyMMdd_HHmm).sql
 
-# 2. 执行迁移 SQL
-mysql -u root -p archive_db < D:\projects_new\projects-online\backend\src\main\resources\db\migration\v2-schema.sql
+# 2. 执行迁移 SQL（MySQL 客户端 source deploy/sql/migrate_260611_01.sql）
+mysql -u root -p archive_db < D:\projects_new\projects-online\deploy\sql\migrate_260611_01.sql
 
 # 3. 验证
 mysql -u root -p -e "USE archive_db; SHOW TABLES;"

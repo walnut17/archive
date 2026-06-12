@@ -39,9 +39,25 @@ java -jar backend/archive.jar
 ```
 
 > 后端启动时,会在以下路径依次查找 config.json(找到就用):
-> 1. `./config/config.json`(JAR 同级目录的 config/)
-> 2. `../config/config.json`(上一级 config/)
-> 3. `CONFIG_JSON_PATH` 环境变量指定的路径(WinSW 服务可设置)
+> 1. `CONFIG_JSON_PATH` 环境变量
+> 2. `D:/archive/config/config.json`（125 生产）
+> 3. `./config/config.json`（JAR 同级）
+> 4. `../config/config.json`（开发常用）
+>
+> **Python qa-agent** 使用相同顺序（见 `qa-agent/app/config_loader.py`），另加仓库根 `config/config.json` 便于从 `qa-agent/` 目录启动。
+
+---
+
+## qa-agent 共用配置
+
+| 项 | 说明 |
+|---|---|
+| 文件 | 与 backend **同一份** `config/config.json` |
+| 125 | `config.json` 放在 `D:\archive\config\`；WinSW 为 backend **与** qa-agent 均设置 `CONFIG_JSON_PATH=D:\archive\config\config.json` |
+| 125 代码 | qa-agent 源码在 `D:\projects-online\qa-agent`（`.venv` 本地 `pip install`，不进 Git） |
+| 专属段 | `qaAgent.host` / `qaAgent.port` / `qaAgent.maxIterations`（模板已加在 `config.example.json`） |
+| 共用段 | `glm` · `database` · `storage` · `archive.networkDict` · `archive.queryMysql` |
+| 不要 | 单独维护 `qa-agent/.env` 作为主配置（`.env.example` 仅文档化可选覆盖） |
 
 ---
 

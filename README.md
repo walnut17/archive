@@ -85,7 +85,7 @@ projects-online/
 | 历史 RI / MOD（Plan I 已完工） | [`docs/reviews/archive/tasks-history-routing.md`](docs/reviews/archive/tasks-history-routing.md) + [`docs/requirements/ARCH-DECOMPOSITION.md`](docs/requirements/ARCH-DECOMPOSITION.md) |
 | 跑通案例、记成功 | 在 `test_task/<案例>.md` **§3** 追加执行历史 |
 | 看业务需求 | [`docs/requirements/REQUIREMENTS.md`](docs/requirements/REQUIREMENTS.md) |
-| 看架构 / 表结构 | [`docs/architecture/`](docs/architecture/README.md) |
+| 看架构 / 表结构 | [`docs/architecture/DATABASE.md`](docs/architecture/DATABASE.md)（Agent 首读）· [`docs/architecture/`](docs/architecture/README.md) |
 | 部署 / 配 key / 运维 | [`docs/operations/`](docs/operations/README.md) |
 | 发现 bug、记 round | [`test-to-settle/round-*.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) · **仅缺陷** |
 | 要修 bug / 做升级（coder） | [`TASKS.md`](TASKS.md) 占 **DEBUG** 或 **UPGRADE** 行 → 打开详情路径 |
@@ -212,9 +212,10 @@ TASKS 占行 → Case 文件 Agent Block → 待审 → Review → CLOSED → do
 **你要读** (按顺序):
 1. `docs/requirements/REQUIREMENTS.md` (全) — 跟需求开发/审核**同一份**, 你是拆
 2. `docs/architecture/ARCHITECTURE-v2.md` (685 行) — 现有架构基线
-3. `docs/architecture/DB-SCHEMA-v2.md` (1060 行) — 现有 schema (你要加表/字段看这里)
-4. `docs/architecture/01~06-arch-*.md` (另一个 AI 写的分章架构) — 现代化拆解参考
-5. `docs/architecture/AGENT-FRAMEWORK-DECISION.md` (885 行) — 关键决策 (Spring AI 1.1 + 不引 spring-ai-alibaba)
+3. [`docs/architecture/DATABASE.md`](docs/architecture/DATABASE.md) — **全库 28 表字段**（对齐 init.sql；加表/字段首读）
+4. [`docs/architecture/DB-SCHEMA-v2.md`](docs/architecture/DB-SCHEMA-v2.md) — v2 迁移脚本与种子数据
+5. `docs/architecture/01~06-arch-*.md` (另一个 AI 写的分章架构) — 现代化拆解参考
+6. `docs/architecture/AGENT-FRAMEWORK-DECISION.md` (885 行) — 关键决策 (Spring AI 1.1 + 不引 spring-ai-alibaba)
 
 **你要写** (在 `docs/requirements/ARCH-DECOMPOSITION.md` 加 RI):
 - **RI-N: <标题> (§X.Y 引用)** — 每节 6 字段:
@@ -423,7 +424,7 @@ docs/requirements/
 | 首读 | 文件 |
 |---|---|
 | 架构基线 | [`ARCHITECTURE-v2.md`](docs/architecture/ARCHITECTURE-v2.md) |
-| 数据库 | [`DB-SCHEMA-v2.md`](docs/architecture/DB-SCHEMA-v2.md) |
+| 数据库 | [`DATABASE.md`](docs/architecture/DATABASE.md) · [`DB-SCHEMA-v2.md`](docs/architecture/DB-SCHEMA-v2.md) |
 | Agent | [`AGENT-IMPL-PLAN.md`](docs/architecture/AGENT-IMPL-PLAN.md) · [`AGENT-FRAMEWORK-DECISION.md`](docs/architecture/AGENT-FRAMEWORK-DECISION.md) |
 | 分章 | [`01-arch-overview.md`](docs/architecture/01-arch-overview.md) ~ `06-*.md` |
 | 历史 | [`history/`](docs/architecture/history/) |
@@ -502,7 +503,7 @@ docs/requirements/
 | ② | 详情文件（TASKS 指向的路径） | DEBUG → round §；UPGRADE → plan §0～§4 |
 | ③ | `docs/reviews/LESSONS-LEARNED.md` | 15+ 踩坑，避免重蹈覆辙 |
 | ④ | `docs/architecture/AGENT-IMPL-PLAN.md` | Agent 框架总览（改后端/Agent 时） |
-| ⑤ | `docs/architecture/DB-SCHEMA-v2.md` | 表结构（改数据层时） |
+| ⑤ | [`docs/architecture/DATABASE.md`](docs/architecture/DATABASE.md) | 全库表结构（改数据层 / Agent 查表） |
 
 **按技术栈**额外读:
 - **后端** — `docs/architecture/ARCHITECTURE-v2.md` + `AGENT-FRAMEWORK-DECISION.md`
@@ -533,10 +534,11 @@ docs/requirements/
 | ① | `docs/requirements/REQUIREMENTS.md` | 1342 | 业务全貌 |
 | ② | `docs/requirements/ARCH-DECOMPOSITION.md` | ~24KB | RI 拆解样例 (RI-1~45), 你要按这个格式加 RI-N |
 | ③ | `docs/architecture/ARCHITECTURE-v2.md` | 685 | 现有架构基线 |
-| ④ | `docs/architecture/DB-SCHEMA-v2.md` | 1060 | 现有 schema |
-| ⑤ | `docs/architecture/01~05-arch-*.md` (6 文件) | ~50KB | 另一个 AI 写的现代化分章架构 (在 `docs/architecture/`) |
-| ⑥ | `docs/architecture/AGENT-FRAMEWORK-DECISION.md` | 885 | 决策 (Spring AI 1.1 + 不引 spring-ai-alibaba) |
-| ⑦ | `docs/architecture/AGENT-IMPL-PLAN.md` | 252 | Plan I 总览 (理解技术决策) |
+| ④ | [`docs/architecture/DATABASE.md`](docs/architecture/DATABASE.md) | 全库 schema（init.sql 对齐） |
+| ⑤ | [`docs/architecture/DB-SCHEMA-v2.md`](docs/architecture/DB-SCHEMA-v2.md) | v2 迁移与种子 |
+| ⑥ | `docs/architecture/01~05-arch-*.md` (6 文件) | ~50KB | 另一个 AI 写的现代化分章架构 (在 `docs/architecture/`) |
+| ⑦ | `docs/architecture/AGENT-FRAMEWORK-DECISION.md` | 885 | 决策 (Spring AI 1.1 + 不引 spring-ai-alibaba) |
+| ⑧ | `docs/architecture/AGENT-IMPL-PLAN.md` | 252 | Plan I 总览 (理解技术决策) |
 
 ### 4.5 测试轮次 Agent 必读包
 

@@ -120,5 +120,12 @@
       "pollingInterval": "30s",
       "pageSize": 20
     }
+  },
+
+  "qaAgent": {
+    "_comment": "Python qa-agent 微服务 — 与 Java 共用本 config.json；GLM/MySQL/存储读上方 glm/database/storage",
+    "host": "127.0.0.1",
+    "port": 8001,
+    "maxIterations": 5
   }
 }

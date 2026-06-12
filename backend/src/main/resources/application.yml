@@ -86,7 +86,7 @@ server:
 app:
   qa-agent:
     enabled: ${QA_AGENT_ENABLED:true}
-    base-url: ${QA_AGENT_BASE_URL:http://127.0.0.1:8001}
+    base-url: http://${app.qa-agent.host:127.0.0.1}:${app.qa-agent.port:8001}
     timeout-seconds: ${QA_AGENT_TIMEOUT:120}
   glm:
     api-key:
