@@ -307,7 +307,7 @@ config/config.json
 ### 5.4 P3：文档同步和治理
 
 1. 更新 README 中规模、测试数量和当前阶段描述。
-2. 在 `docs/README.md` 中补充 `docs/review/` 与既有 `docs/reviews/` 的关系，避免后续评审文档分散。
+2. 在 `docs/reviews/README.md` 或 `docs/README.md` 中补充本报告索引，避免后续评审文档分散。
 3. 为“架构迁移状态”增加一个短页：
    - 当前主路径。
    - 兼容路径。
