@@ -108,6 +108,34 @@
 - `main.ts`：errorHandler 升级为 `reportError()` + `unhandledrejection` 监听
 - `DEV-STANDARDS.md` §12：前端错误处理规范
 
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-12 14:30
+ref: plan-2026-06-12-frontend-error-standard
+verdict: REQUEST_CHANGES
+summary: toast + DEV-STANDARDS OK，但上报端点鉴权/请求方式导致 audit_log 实际写不入
+
+**P0 — 上报链路不通**
+
+1. `clientError.ts` 用裸 `fetch('/api/client-error')`，未带 `Authorization: Bearer`（`http.ts` 拦截器未走）
+2. `SecurityConfig` 要求 `/api/**` authenticated → 401 被 `.catch(() => {})` 静默吞掉
+3. §1.5「上报 → audit_log 有 CLIENT_ERROR 行」**无法满足**
+
+**建议修**：`SecurityConfig` 对 `POST /api/client-error` 加 `permitAll`（或 authenticated 但改用 `http` 实例带 token）；二选一需与运维确认未登录页是否也要上报
+
+**P1 — 缺单测**
+
+4. §1.3/§2 列 `ClientErrorControllerTest.java`、`errorHandler.spec.ts`，commit 未含
+
+**P2**
+
+5. `userId: localStorage.getItem('userId')` — 项目只用 `archive-token`，`userId` 永为 undefined；建议从 JWT 解析 username 或后端 `@AuthenticationPrincipal`
+
+**已通过**：`ClientErrorController` + `AuditLogService.logClientError()`、`main.ts` errorHandler + unhandledrejection、`DEV-STANDARDS.md` §12、无空 `catch {}`
+
+----- agent-block end -----
+
 ---
 
 ## 4. Reviewer

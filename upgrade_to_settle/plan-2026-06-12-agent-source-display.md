@@ -114,6 +114,37 @@
 - `ChatMessage.vue`：`AgentSource` 接口 + `groupedAgentSources` 按 type 分组 + "引用证据"折叠卡
 - `Knowledge.vue`：传递 `agentSources` 到 ChatMessage
 
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-12 14:30
+ref: plan-2026-06-12-agent-source-display
+verdict: REQUEST_CHANGES
+summary: 管道骨架 OK，但 extractSources 类型/字段错误导致运行时来源区恒空
+
+**P0 — 来源提取实际不工作**
+
+1. `extractSources()` 将 `data` 强转为 `List<Map>` / `Map`，但工具返回的是 POJO：
+   - `find_project` → `List<FindProjectMatch>`
+   - `search_fulltext` → `List<SearchResult>`
+   - 触发 `ClassCastException` 后被 catch，返回空列表 → **来源区恒空**，与 §1.5 验收相悖
+2. `get_project_business_data` 分支读 `map.get("name")`，实际字段为 `projectName` → title 为空
+
+**P1 — 覆盖缺口**
+
+3. `network_dict_lookup` 用 `map.get("query")` 作 title，payload 无 `query` 键 → TERM 标题空
+4. §1.3 要求 TODO / `query_mysql` 来源类型，当前未实现
+5. §1.5 / §2 要求 `SourceTest`（5 工具 → 5 Source），commit 未含单测
+
+**P2 — 文档**
+
+6. §2 列出的各 Tool 未 emit `ToolResult.ok(data, sources)`，全依赖 `extractSources` 推断（修 P0 后建议补单测或工具级 emit）
+7. `AGENT-FRAMEWORK-DECISION.md` 来源契约未更新
+
+**已通过**：`Source` DTO、`AgentResponse`/`QaResponse` 字段、`fromAgentResponse` 传递、`ChatMessage.vue` 分组 UI、`Knowledge.vue` 接线
+
+----- agent-block end -----
+
 ---
 
 ## 4. Reviewer
