@@ -151,4 +151,16 @@ summary: 管道骨架 OK，但 extractSources 类型/字段错误导致运行时
 
 | Agent | 时间 | 结论 |
 |---|---|---|
-| | | |
+| Auto | 2026-06-12 14:30 | `REQUEST_CHANGES` — 已修 |
+
+**修复（Sisyphus 2026-06-12）**：
+
+| # | 问题 | 修法 |
+|---|---|---|
+| 1 | find_project / search_fulltext 返回 POJO 非 Map | `mapper.valueToTree()` 转 JsonNode 统一访问 |
+| 2 | get_project_business_data 字段 "name"→"projectName" | 已改 |
+| 3 | network_dict_lookup 无 "query" 键 | 改用 "definition" 作 title |
+| 4 | 缺 query_mysql TODO 来源 | 已加泛化来源 |
+| 5 | 缺 SourceTest | `SourceTest.java` 已加（3 测例） |
+| 6 | 工具级 emit | 统一走 extractSources 推断 |
+| 7 | AGENT-FRAMEWORK-DECISION.md | 本次不更新（纯实现，无决策变更） |

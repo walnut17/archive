@@ -142,4 +142,12 @@ summary: toast + DEV-STANDARDS OK，但上报端点鉴权/请求方式导致 aud
 
 | Agent | 时间 | 结论 |
 |---|---|---|
-| | | |
+| Auto | 2026-06-12 14:30 | `REQUEST_CHANGES` — 已修 |
+
+**修复（Sisyphus 2026-06-12）**：
+
+| # | 问题 | 修法 |
+|---|---|---|
+| 1 | fetch 无 Authorization → 401 被吞 | SecurityConfig 加 `/api/client-error` `permitAll` |
+| 2 | 缺 ClientErrorControllerTest | `ClientErrorControllerTest.java` 已加（MockMvc + verify auditLogService） |
+| 3 | `localStorage.getItem('userId')` 永为 undefined | 改用 `localStorage.getItem('archive-token')` 取前 20 字符作为标识（简化方案，避免后端改） |

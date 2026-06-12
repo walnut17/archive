@@ -397,35 +397,37 @@ public class AgentEngine {
         try {
             switch (toolName) {
                 case "find_project" -> {
-                    // data = List<Map> with projectCode, projectName
-                    List<Map<String, Object>> list = (List<Map<String, Object>>) data;
-                    for (Map<String, Object> item : list) {
+                    // data = List<FindProjectMatch> (POJO, 不是 Map)
+                    var rawList = (List<?>) data;
+                    for (Object item : rawList) {
+                        // 用 Jackson 将 POJO 转为 Map 以统一访问
+                        JsonNode node = mapper.valueToTree(item);
                         result.add(com.archive.dto.Source.builder()
                                 .type(com.archive.dto.Source.SourceType.PROJECT)
-                                .id(str(item.get("projectCode")))
-                                .title(str(item.get("projectName")))
+                                .id(str(node.get("projectCode")))
+                                .title(str(node.get("projectName")))
                                 .build());
                     }
                 }
                 case "search_fulltext" -> {
-                    // data = List<Map> with materialTitle, projectCode
-                    List<Map<String, Object>> list = (List<Map<String, Object>>) data;
-                    for (Map<String, Object> item : list) {
+                    // data = List<SearchResult> (POJO, 不是 Map)
+                    var rawList = (List<?>) data;
+                    for (Object item : rawList) {
+                        JsonNode node = mapper.valueToTree(item);
                         result.add(com.archive.dto.Source.builder()
                                 .type(com.archive.dto.Source.SourceType.MATERIAL)
-                                .id(str(item.get("materialId")))
-                                .title(str(item.get("materialTitle")))
-                                .snippet(truncate(str(item.get("snippet")), 100))
+                                .id(str(node.get("materialId")))
+                                .title(str(node.get("materialTitle")))
+                                .snippet(truncate(str(node.get("snippet")), 100))
                                 .build());
                     }
                 }
                 case "get_project_business_data" -> {
-                    // data = Map with projectCode, name
                     Map<String, Object> map = (Map<String, Object>) data;
                     result.add(com.archive.dto.Source.builder()
                             .type(com.archive.dto.Source.SourceType.PROJECT)
                             .id(str(map.get("projectCode")))
-                            .title(str(map.get("name")))
+                            .title(str(map.get("projectName")))
                             .build());
                 }
                 case "network_dict_lookup" -> {
@@ -434,10 +436,18 @@ public class AgentEngine {
                         result.add(com.archive.dto.Source.builder()
                                 .type(com.archive.dto.Source.SourceType.TERM)
                                 .id(str(map.get("source")))
-                                .title(str(map.get("query")))
-                                .snippet(truncate(str(map.get("definition")), 100))
+                                .title(truncate(str(map.get("definition")), 80))
                                 .build());
                     }
+                }
+                case "query_mysql" -> {
+                    Map<String, Object> map = (Map<String, Object>) data;
+                    // query_mysql 查 project 表时添加 PROJECT 来源
+                    result.add(com.archive.dto.Source.builder()
+                            .type(com.archive.dto.Source.SourceType.MATERIAL)
+                            .id("sql-" + str(map.get("rowCount")))
+                            .title("查询结果 " + map.get("rowCount") + " 行")
+                            .build());
                 }
             }
         } catch (Exception e) {
@@ -447,4 +457,8 @@ public class AgentEngine {
     }
 
     private String str(Object o) { return o == null ? "" : o.toString(); }
-}
+    
+    /** JsonNode 转 String，处理 null 节点. */
+    private String str(JsonNode node) {
+        return node == null || node.isNull() ? "" : node.asText();
+    }

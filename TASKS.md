@@ -32,8 +32,8 @@ TASKS.md
 
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
 |---|---|---|---|---|---|---|
-| **plan-2026-06-12-agent-source-display** | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-agent-source-display.md`](upgrade_to_settle/plan-2026-06-12-agent-source-display.md) | `开发中` | Auto (Reviewer) | 2026-06-12 | Agent 模式来源区契约（升格 C-0611-06）|
-| **plan-2026-06-12-frontend-error-standard** | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-frontend-error-standard.md`](upgrade_to_settle/plan-2026-06-12-frontend-error-standard.md) | `开发中` | Auto (Reviewer) | 2026-06-12 | 前端 errorHandler 标准化 + 上报（升格 C-0611-07）|
+| **plan-2026-06-12-agent-source-display** | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-agent-source-display.md`](upgrade_to_settle/plan-2026-06-12-agent-source-display.md) | `待审` | Sisyphus | 2026-06-12 | Agent 模式来源区契约 |
+| **plan-2026-06-12-frontend-error-standard** | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-frontend-error-standard.md`](upgrade_to_settle/plan-2026-06-12-frontend-error-standard.md) | `待审` | Sisyphus | 2026-06-12 | 前端 errorHandler 标准化 + 上报 |
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
 > **不在本表**：complexity 中转 · AT-* 自动化 · 已 CLOSED（见各 `done/`）

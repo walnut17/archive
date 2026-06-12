@@ -24,11 +24,12 @@ export function reportError(error: unknown, context?: string): void {
   ElMessage.error('操作失败，请刷新或联系运维')
 
   // 3. 异步上报到后端
+  const token = localStorage.getItem('archive-token') ?? ''
   const payload: ClientErrorPayload = {
     message: error instanceof Error ? error.message : String(error),
     stack: error instanceof Error ? (error.stack ?? '') : '',
     url: window.location.href,
-    userId: localStorage.getItem('userId') ?? undefined,
+    userId: token ? token.substring(0, 20) : undefined,
     timestamp: new Date().toISOString(),
   }
 

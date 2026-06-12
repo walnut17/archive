@@ -57,6 +57,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/health").permitAll()
+                        .requestMatchers("/api/client-error").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         // 字典查询选项(公开字典数据):任何已认证用户可用(必须在 /api/dict/** 之前)
