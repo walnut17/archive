@@ -32,7 +32,7 @@ TASKS.md
 
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
 |---|---|---|---|---|---|---|
-| `plan-2026-06-12-qa-agent-followups` | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-agent-followups.md`](upgrade_to_settle/plan-2026-06-12-qa-agent-followups.md) | `开发中` | Auto (Reviewer) | 2026-06-12 | F-01 未 commit；F-02 应读 storage_path 列 |
+| `plan-2026-06-12-qa-agent-followups` | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-agent-followups.md`](upgrade_to_settle/plan-2026-06-12-qa-agent-followups.md) | `待审` | Sisyphus | 2026-06-12 | F-01 config_loader + F-02 storage_path 已修 |
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
 > **不在本表**：complexity 中转 · AT-* 自动化 · 已 CLOSED（见各 `done/`）
