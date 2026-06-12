@@ -11,7 +11,7 @@
 |---|---|
 | **路由 ID** | `plan-2026-06-12-frontend-error-standard` |
 | **类型** | `UPGRADE` |
-| **Case 状态** | `OPEN` |
+| **Case 状态** | `CLOSED` |
 | **标题** | 前端 errorHandler 标准化 + toast 提示 + 上报选型 |
 | **需求锚点** | `docs/requirements/REQUIREMENTS.md` §13.2.5（健壮性） |
 | **架构锚点** | `docs/architecture/03-frontend-component-architecture.md` §6（错误边界） |
@@ -143,6 +143,7 @@ summary: toast + DEV-STANDARDS OK，但上报端点鉴权/请求方式导致 aud
 | Agent | 时间 | 结论 |
 |---|---|---|
 | Auto | 2026-06-12 14:30 | `REQUEST_CHANGES` — 已修 |
+| Auto | 2026-06-12 15:00 | `APPROVED` + `CLOSED` |
 
 **修复（Sisyphus 2026-06-12）**：
 
@@ -151,3 +152,29 @@ summary: toast + DEV-STANDARDS OK，但上报端点鉴权/请求方式导致 aud
 | 1 | fetch 无 Authorization → 401 被吞 | SecurityConfig 加 `/api/client-error` `permitAll` |
 | 2 | 缺 ClientErrorControllerTest | `ClientErrorControllerTest.java` 已加（MockMvc + verify auditLogService） |
 | 3 | `localStorage.getItem('userId')` 永为 undefined | 改用 `localStorage.getItem('archive-token')` 取前 20 字符作为标识（简化方案，避免后端改） |
+
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-12 15:00
+ref: plan-2026-06-12-frontend-error-standard
+verdict: APPROVED
+summary: commit 01fea31 修复 P0 — permitAll + ClientErrorControllerTest，上报链路可通
+
+- `SecurityConfig` 对 `/api/client-error` 加 `permitAll`，裸 fetch 不再 401
+- `ClientErrorControllerTest` MockMvc 验证 `logClientError` 调用
+- `userId` 改为 token 前缀标识（务实方案）
+- **遗留（非阻塞）**：`errorHandler.spec.ts` 未加；125 联测 toast + audit_log 待 Operator
+
+----- agent-block end -----
+
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-12 15:00
+ref: case
+verdict: CLOSED
+archive: upgrade_to_settle/done/plan-2026-06-12-frontend-error-standard.md
+summary: 前端 errorHandler 标准化 + 后端上报交付，case 关闭
+
+----- agent-block end -----

@@ -1,6 +1,6 @@
 # 已归档 Case — `upgrade_to_settle/done/`
 
-> 审查员写 **Closer** 块后，从 [`upgrade_to_settle/`](../README.md) 根目录移入的 plan，只读留存。
+> 审查员 **`Reviewer(CLOSED)`** 后，从 [`upgrade_to_settle/`](../README.md) 根目录移入的 plan，只读留存。
 
 | Plan 文件 | 路由 ID | 完工日期 | 摘要 |
 |---|---|---|---|
@@ -9,6 +9,8 @@
 | [`plan-2026-06-11-agent-intent-classification.md`](plan-2026-06-11-agent-intent-classification.md) | plan-2026-06-11-agent-intent-classification | 2026-06-12 | Agent 域约束 + 拒答规则（1 P1 已修） |
 | [`plan-2026-06-11-chat-ui.md`](plan-2026-06-11-chat-ui.md) | plan-2026-06-11-chat-ui | 2026-06-12 | 聊天式 Knowledge UI（1 P2 + 自我评审 2 P2 全部修） |
 | [`plan-2026-06-11-test-governance.md`](plan-2026-06-11-test-governance.md) | plan-2026-06-11-test-governance | 2026-06-12 | 第 45 测例 + test-strategy（1 P0 guard 已加） |
+| [`plan-2026-06-12-agent-source-display.md`](plan-2026-06-12-agent-source-display.md) | plan-2026-06-12-agent-source-display | 2026-06-12 | Agent 模式来源区 Source DTO + extractSources + 前端分组 |
+| [`plan-2026-06-12-frontend-error-standard.md`](plan-2026-06-12-frontend-error-standard.md) | plan-2026-06-12-frontend-error-standard | 2026-06-12 | errorHandler toast + /api/client-error 上报 + DEV-STANDARDS §12 |
 
 ---
 
@@ -20,6 +22,6 @@ git mv upgrade_to_settle/plan-YYYY-MM-DD-*.md upgrade_to_settle/done/
 
 同步：**[`TASKS.md`](../../TASKS.md) 删除本 case 行** · 可选更新 [`../STATUS.md`](../STATUS.md) · 本表索引。
 
-**关单职责**：由**代码审查员**按 [`CODE-REVIEWER.md`](../../CODE-REVIEWER.md) 写 **Closer** 后执行（勿由 Coder 代关）。
+**关单职责**：**代码审查员**写 **Reviewer(CLOSED)** 后 `git mv`（见 [`CODE-REVIEWER.md`](../../CODE-REVIEWER.md)）。
 
 详见 [`CASE-FORMAT.md`](../../CASE-FORMAT.md)。

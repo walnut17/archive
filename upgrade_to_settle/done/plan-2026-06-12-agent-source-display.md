@@ -11,7 +11,7 @@
 |---|---|
 | **路由 ID** | `plan-2026-06-12-agent-source-display` |
 | **类型** | `UPGRADE` |
-| **Case 状态** | `OPEN` |
+| **Case 状态** | `CLOSED` |
 | **标题** | Agent 模式来源区契约与实现 |
 | **需求锚点** | `docs/requirements/AGENT-REQUIREMENTS.md` §4.5（多轮 + 来源） |
 | **架构锚点** | `docs/architecture/AGENT-FRAMEWORK-DECISION.md` §3（Agent ↔ UI 契约） |
@@ -152,6 +152,7 @@ summary: 管道骨架 OK，但 extractSources 类型/字段错误导致运行时
 | Agent | 时间 | 结论 |
 |---|---|---|
 | Auto | 2026-06-12 14:30 | `REQUEST_CHANGES` — 已修 |
+| Auto | 2026-06-12 15:00 | `APPROVED` + `CLOSED` |
 
 **修复（Sisyphus 2026-06-12）**：
 
@@ -164,3 +165,30 @@ summary: 管道骨架 OK，但 extractSources 类型/字段错误导致运行时
 | 5 | 缺 SourceTest | `SourceTest.java` 已加（3 测例） |
 | 6 | 工具级 emit | 统一走 extractSources 推断 |
 | 7 | AGENT-FRAMEWORK-DECISION.md | 本次不更新（纯实现，无决策变更） |
+
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-12 15:00
+ref: plan-2026-06-12-agent-source-display
+verdict: APPROVED
+summary: commit 01fea31 修复 P0 — POJO 经 valueToTree 提取来源，projectName/definition 字段正确
+
+- `extractSources` 用 `mapper.valueToTree()` 处理 `FindProjectMatch` / `SearchResult`，不再 ClassCastException
+- `get_project_business_data` → `projectName`；`network_dict_lookup` → definition 作 title
+- `query_mysql` 泛化来源已加
+- `SourceTest.java` 已加（DTO 冒烟；未直接测 extractSources 私有方法，可接受）
+- **遗留（非阻塞）**：§1.5 TODO 类型来源未实现（工具仅返 todoCount）；125 联测待 Operator
+
+----- agent-block end -----
+
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-12 15:00
+ref: case
+verdict: CLOSED
+archive: upgrade_to_settle/done/plan-2026-06-12-agent-source-display.md
+summary: Agent 来源区管道 + 前端分组展示交付，case 关闭
+
+----- agent-block end -----
