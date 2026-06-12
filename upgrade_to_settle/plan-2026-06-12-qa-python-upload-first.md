@@ -295,6 +295,40 @@ summary: 一期骨架+8工具+WinSW/health 已落；T-0612-04 仍 500、v1.1 响
 
 ----- agent-block end -----
 
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-12 17:30
+ref: plan-2026-06-12-qa-python-upload-first
+verdict: REQUEST_CHANGES
+summary: 9ec01b2/e167257 修掉上轮 7/10 项；§1.2 F v1.1 响应字段仍空
+
+**本轮已修 ✅**
+
+| # | 项 | commit |
+|---|---|---|
+| 1 | T-0612-04 第三降级 | `e167257` |
+| 2 | `agentSources` 映射 | `9ec01b2` |
+| 3 | query_mysql column/operator 双兼容 | `9ec01b2` |
+| 4 | ask_clarification 中断 ReAct | `9ec01b2` |
+| 5 | GLM 失败去重试 | `9ec01b2` |
+| 6 | deployment_log §11 | `9ec01b2` |
+| 7 | WinSW → `D:\archive\apps\qa-agent` | `9ec01b2` |
+| 8 | Coder block | `9ec01b2` |
+
+**仍阻塞关单**
+
+1. **§1.2 F**：`engine.py` 仍硬编码 `project_switch_hint`/`confidence_badge`/`agent_sources` 为空 — `find_project` 后应填切换 hint + 置信徽章 + 工具来源聚合
+2. **§1.2 G**：`QaAgentClient.post()` 未用 `timeoutSeconds`
+
+**非阻塞（可下一迭代）**
+
+3. `archive_fs` 缺 `materialVersionId` 绑路径
+4. `AgentIntegrationTest` 未迁 mock Python
+5. §1.4 125 Co-test 8 条待 Operator
+
+----- agent-block end -----
+
 ---
 
 ## 4. 关单检查

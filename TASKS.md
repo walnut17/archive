@@ -32,8 +32,7 @@ TASKS.md
 
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
 |---|---|---|---|---|---|---|
-| `plan-2026-06-12-qa-python-upload-first` | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md`](upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md) | `开发中` | Auto (Reviewer) | 2026-06-12 | 骨架+二期工具 OK；T-0612-04/503/v1.1字段/§1.4未过 |
-| `round-2026-06-12-qa-regression` | DEBUG | [`test-to-settle/round-2026-06-12-qa-regression.md`](test-to-settle/round-2026-06-12-qa-regression.md) | `开发中` | Auto (Reviewer) | 2026-06-12 | T-0612-04 仍 500（qa-agent 开/Python 未起/Java Agent 关）|
+| `plan-2026-06-12-qa-python-upload-first` | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md`](upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md) | `开发中` | Auto (Reviewer) | 2026-06-12 | §1.2 F v1.1 字段 + QaAgentClient timeout 待补 |
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
 > **不在本表**：complexity 中转 · AT-* 自动化 · 已 CLOSED（见各 `done/`）
@@ -65,16 +64,16 @@ TASKS.md
 
 > 流程：[`test_task/README.md`](test_task/README.md) · 模板 [`test_task/case-TEMPLATE.md`](test_task/case-TEMPLATE.md)
 
-#### AT-001: qa-agent 直连 HTTP 冒烟（125）
+#### AT-001: qa-agent 直连 HTTP 冒烟（125 · 本机发起）
 
-- **状态**: 已开发（待 125 live 执行）
+- **状态**: 脚本已就绪（待 125 部署后实测）
 - **占用者**: —
 - **案例文件**: `test_task/AT-001-qa-agent-http-smoke.md`
 - **工作量**: ~1h
-- **依赖**: **125** 上 qa-agent 已启动（`127.0.0.1:8001`）+ MySQL `archive_db` + `.env`（GLM/MYSQL 与 `config.json` 一致）
-- **可并行**: ✅（与 125 Co-test 同机）
-- **验收**: 在 **125 本机**跑 live/smoke 全绿 → 案例 §3 PASS + 本节 `已完成`；FAIL → test_bug + round
-- **commit 模板**: `test(at-001): qa-agent HTTP smoke PASS on 125 by <Agent>`
+- **依赖**: **125** 已部署 qa-agent（`182.168.1.125:8001` 对本机可达）+ MySQL `archive_db`
+- **执行**: 开发机 `qa-agent/scripts/run_remote_smoke.ps1`（用户叫「开始实测」后跑）
+- **验收**: live + smoke 全绿 → 案例 §3 PASS + 本节 `已完成`；FAIL → test_bug + round
+- **commit 模板**: `test(at-001): qa-agent remote smoke PASS by <Agent>`
 
 ---
 
