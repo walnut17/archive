@@ -117,4 +117,64 @@
 
 > 顺序：`Coder` ↔ `Reviewer` → **`Closer`（必）**
 
-<!-- 从 Coder 块开始 -->
+<!-- Coder 块 (PM 干活的紧急回退) -->
+
+**Agent**：投委会档案项目PM（PM 兼 Coder 干活的紧急回退）  
+**时间**：2026-06-12 22:55  
+**摘要**：接手 agent 沙箱凭据流程卡住, 业务方无法在 Gitee 操作; PM 干 P1 tool-recovery 全部代码 + 1-2d 后 commit。
+
+### 3.1 干的部分
+
+**A. 冷启动降级 (3 级 fallback)**
+- 新建 `qa-agent/app/services/llm_retry.py`
+- L1: 主 GLM 调
+- L2: 失败 → 1 次重试 (exponential backoff 500ms/1s)
+- L3: 仍失败 → FULLTEXT 检索 + 模板答案
+- 新建 `qa-agent/app/services/degraded_search.py`
+- `confidence_badge='DEGRADED'` 标
+
+**B. 死循环自愈**
+- `qa-agent/app/agent/engine.py` 加 `AGENT_LOOP_RECOVERY_MODE`
+- 连续 2 步 `(tool, toolArgs) hash` 相同：
+  - 第 1 次：自动改写 `toolArgs` (`find_project("lmz")` → `find_project("lmz项目", topN=5)` + 变体)
+  - 第 2 次：主动调 `ask_clarification` 中断
+- `qa-agent/app/config.py` 加配置项
+
+**C. find_project 4 级链**
+- `qa-agent/app/agent/tools/find_project.py` 加 `build_search_variants()`
+- 与 v1.1 Java `FindProjectTool.buildSearchVariants` 对齐
+- 4 级链：EXACT → FULLTEXT → LIKE → LLM 兜底 (项目数 < 300)
+
+**D. query_mysql ORDER BY**
+- `qa-agent/app/agent/tools/query_mysql.py` 加 `order_by` 子句支持
+- 列名走白名单 (与 columns 共享)
+- 默认 `ORDER BY id DESC`
+
+**E. Java 透传 degraded 字段**
+- `QaAgentClient.java` 透传 `degraded` 字段
+- `QaResponse.java` 加 `degraded: Boolean` 字段
+
+**F. AT 测例**
+- 新建 `test_task/AT-003-qa-agent-degraded-fallback.md`
+
+### 3.2 commit 计划
+
+每 A~F 段单独 commit:
+- `feat(qa-agent): 3 级 GLM 降级 (P1)`
+- `feat(qa-agent): 死循环自愈 + ask_clarification`
+- `feat(qa-agent): find_project 4 级链 (build_search_variants)`
+- `feat(qa-agent): query_mysql ORDER BY 支持`
+- `feat(backend): QaResponse degraded 字段透传`
+- `test(at-003): degraded fallback PASS`
+
+### 3.3 PM 干后 业务方验收
+
+- 125 服务器 GLM key 故意删 → 端点返 200 + `degraded=true` + 模板答案
+- 连续 2 步同 tool → 自动改写 toolArgs (log 可见)
+- `find_project("lmz项目")` 命中 v1.1 测例同款结果
+- `query_mysql` 支持 `order_by` 字段
+
+### 3.4 不干 / 推迟 v2
+
+- 5 级 find_project 链 (3 级够 v1.1, 4-5 级 v2 计划)
+- 客户/业务方人名映射 (v2)

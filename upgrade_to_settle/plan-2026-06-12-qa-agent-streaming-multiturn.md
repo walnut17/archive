@@ -114,4 +114,59 @@
 
 > 顺序：`Coder` ↔ `Reviewer` → **`Closer`（必）**
 
-<!-- 从 Coder 块开始 -->
+<!-- Coder 块 (PM 干活的紧急回退) -->
+
+**Agent**：投委会档案项目PM（PM 兼 Coder 干活的紧急回退）  
+**时间**：2026-06-12 22:55  
+**摘要**：接手 agent 沙箱凭据流程卡住, 业务方无法在 Gitee 操作; PM 干 P0 streaming-multiturn 全部代码 + 1-2d 后 commit。
+
+### 3.1 干的部分
+
+**A. FastAPI SSE 端点**
+- `qa-agent/app/api/routes.py` 加 `POST /v1/ask/stream` + `POST /v1/turn/{session_id}/stream`
+- 用 `sse-starlette` 或 FastAPI 原生 `StreamingResponse`
+- 4 类事件: `step` / `token` / `source` / `done`
+
+**B. ReAct 流式引擎**
+- `qa-agent/app/agent/engine.py` 改 `run_agent` → `run_agent_stream(question, session_id)`
+- 内部 LLM 调 `glm_client` 用 `stream=True` (OpenAI SDK)
+- 每次 ReAct 步完成 yield 1 个 `step` 事件
+- LLM 每次生成 token yield 1 个 `token` 事件
+- 来源命中 yield 1 个 `source` 事件
+- 全部完成 yield 1 个 `done` 事件
+
+**C. 项目锁 / 指代词解析**
+- 新建 `qa-agent/app/services/memory.py`
+- 新建表 `chat_session_context` (SQL: `qa-agent/app/db/migration/V_20260612_chat_session_context.sql`)
+- `resolve_project_reference(question, ctx)` 检测「它/那/这个项目/剩余金额」+ 注入
+- `save_context` ReAct 完成后写回
+
+**D. Java 流式转发**
+- `QaAgentClient.java` 加 `streamAsk(question, sessionId): Flux<ServerSentEvent<String>>`
+- 用 `WebClient` + `bodyToFlux`
+- `QaController.java` 加 `/api/qa/ask/stream` 返回 `Flux<>`
+
+**E. 前端流式**
+- `Knowledge.vue` + `ChatMessage.vue` 改用 `fetch + ReadableStream` 读 SSE
+- 逐字追加到 `currentMessage.answer`
+
+**F. AT 测例**
+- 新建 `test_task/AT-002-qa-agent-streaming-multiturn.md`
+
+### 3.2 commit 计划
+
+每 A~E 段单独 commit, 全部合到一个 PR:
+- `feat(qa-agent): SSE 流式 + 项目锁 (P0)`
+- `feat(frontend): EventSource 流式消费`
+- `feat(backend): QaAgentClient stream + QaController stream`
+- `test(at-002): streaming multiturn PASS`
+
+### 3.3 PM 干后 业务方验收
+
+- 业务方 125 服务器 `git pull` 后 `mvn spring-boot:run` + `uvicorn app.main:app`
+- 浏览器开 http://localhost, 知识库问答逐字渲染
+- 第 1 轮问 PRJ-2026-001 → 第 2 轮「剩余金额」→ 自动锁项目
+
+### 3.4 不干 / 推迟 v2
+
+- 5 级 find_project 链 (3 级够 v1.1, 4-5 级 v2 计划)
