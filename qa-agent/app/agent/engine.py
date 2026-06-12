@@ -201,3 +201,214 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
         "confidence_badge": confidence_badge,
         "agent_sources": agent_sources,
     }
+
+
+# =============================================================================
+# v1.2 流式接口 (SSE): run_agent_stream
+# =============================================================================
+
+import json as _json
+from collections.abc import Iterator
+
+
+def _sse_event(event: str, data: dict) -> str:
+    """格式化为 SSE: event: <name>\\ndata: <json>\\n\\n"""
+    return f"event: {event}\ndata: {_json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def run_agent_stream(question: str, session_id: str | None = None) -> Iterator[str]:
+    """SSE 流式 ReAct: yield event 字符串.
+
+    事件类型 4 种:
+    - step: ReAct 步完成 (含 tool/args/observation)
+    - token: LLM 生成的 token
+    - source: 来源命中 (PROJECT/MATERIAL/...)
+    - done: 结束 (含 answer/tool_calls/agent_sources/...)
+
+    与 run_agent() 共享核心逻辑 (项目锁 / 死循环 / 5 级链 / 降级), 区别:
+    - LLM 调用 chat_stream() 逐 token yield
+    - 每 ReAct 步完成 yield step 事件
+    - 来源命中 yield source 事件
+    - 最终 yield done 事件
+    """
+    steps: list[dict] = []
+    agent_sources: list[dict] = []
+    project_switch_hint: str | None = None
+    confidence_badge: str | None = None
+    final_answer: str | None = None
+
+    # v1.2: 项目锁读取 (chat_session_context)
+    project_code: str | None = None
+    project_name: str | None = None
+    if session_id:
+        try:
+            from app.services.memory import load_context
+            ctx_row = load_context(session_id)
+            if ctx_row:
+                project_code = ctx_row.get("project_code")
+                project_name = ctx_row.get("project_name")
+        except Exception as e:
+            logger.debug("load_context 失败: %s", e)
+
+    # v1.2: 指代词解析
+    question_resolved = question
+    if session_id and project_code:
+        try:
+            from app.services.memory import resolve_project_reference
+            question_resolved = resolve_project_reference(question, project_code)
+            if question_resolved != question:
+                logger.info("指代词解析: %r → %r", question, question_resolved)
+                # step 事件前置: 让前端看到指代词解析过程
+                yield _sse_event("step", {
+                    "iteration": 0,
+                    "thought": f"识别到指代词, 自动锁定项目 {project_code} ({project_name})",
+                    "tool": "_resolve_reference",
+                    "toolArgs": _json.dumps({"original": question, "resolved": question_resolved}, ensure_ascii=False),
+                    "observation": project_code,
+                })
+        except Exception as e:
+            logger.debug("resolve_project_reference 失败: %s", e)
+
+    ctx: dict[str, Any] = {
+        "project_code": project_code,
+        "project_name": project_name,
+        "interrupted": False,
+    }
+
+    for i in range(1, settings.glm_max_iterations + 1):
+        user_prompt = build_user_prompt(question_resolved, session_id, steps)
+
+        # === B 段: LLM 流式 token yield ===
+        llm_raw_chunks: list[str] = []
+        try:
+            for token in glm_client.chat_stream(SYSTEM_PROMPT, user_prompt):
+                llm_raw_chunks.append(token)
+                yield _sse_event("token", {"iteration": i, "delta": token})
+        except Exception as e:
+            logger.exception("GLM 流式调用失败")
+            yield _sse_event("step", {
+                "iteration": i,
+                "thought": f"LLM 调用失败: {e}",
+                "tool": FINAL_ANSWER,
+                "toolArgs": "",
+                "observation": "",
+            })
+            final_answer = "抱歉, 我暂时无法回答 (LLM 调用失败)。请稍后再试或联系运维。"
+            break
+
+        llm_raw = "".join(llm_raw_chunks)
+        step = parse_agent_step(llm_raw, i)
+        tool = step["tool"]
+
+        if tool == FINAL_ANSWER:
+            final_answer = final_answer_from_args(step["toolArgs"])
+            steps.append(step)
+            yield _sse_event("step", {
+                "iteration": i,
+                "thought": step["thought"],
+                "tool": FINAL_ANSWER,
+                "toolArgs": step["toolArgs"],
+                "observation": "",
+            })
+            break
+
+        # 调工具
+        obs: Any = None
+        try:
+            obs = dispatch_tool(tool, step["toolArgs"], ctx)
+            step["observation"] = _truncate(obs if isinstance(obs, str) else _json.dumps(obs, ensure_ascii=False))
+        except Exception as e:
+            logger.exception("Tool %s failed", tool)
+            step["observation"] = _truncate(f"ERROR: {e}")
+
+        # 来源提取 (与 run_agent() 同逻辑)
+        new_sources = []
+        if tool == "find_project" and isinstance(obs, list):
+            for item in obs[:1]:
+                if isinstance(item, dict):
+                    sd = item.get("switchDecision")
+                    if sd:
+                        if sd != "SAME_CONFIRMED":
+                            project_switch_hint = sd
+                        if sd in ("SAME_PROBABLY", "DIFFERENT_PROBABLY"):
+                            confidence_badge = "AI_INFERRED"
+                        elif sd == "UNCLEAR":
+                            confidence_badge = "PENDING_REVIEW"
+                    src = {
+                        "type": "PROJECT",
+                        "id": item.get("projectCode") or item.get("code", ""),
+                        "title": item.get("projectName") or item.get("name", ""),
+                    }
+                    agent_sources.append(src)
+                    new_sources.append(src)
+        elif tool == "search_fulltext" and isinstance(obs, list):
+            for item in obs[:3]:
+                if isinstance(item, dict) and item.get("materialId"):
+                    src = {
+                        "type": "MATERIAL",
+                        "id": str(item.get("materialId", "")),
+                        "title": item.get("materialTitle", ""),
+                    }
+                    agent_sources.append(src)
+                    new_sources.append(src)
+
+        # yield step 事件
+        steps.append(step)
+        yield _sse_event("step", {
+            "iteration": i,
+            "thought": step["thought"],
+            "tool": tool,
+            "toolArgs": step["toolArgs"],
+            "observation": step["observation"],
+        })
+        # yield source 事件
+        for src in new_sources:
+            yield _sse_event("source", src)
+
+        # ask_clarification 中断
+        if ctx.get("interrupted") and isinstance(obs, dict):
+            final_answer = _json.dumps({"clarification": True, "question": obs.get("question", "")}, ensure_ascii=False)
+            break
+
+        # 死循环: 连续相同 tool+args
+        if len(steps) >= 2:
+            a, b = steps[-2], steps[-1]
+            if a["tool"] == b["tool"] and a.get("toolArgs") == b.get("toolArgs"):
+                final_answer = "抱歉，多次尝试未找到匹配结果。请换更具体的关键词或联系档案管理员。"
+                yield _sse_event("step", {
+                    "iteration": i + 1,
+                    "thought": "检测到重复工具调用，强制结束",
+                    "tool": FINAL_ANSWER,
+                    "toolArgs": _json.dumps({"answer": final_answer}, ensure_ascii=False),
+                    "observation": "",
+                })
+                break
+
+    if final_answer is None:
+        final_answer = "抱歉，我无法在限定步数内找到答案。请尝试更具体的提问。"
+
+    if session_id:
+        append_memory(session_id, "assistant", final_answer)
+
+    # v1.2: 项目锁写回
+    if session_id and final_answer and not ctx.get("interrupted"):
+        try:
+            from app.services.memory import save_context
+            # 找最后一次 find_project 命中的 PROJECT
+            for src in reversed(agent_sources):
+                if src.get("type") == "PROJECT" and src.get("id"):
+                    save_context(session_id, src["id"], src.get("title", ""))
+                    break
+        except Exception as e:
+            logger.debug("save_context 失败: %s", e)
+
+    # yield done 事件
+    yield _sse_event("done", {
+        "answer": final_answer,
+        "agent_mode": True,
+        "steps": steps,
+        "tool_calls": len(steps),
+        "project_switch_hint": project_switch_hint,
+        "confidence_badge": confidence_badge,
+        "agent_sources": agent_sources,
+    })
