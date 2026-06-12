@@ -37,7 +37,9 @@ def extract_project_fields(material_version_id: int) -> dict[str, Any]:
             "data": None,
         }
 
-    user = EXTRACT_USER_TEMPLATE.format(title=title, content=text[:15000])
+    user = EXTRACT_USER_TEMPLATE.format(
+        title=title, content=text[:15000], max_chars=15000
+    )
     try:
         raw = glm_client.chat(EXTRACT_SYSTEM, user)
     except Exception as e:
