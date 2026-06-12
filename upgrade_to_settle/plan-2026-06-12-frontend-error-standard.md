@@ -1,7 +1,7 @@
 # 前端 errorHandler 标准化 + 上报选型
 
 > **来源**：`test-to-settle/complexity.md` C-0611-07（升格自 round-0611 T-0611-17）
-> **状态**：`OPEN` · **类型**：`UPGRADE` · **PM 拍板**：2026-06-12
+> **状态**：`VERIFY` · **类型**：`UPGRADE` · **PM 拍板**：2026-06-12
 
 ---
 
@@ -90,3 +90,28 @@
 > 顺序：`Coder` ↔ `Reviewer` → **`Closer`（必）**
 
 <!-- 从 Coder 块开始 -->
+
+## 3. Agent Blocks
+
+### Coder — Sisyphus (2026-06-12)
+
+| 字段 | 内容 |
+|---|---|
+| **Agent** | Sisyphus |
+| **时间** | 2026-06-12 |
+| **改动清单** | `ClientErrorController.java` + `clientError.ts` + `main.ts` errorHandler + `AuditLogService.logClientError()` + `DEV-STANDARDS.md` §12 |
+
+**实现项**：
+- `ClientErrorController.java`：POST `/api/client-error`，接收 `{ message, stack, url, userId, timestamp }`
+- `AuditLogService.logClientError()`：写入 `audit_log (type=CLIENT_ERROR, action=CLIENT_ERROR)`
+- `clientError.ts`：`reportError()` SDK，console.error + toast + fetch 上报
+- `main.ts`：errorHandler 升级为 `reportError()` + `unhandledrejection` 监听
+- `DEV-STANDARDS.md` §12：前端错误处理规范
+
+---
+
+## 4. Reviewer
+
+| Agent | 时间 | 结论 |
+|---|---|---|
+| | | |

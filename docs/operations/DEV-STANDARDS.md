@@ -463,4 +463,33 @@ Thumbs.db
 
 ---
 
+## 12. 前端错误处理规范（2026-06-12 强制）
+
+### 12.1 全局 errorHandler
+
+`src/main.ts` 必须注册 `app.config.errorHandler`。当前实现：
+
+```typescript
+app.config.errorHandler = (err, instance, info) => {
+  reportError(err, `Vue error: ${info}`)
+}
+```
+
+`reportError()` 来自 `src/api/clientError.ts`，行为：
+1. `console.error` 输出完整堆栈
+2. `ElMessage.error` 显示用户提示：「操作失败，请刷新或联系运维」
+3. 异步 `POST /api/client-error` 上报到后端 `audit_log`
+
+### 12.2 禁止项
+
+- ❌ `catch (e) {}` — 空块禁止。至少 `console.error` + 显式上报。
+- ❌ 业务代码吞异常不提示用户
+
+### 12.3 强制项
+
+- ✅ 任何 try-catch 后必须重新 throw 或调用 `reportError()`
+- ✅ 所有组件不可预见的运行时异常由全局 errorHandler 兜底，组件不应自行 `window.onerror`
+
+---
+
 *违反本规范的代码,Reviewer 有权退回重做。*

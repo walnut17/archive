@@ -25,7 +25,7 @@
 TASKS.md
   ├─ DEBUG case → test-to-settle/round-*.md
   └─ UPGRADE case → upgrade_to_settle/plan-*.md
-        ↓ Coder 块 → 待审 → Reviewer 块 → Closer → done/ → 删 TASKS 行
+        ↓ Coder 块 → 待审 → Reviewer 块 → 审查员 Reviewer(CLOSED) → done/ → 删 TASKS 行
 ```
 
 ### 路由表
@@ -33,7 +33,7 @@ TASKS.md
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
 |---|---|---|---|---|---|---|
 | **plan-2026-06-12-agent-source-display** | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-agent-source-display.md`](upgrade_to_settle/plan-2026-06-12-agent-source-display.md) | `未开发` | — | 2026-06-12 | Agent 模式来源区契约（升格 C-0611-06）|
-| **plan-2026-06-12-frontend-error-standard** | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-frontend-error-standard.md`](upgrade_to_settle/plan-2026-06-12-frontend-error-standard.md) | `未开发` | — | 2026-06-12 | 前端 errorHandler 标准化 + 上报（升格 C-0611-07）|
+| **plan-2026-06-12-frontend-error-standard** | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-frontend-error-standard.md`](upgrade_to_settle/plan-2026-06-12-frontend-error-standard.md) | `待审` | Sisyphus | 2026-06-12 | 前端 errorHandler 标准化 + 上报（升格 C-0611-07）|
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
 > **不在本表**：complexity 中转 · AT-* 自动化 · 已 CLOSED（见各 `done/`）
@@ -46,7 +46,7 @@ TASKS.md
 
 ### Reviewer SOP
 
-见 [`CODE-REVIEWER.md`](CODE-REVIEWER.md)：占 **`待审`** → **`审阅中`** → Reviewer 块 → 全过则 Closer + `done/` + **删本行**。
+见 [`CODE-REVIEWER.md`](CODE-REVIEWER.md)：占 **`待审`** → **`审阅中`** → Reviewer 块 → 全过则 **Reviewer(CLOSED)** + `done/` + **删本行**。
 
 ### 何时新增一行
 

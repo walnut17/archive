@@ -82,6 +82,17 @@ public class AuditLogService {
         return logTyped("system", "LLM_" + toolName, "LLM", "agent_tool", toolName, null, extra);
     }
 
+    /**
+     * 记录前端客户端错误上报.
+     */
+    @Transactional
+    public AuditLog logClientError(String actor, String message, String stack, String url) {
+        String extra = "{\"msg\":" + quoteJson(truncate(message, 500))
+                + ",\"stack\":" + quoteJson(truncate(stack, 2000))
+                + ",\"url\":" + quoteJson(url) + "}";
+        return logTyped(actor, "CLIENT_ERROR", "CLIENT_ERROR", "frontend", null, null, extra);
+    }
+
     private AuditLog logTyped(String actor, String action, String type, String entityType,
                               String entitySubtype, Long entityId, String extra) {
         AuditLog auditLog = AuditLog.builder()

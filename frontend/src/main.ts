@@ -10,10 +10,15 @@ import './assets/main.css'
 
 const app = createApp(App)
 
-// 全局错误处理器: 避免单个 Vue 组件未捕获异常拖死整站 RouterView (T-0611-16/17)
+// 全局错误处理器 (T-0611-16/17 + plan-frontend-error-standard)
+import { reportError } from './api/clientError'
 app.config.errorHandler = (err, _instance, info) => {
-  console.warn('[GlobalErrorHandler] Caught:', err, info)
+  reportError(err, `Vue error: ${info}`)
 }
+// 浏览器未捕获 Promise rejection
+window.addEventListener('unhandledrejection', (event) => {
+  reportError(event.reason, 'Unhandled Promise rejection')
+})
 
 app.use(createPinia())
 app.use(router)
