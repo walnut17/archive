@@ -236,6 +236,45 @@ fix(qa-agent,plan-2026-06-12-qa-python-upload-first): …
 
 > Coder 占 [`TASKS.md`](../TASKS.md) **`plan-2026-06-12-qa-python-upload-first`** → 按 [`CASE-FORMAT.md`](../CASE-FORMAT.md) 追加 **Coder** 块；完工 → **待审**。
 
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-12 17:00
+ref: plan-2026-06-12-qa-python-upload-first
+verdict: REQUEST_CHANGES
+summary: 一期骨架+8工具+WinSW/health 已落；T-0612-04 仍 500、v1.1 响应字段空、query_mysql 参数契约不一致
+
+**已通过（骨架）**
+
+- `qa-agent/` FastAPI + ReAct + 8 工具注册；`pytest` **20 passed**（本地，不含 live HTTP）
+- Java BFF：`QaAgentClient` / `QaController` / `MultiTurnController` POST / RI-16 `staging-upload` + `ProjectCreateUpload.vue`
+- 二期工具文件：`archive_fs` · `network_dict_lookup` · `get_project_business_data` · `ask_clarification`
+- `QaAgentHealthIndicator` · `deploy/winsw/qa-agent.xml` · `RUNBOOK` 增补 · `AgentConfig`/`AgentEngine` `@Deprecated`
+- `llm_call_log` 写入（`AGENT_STEP`）
+
+**P0 — 阻塞关单 / round 联动**
+
+1. **T-0612-04 未修**（`848e116` 后仍如此）：`app.qa-agent.enabled=true` + Python 未起 + `spring.ai.agent.enabled=false` → `/api/qa/turn/*` 仍 `IllegalStateException` **500**。§1.4 #7、§K round 关单均不满足。
+2. **§1.2 G**：`QaAgentClient.ask()` 无 try/catch、未用 `timeoutSeconds`；失败抛栈 → BFF **500** 非 503。`toAgentResponse` **未映射** `agentSources`。
+3. **§1.2 F**：`engine.py` 恒返回 `project_switch_hint/confidence_badge/agent_sources` 为 null/[]；prompt 已写 5 级切换与 3 级置信，**未实现**。
+
+**P1 — 工具/契约**
+
+4. **query_mysql 参数名分裂**：`prompts.py` 教 LLM 用 `column`/`operator`；`query_mysql.py` 读 `field`/`op` → 工具调用 silently 跳过 WHERE。
+5. **ask_clarification**：工具设 `ctx["interrupted"]` 但 `engine.py` **不中断** ReAct，前端无 clarification UI（§2 列 `Knowledge.vue` 可选未做）。
+6. **archive_fs**：缺 plan §2.2 `materialVersionId` → SQL 绑路径；仅 `relativePath` 手工路径。
+7. **§1.2 H**：`deployment_log.md` **无 §11** 联调留痕；WinSW `workingdirectory` 为 `D:\projects-online\qa-agent`，125 应为 `D:\archive\apps\qa-agent`（对齐 `08` §8）。
+
+**P2 — 工程**
+
+8. **§1.2 I/J**：`AgentIntegrationTest` 未改 mock Python；无 `QaAgentClient` 单测。
+9. **§1.4**：125 Co-test 8 条均未验收；缺正式 **Coder agent-block**（仅有 commit `ef8be2d`/`3d88a57`）。
+10. `engine.py` GLM 失败分支重复调用 `glm_client.chat`（102–109 行）无意义，应删。
+
+**建议修序**：T-0612-04 第三降级（503 或 legacy）→ query_mysql 参数对齐 → v1.1 字段 + agentSources 管道 → 125 WinSW 路径 + §11 log → 再 `待审`。
+
+----- agent-block end -----
+
 ---
 
 ## 4. 关单检查
