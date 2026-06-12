@@ -49,6 +49,11 @@ const router = createRouter({
           meta: { requiresAdmin: true, title: '数据导入' },
         },
         {
+          path: 'projects/new/upload',
+          name: 'project-create-upload',
+          component: () => import('@/views/ProjectCreateUpload.vue'),
+        },
+        {
           path: 'projects/new',
           name: 'project-form',
           component: () => import('@/views/ProjectForm.vue'),

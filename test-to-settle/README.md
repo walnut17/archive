@@ -123,7 +123,8 @@ cp test-to-settle/round-TEMPLATE.md test-to-settle/round-2026-06-12-v1.1-regress
 
 | 轮次 | 文件 | 状态 |
 |---|---|---|
-| v1.1 / 0611 部署 | [round-2026-06-11-v1.1-deploy.md](round-2026-06-11-v1.1-deploy.md) | `OPEN`（T-0611-09/18 待修） |
+| 0612 Co-test QA | [round-2026-06-12-qa-regression.md](round-2026-06-12-qa-regression.md) | `OPEN`（T-0612-04/06 待修） |
+| 0611 部署（归档） | [done/round-2026-06-11-v1.1-deploy.md](done/round-2026-06-11-v1.1-deploy.md) | `CLOSED` |
 
 ---
 

@@ -32,7 +32,7 @@ TASKS.md
 
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
 |---|---|---|---|---|---|---|
-| `plan-2026-06-12-qa-python-upload-first` | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md`](upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md) | `未开发` | 架构师 | 2026-06-12 | Python qa-agent 一期收尾+二期全量+RI-16+125部署+Java Agent退役 |
+| `plan-2026-06-12-qa-python-upload-first` | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md`](upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md) | `开发中` | Sisyphus | 2026-06-12 | Python qa-agent 一期收尾+二期全量+RI-16+125部署+Java Agent退役 |
 | `round-2026-06-12-qa-regression` | DEBUG | [`test-to-settle/round-2026-06-12-qa-regression.md`](test-to-settle/round-2026-06-12-qa-regression.md) | `待审` | Sisyphus | 2026-06-12 | 0612 Co-test：多轮 QA 500（T-0612-04）、思考链 P2；编译 fix 留痕 |
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
@@ -63,8 +63,18 @@ TASKS.md
 
 ## 🤖 自动化测试（AT-*）
 
-> **当前：无 AT 任务。** 有真实案例时再在本节追加一行。  
 > 流程：[`test_task/README.md`](test_task/README.md) · 模板 [`test_task/case-TEMPLATE.md`](test_task/case-TEMPLATE.md)
+
+#### AT-001: qa-agent 直连 HTTP 冒烟
+
+- **状态**: 未开发
+- **占用者**: —
+- **案例文件**: `test_task/AT-001-qa-agent-http-smoke.md`
+- **工作量**: ~1h
+- **依赖**: qa-agent 已启动（`:8001`）；`.env` 配 GLM + MySQL
+- **可并行**: ✅
+- **验收**: 案例 §3 PASS + 本节 `已完成`；FAIL → test_bug + round
+- **commit 模板**: `test(at-001): qa-agent HTTP smoke PASS by <Agent>`
 
 ---
 

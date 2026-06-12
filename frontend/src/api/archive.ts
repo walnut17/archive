@@ -62,6 +62,25 @@ export interface ExtractionPreviewResult {
   data?: Record<string, unknown>
 }
 
+export interface StagingUploadResult {
+  draftProjectId: number
+  draftProjectCode: string
+  proposalId: number
+  materialId: number
+  materialVersionId: number
+}
+
+/** RI-16: 上传材料 → 草稿项目链 */
+export async function stagingUploadProject(file: File): Promise<StagingUploadResult> {
+  const form = new FormData()
+  form.append('file', file)
+  return getData<StagingUploadResult>(
+    await http.post<any>('/projects/staging-upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  )
+}
+
 /** 立项 AI 预填 — 从材料版本同步抽取 (RI-30) */
 export async function extractProjectFields(materialVersionId: number): Promise<ExtractionPreviewResult> {
   return getData<ExtractionPreviewResult>(

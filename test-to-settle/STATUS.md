@@ -4,6 +4,6 @@
 
 | Case 文件 | Case 状态 | 摘要 | 最后更新 |
 |---|---|---|---|
-| _(无活跃 case — round-0611 已于 2026-06-12 09:45 Closer 归入 `done/`)_ | — | — | — |
+| [`round-2026-06-12-qa-regression.md`](round-2026-06-12-qa-regression.md) | OPEN | T-0612-04 多轮 500 · T-0612-06 思考链 · 编译 fix 留痕 | 2026-06-12 |
 
 **CLOSED** → 移 [`done/`](done/README.md)，并从本表删除。

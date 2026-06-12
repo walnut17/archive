@@ -59,7 +59,7 @@ spring:
       moderation: none  # 关闭 OpenAI moderation
       chat: none       # 关闭 OpenAI chat (GLMChatModel 自定义)
     agent:
-      enabled: ${AGENT_ENABLED:true}
+      enabled: ${AGENT_ENABLED:false}
       observation-truncate-chars: 2000
       # 5 步上限硬编码在 AgentEngine.MAX_ITERATIONS = 5
       # find_project 工具: 4 级兜底链配置
@@ -84,6 +84,10 @@ server:
 
 # 应用专属配置(从 config.json 注入,见 ConfigJsonLoader)
 app:
+  qa-agent:
+    enabled: ${QA_AGENT_ENABLED:true}
+    base-url: ${QA_AGENT_BASE_URL:http://127.0.0.1:8001}
+    timeout-seconds: ${QA_AGENT_TIMEOUT:120}
   glm:
     api-key:
     chat-url: https://open.bigmodel.cn/api/paas/v4/chat/completions
