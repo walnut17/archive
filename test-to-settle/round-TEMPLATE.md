@@ -43,15 +43,15 @@
 ## 2. Agent Blocks
 
 > **按时间追加**。格式见 [`CASE-FORMAT.md`](../CASE-FORMAT.md) §2。  
-> 顺序：`Recorder?` → `Analyst?` → `Coder` ↔ `Reviewer` → **`Closer`（必）**
+> 顺序：`Recorder?` → `Analyst?` → `Coder` ↔ `Reviewer` → **审查员 `Reviewer(CLOSED)`**
 
 <!-- 从 Recorder 或 Coder 块开始 -->
 
 ---
 
-## 3. 关单检查（Closer 完成后打勾）
+## 3. 关单检查（审查员 Reviewer(CLOSED) 完成后打勾）
 
 - [ ] 各 `T-*` 已 APPROVED / ESCALATED / WONTFIX
-- [ ] 已有 **`role: Closer`** 块
+- [ ] 已有 **`Reviewer` + `verdict: CLOSED`** 块
 - [ ] `Case 状态` = `CLOSED` · `git mv` → [`done/`](done/README.md)
 - [ ] [`TASKS.md`](../TASKS.md) **已删除**本 case 行

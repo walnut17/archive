@@ -18,7 +18,7 @@
 
 | 目录 | 场景 | 谁结案 |
 |---|---|---|
-| **`test-to-settle/round-*.md`** | 部署/验收测出的 **bug**：§1 任务描述 → Agent Blocks → **Closer** → `done/` | 审查员 **Closer** + TASKS 删行 |
+| **`test-to-settle/round-*.md`** | 部署/验收测出的 **bug**：§1 → Agent Blocks → **Reviewer(CLOSED)** → `done/` | 审查员关单 + TASKS 删行 |
 | **`docs/reviews/`** | **代码/架构/交付物**评审、MOD 完工审、跨 agent 对线 | **仅 Review Agent** 在该文件宣布 `CLOSED` |
 
 一条问题可以**同时**出现在 `test-to-settle/round`（验收 bug）和 `docs/reviews`（代码审），互相用链接关联即可。
@@ -112,6 +112,7 @@ REV-YYYY-MM-DD-<简述>                  # 写在文件元信息里
 
 | 日期 | 文件 | 类型 |
 |---|---|---|
+| 2026-06-11 | [archive/tasks-history-routing.md](./archive/tasks-history-routing.md) | 原 TASKS Plan I / v1.1 MOD / UPGRADE 占表归档 |
 | 2026-06-09 | [2026-06-09-plan-i-p0-review.md](./2026-06-09-plan-i-p0-review.md) | Plan I P0 静态 review |
 | 2026-06-10 | [sisyphus-code-review-2026-06-10.md](./sisyphus-code-review-2026-06-10.md) | 代码 review |
 | 2026-06-11 | [sisyphus-review-MOD-*.md](./sisyphus-review-MOD-01-2026-06-11.md) | v1.1 MOD 静态 review |

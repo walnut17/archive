@@ -82,7 +82,7 @@ projects-online/
 | 认项目 / 选角色 | 本文 [§1 角色导航](#-1-角色导航-核心) |
 | 抢 DEBUG / UPGRADE（coder） | [`TASKS.md`](TASKS.md) **🎯 任务路由** → 详情路径 |
 | 抢自动化测试任务 AT-* | [`TASKS.md`](TASKS.md) AT 节 + [`test_task/`](test_task/README.md) |
-| 历史 RI / MOD（Plan I 已完工） | TASKS **📜 历史占表** + [`docs/requirements/ARCH-DECOMPOSITION.md`](docs/requirements/ARCH-DECOMPOSITION.md) |
+| 历史 RI / MOD（Plan I 已完工） | [`docs/reviews/archive/tasks-history-routing.md`](docs/reviews/archive/tasks-history-routing.md) + [`docs/requirements/ARCH-DECOMPOSITION.md`](docs/requirements/ARCH-DECOMPOSITION.md) |
 | 跑通案例、记成功 | 在 `test_task/<案例>.md` **§3** 追加执行历史 |
 | 看业务需求 | [`docs/requirements/REQUIREMENTS.md`](docs/requirements/REQUIREMENTS.md) |
 | 看架构 / 表结构 | [`docs/architecture/`](docs/architecture/README.md) |
@@ -121,7 +121,7 @@ projects-online/
 | 你是谁 | TASKS 找什么状态 | Case 里写什么块 |
 |---|---|---|
 | **Coder（程序员 / Fix）** | `未开发` · `开发中` | **Coder**（完工 → TASKS 改 **`待审`**） |
-| **代码审查员** | `待审` · `审阅中` | **Reviewer**（全过 → **Closer** → `done/` → **删 TASKS 行**） |
+| **代码审查员** | `待审` · `审阅中` | **Reviewer**（全过 → **Reviewer(CLOSED)** → `done/` → **删 TASKS 行**） |
 | **Recorder / Analyst** | case 已存在、无单独 TASKS 行时 | 在 case 内 **Recorder** / **Analyst** 块 |
 | **测试 Agent** | TASKS **AT-***（若有） | `test_task/`（非 case 流程） |
 | **架构师 / PM** | complexity `PENDING` | docs + plan → 新 case + TASKS 行 |
@@ -141,7 +141,7 @@ TASKS 占行 → Case 文件 Agent Block → 待审 → Review → CLOSED → do
 | **[测试 Agent](#19-测试-agenttest_task)** | 抢 **AT-*** 自动化测试 | TASKS AT 节 + [`test_task/`](test_task/README.md) | PASS 写 §3；FAIL 建 `test_bug` | [§1.0](#10-找任务接-agent-第一站) · [§9](#-9-自动化测试任务-test_task) | ❌ FAIL 时不擅自改业务代码 |
 | **[Recorder Agent](#15-recorder-agent)** | 发现 bug 并记入 case | `test-to-settle/round-*.md` | **§1 任务描述**（表）+ 可选 **Recorder** block | [§1.0](#10-找任务接-agent-第一站) · [§8](#-8-bug-跟踪与修复-test) | ❌ 不写根因、不改代码 |
 | **[Analyst Agent](#15-analyst-agent)** | 根因分析 + 修改建议 | case **§1** Bug 表 | **Analyst** block；大改 → complexity | [§8](#-8-bug-跟踪与修复-test) | ❌ 默认不改代码 |
-| **[代码审查员](#111-代码审查员)** | 审 DEBUG/UPGRADE | [`TASKS.md`](TASKS.md) + [`CODE-REVIEWER.md`](CODE-REVIEWER.md) | **Reviewer** / **Closer** block → **done/** | [§1.11](#111-代码审查员) | ❌ 不替 Coder 改代码 |
+| **[代码审查员](#111-代码审查员)** | 审 DEBUG/UPGRADE | [`TASKS.md`](TASKS.md) + [`CODE-REVIEWER.md`](CODE-REVIEWER.md) | **Reviewer** block（含 **CLOSED** 关单）→ **done/** | [§1.11](#111-代码审查员) | ❌ 不替 Coder 改代码 |
 | **[Co-test Guide](#110-co-test-双人联调)** | 对话里指挥联调 | `deployment_log` + case §1 | 代拟 log / round 草稿 | [§1.10](#110-co-test-双人联调) | ❌ 默认不改代码 |
 | **[Co-test Operator](#110-co-test-双人联调)** | 在 125/浏览器执行 | Guide 给的步骤 | 反馈结果 | [§1.10](#110-co-test-双人联调) | ❌ 有 bug 先记再修 |
 | **[Review Agent](#16-review-agent)** | 代码/架构评审 | [`docs/reviews/`](docs/reviews/README.md) OPEN 项 | review 意见 → CLOSED | [§1.6](#16-评审对线-docsreviews) | ❌ 替 Subject 写回复 |
@@ -273,7 +273,7 @@ TASKS 占行 → Case 文件 Agent Block → 待审 → Review → CLOSED → do
 - ❌ 改 `REQUIREMENTS.md` / 擅自拆 RI
 - ❌ 推 `minimax` 分支
 
-**历史 Plan I RI**：见 TASKS **📜 历史占表**，新工作勿占。
+**历史 Plan I RI**：见 [`docs/reviews/archive/tasks-history-routing.md`](docs/reviews/archive/tasks-history-routing.md)，新工作勿占。
 
 ### 1.5 DEBUG case 各 Agent（`test-to-settle/round-*.md`）
 
@@ -282,7 +282,7 @@ TASKS 占行 → Case 文件 Agent Block → 待审 → Review → CLOSED → do
 > **§1 任务描述**（Bug 表，只写一次）→ **Agent Blocks**（之后全部留痕，a-b 格式）
 
 ```text
-§1 任务描述 → Recorder? → Analyst? → Coder ↔ Reviewer → Closer → done/
+§1 任务描述 → Recorder? → Analyst? → Coder ↔ Reviewer → Reviewer(CLOSED) → done/
 ```
 
 | Agent | 写什么 | 做什么 |
@@ -290,7 +290,7 @@ TASKS 占行 → Case 文件 Agent Block → 待审 → Review → CLOSED → do
 | **Recorder** | §1 表 + 可选 **Recorder** block | 记 bug；**开新 round 时**按 CASE-FORMAT 命名 + TASKS 行 |
 | **Analyst** | **Analyst** block | 根因；`ESCALATED` → complexity |
 | **Coder** | **Coder** block + commit | TASKS 占 **DEBUG** 行 |
-| **Reviewer** | **Reviewer** / **Closer** block | 审 diff；**Closer** 才关 case |
+| **Reviewer**（代码审查员） | **Reviewer** block | 审 diff；**verdict: CLOSED** 关 case |
 
 > **注意**：case **Reviewer** ≠ [§1.6](#16-评审对线-docsreviews) 的 **Review Agent**（`docs/reviews/`）。
 
@@ -365,7 +365,7 @@ Review Agent Round 2：CONTINUE 续提要求 或 CLOSED 宣布评审结束
 1. TASKS 占 **`待审`** → **`审阅中`**
 2. 打开 Case 路径 → 先读 **§1 任务描述** → 再读 **Agent Blocks** + diff → 追加 **Reviewer** 块
 3. 打回：TASKS → **`开发中`**
-4. 整 case 通过：**Closer** 块 → `done/` → **删除 TASKS 行**
+4. 整 case 通过：**Reviewer(CLOSED)** → `done/` → **删除 TASKS 行**
 
 **你不能**：未读 diff 通过；自己改业务代码；CLOSED 后仍留 TASKS 行。
 
@@ -595,7 +595,7 @@ mvn compile -DskipTests -B -o   # 期望 BUILD SUCCESS
 
 ### 5.5 Step 4: 审查与关单（审查员）
 
-见 [`CODE-REVIEWER.md`](CODE-REVIEWER.md)：Reviewer 块 → Closer → `done/` → **删 TASKS 行**
+见 [`CODE-REVIEWER.md`](CODE-REVIEWER.md)：Reviewer 块 → Reviewer(CLOSED) → `done/` → **删 TASKS 行**
 
 ### 5.6 严禁
 
@@ -714,11 +714,11 @@ projects-online/
 ### 8.1 Case 时间线
 
 ```text
-§1 任务描述 → Recorder? → Analyst? → Coder → Reviewer(APPROVED) → Closer → done/ → TASKS 删行
+§1 任务描述 → Recorder? → Analyst? → Coder → Reviewer(APPROVED) → Reviewer(CLOSED) → done/ → TASKS 删行
                       ↘ ESCALATED → complexity.md → PM/架构 → plan
 ```
 
-**关 case 条件**：各 `T-*` 已 APPROVED / ESCALATED / WONTFIX，且有 **`role: Closer`** 块。  
+**关 case 条件**：各 `T-*` 已 APPROVED / ESCALATED / WONTFIX，且有审查员 **`Reviewer` + `verdict: CLOSED`** 块。  
 **历史 round** 可能仍含旧 §2～§7 表 — **新留痕只追加 Agent Blocks**。
 
 ### 8.2 目录与文件
@@ -740,7 +740,7 @@ projects-online/
 | **Coder** | TASKS **DEBUG/UPGRADE** | Case 路径 | **Coder** block + 代码 |
 | Recorder | case 已存在 | `round-*.md` | **§1** 表 + 可选 **Recorder** block |
 | Analyst | case §1 Bug 表 | 同上 | **Analyst** block |
-| Reviewer | TASKS **待审** | 同上 + diff | **Reviewer** / **Closer** block |
+| Reviewer | TASKS **待审** | 同上 + diff | **Reviewer** block（含 CLOSED 关单） |
 | PM / 架构 | complexity | → plan §1/§2 → TASKS UPGRADE | 见 [`complexity.md`](test-to-settle/complexity.md) |
 
 ### 8.4 当前轮次

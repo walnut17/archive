@@ -65,7 +65,7 @@ test-to-settle/
 §1 任务描述（Bug 表，非 block）
   → Recorder? / Analyst?（Agent Blocks）
   → Coder ↔ Reviewer
-  → Closer（审查员，必）
+  → Reviewer(CLOSED)（审查员关单，必）
   → done/ + TASKS 删行
                   ↘ Analyst ESCALATED → complexity.md
 ```
@@ -73,7 +73,7 @@ test-to-settle/
 | 环节 | 写什么 |
 |---|---|
 | §1 | Recorder / Co-test：Bug 表（`T-MMDD-NN`，来源 `DEPLOY`/`AUTO`） |
-| Agent Blocks | **Recorder** / **Analyst** / **Coder** / **Reviewer** / **Closer**（a-b 格式） |
+| Agent Blocks | **Recorder** / **Analyst** / **Coder** / **Reviewer**（a-b 格式） |
 
 **与 `docs/reviews/` 区别**：case Reviewer 审 **TASKS 路由的代码改动**；reviews 审 **架构/交付对线**。
 
@@ -134,7 +134,7 @@ cp test-to-settle/round-TEMPLATE.md test-to-settle/round-2026-06-12-v1.1-regress
 | Recorder | 当前 `round-*.md` | **§1** + 可选 **Recorder** block |
 | Analyst | 同上 | **Analyst** block |
 | Coder | [`TASKS.md`](../TASKS.md) → case | **Coder** block + 代码 |
-| Reviewer | [`TASKS.md`](../TASKS.md) → case + diff | **Reviewer** / **Closer** block |
+| Reviewer | [`TASKS.md`](../TASKS.md) → case + diff | **Reviewer** block（含 CLOSED） |
 | PM / 架构 | [`complexity.md`](complexity.md) | 分析 → plan → 删 §2 行 |
 
 ---

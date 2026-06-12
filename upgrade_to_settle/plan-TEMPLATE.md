@@ -46,12 +46,12 @@
 
 ## 3. Agent Blocks
 
-> 顺序：`Coder` ↔ `Reviewer` → **`Closer`（必）** · 格式见 [`CASE-FORMAT.md`](../CASE-FORMAT.md)
+> 顺序：`Coder` ↔ `Reviewer` → **审查员 `Reviewer(CLOSED)`** · 格式见 [`CASE-FORMAT.md`](../CASE-FORMAT.md)
 
 ---
 
 ## 4. 关单检查
 
 - [ ] Reviewer 对全 scope **`APPROVED`**
-- [ ] 已有 **`role: Closer`** 块
+- [ ] 已有 **`Reviewer` + `verdict: CLOSED`** 块
 - [ ] `git mv` → [`done/`](done/README.md) · TASKS **删行**

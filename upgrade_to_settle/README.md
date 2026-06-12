@@ -25,7 +25,7 @@ upgrade_to_settle/
 |---|---|
 | **`plan-*.md`**（根下） | 进行中的 UPGRADE case |
 | [`STATUS.md`](STATUS.md) | 辅索引（**主入口 [`TASKS.md`](../TASKS.md)**） |
-| [`done/`](done/README.md) | Closer 关单后的只读归档 |
+| [`done/`](done/README.md) | 审查员关单后只读归档 |
 
 ---
 
@@ -50,14 +50,14 @@ upgrade_to_settle/
 §0  元信息
 §1  任务描述（PM/架构，非 block）
 §2  开发说明（架构，非 block；Coder 只读）
-§3  Agent Blocks：Coder ↔ Reviewer → Closer → done/ → TASKS 删行
+§3  Agent Blocks：Coder ↔ Reviewer → Reviewer(CLOSED) → done/ → TASKS 删行
 ```
 
 | 环节 | 写什么 |
 |---|---|
 | §0～§2 | 开 case 时定稿；变更走 plan 内「变更记录」 |
 | **Coder** block | 代码 + `commits` |
-| **Reviewer** / **Closer** block | 审 diff；**Closer** 才关 case |
+| **Reviewer** block | 审 diff；**verdict: CLOSED** 关 case |
 
 **历史 plan** 可能仍含旧 §3～§7 — **新留痕只追加 Agent Blocks**。
 
@@ -84,7 +84,7 @@ cp upgrade_to_settle/plan-TEMPLATE.md upgrade_to_settle/plan-2026-06-12-my-featu
 
 ## 5. 完工归档
 
-审查员写 **Closer** 块后：
+审查员 **Reviewer(CLOSED)** 后：
 
 1. 元信息 `Case 状态` → `CLOSED`  
 2. `git mv upgrade_to_settle/plan-YYYY-MM-DD-*.md upgrade_to_settle/done/`  

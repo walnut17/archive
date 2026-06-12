@@ -1,6 +1,6 @@
 # 已关闭 Case — `test-to-settle/done/`
 
-> 审查员写 **Closer** 块后，从 [`test-to-settle/`](../README.md) 根目录移入的 `round-*.md`，只读留存。
+> 审查员 **`Reviewer(CLOSED)`** 后，从 [`test-to-settle/`](../README.md) 根目录移入的 `round-*.md`，只读留存。
 
 | Case 文件 | Case ID | 完工日期 | 摘要 |
 |---|---|---|---|
@@ -12,7 +12,7 @@
 ## 归档条件
 
 - 各 `T-*` 已 APPROVED / ESCALATED / WONTFIX
-- 已有 **`role: Closer`** 块
+- 已有 **`Reviewer` + `verdict: CLOSED`** 块
 - 元信息 `Case 状态` = **`CLOSED`**
 
 ## 归档命令

@@ -50,7 +50,7 @@
 |---|---|
 | 了解业务要做什么 | [`requirements/REQUIREMENTS.md`](requirements/REQUIREMENTS.md) |
 | 抢 coder 任务（DEBUG / UPGRADE） | 根 [`TASKS.md`](../TASKS.md) **🎯 任务路由** → 详情路径 |
-| 历史 RI / MOD | TASKS **📜 历史占表** + [`requirements/ARCH-DECOMPOSITION.md`](requirements/ARCH-DECOMPOSITION.md) |
+| 历史 RI / MOD | [`reviews/archive/tasks-history-routing.md`](reviews/archive/tasks-history-routing.md) + [`requirements/ARCH-DECOMPOSITION.md`](requirements/ARCH-DECOMPOSITION.md) |
 | 抢 AT 自动化测试 | [`TASKS.md`](../TASKS.md) AT 节 + [`../test_task/`](../test_task/README.md) |
 | 看表结构 / 加字段 | [`architecture/DB-SCHEMA-v2.md`](architecture/DB-SCHEMA-v2.md) |
 | 看系统架构 / 模块划分 | [`architecture/ARCHITECTURE-v2.md`](architecture/ARCHITECTURE-v2.md) |

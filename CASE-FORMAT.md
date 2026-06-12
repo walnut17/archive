@@ -74,15 +74,15 @@ Case 文件
   §2+ Agent Blocks      ← 之后全部留痕，【必须】agent-block，按时间往下追加
 
 时间线（最短）：
-  §1 任务描述 → Coder 块 → Reviewer 块(APPROVED) → Closer 块 → done/ → TASKS 删行
+  §1 任务描述 → Coder 块 → Reviewer(APPROVED) → Reviewer(CLOSED) → done/ → TASKS 删行
 
 时间线（有打回）：
-  … → Reviewer(REQUEST_CHANGES) → Coder → Reviewer(APPROVED) → … → Closer
+  … → Reviewer(REQUEST_CHANGES) → Coder → Reviewer(APPROVED) → … → Reviewer(CLOSED)
 
 铁律：
   · 只追加 block，不改、不删他人 block
-  · 只有 Reviewer 能写 Closer（case-status: CLOSED）
-  · Closer 之前必须有 Reviewer 的 APPROVED（可对多个 ref 分块写）
+  · **关单 = 代码审查员**写最后一轮 Reviewer 块（verdict: CLOSED），不是单独 Agent 角色
+  · CLOSED 之前须有 Reviewer 的 APPROVED（可对多个 ref 分块写）
   · CLOSED 后 case 移 done/，TASKS 删除该行
 ```
 
@@ -133,33 +133,36 @@ summary: <一行摘要，必填>
 ----- agent-block end -----
 ```
 
-### 2.1 role 枚举（只用这些字，勿自创）
+### 2.1 role 枚举（Agent 角色 — 只用这些字）
 
 | role | 谁 | 必填扩展头 | 正文 |
 |---|---|---|---|
 | **Recorder** | Co-test / 测试 | `source: DEPLOY \| AUTO` | 现象、复现（§1 已写时可简短） |
 | **Analyst** | 分析 Agent | `verdict: SMALL_FIX \| ESCALATED` | 根因、建议；大改链 complexity ID |
 | **Coder** | 程序员 | `commits: <hash>` 或 `commits: —` | 改了什么、怎么验 |
-| **Reviewer** | 代码审查员 | `verdict: APPROVED \| REQUEST_CHANGES` | 审 diff、问题列表 |
-| **Closer** | **仅审查员** | `case-status: CLOSED` · `archive: <done/路径>` | 宣布整 case 完成 |
+| **Reviewer** | **代码审查员**（含审代码 + **关单**） | `verdict: APPROVED \| REQUEST_CHANGES \| CLOSED` | 审 diff；**关单时**另填 `archive: <done/路径>` |
 
-**没有 `Fix` / `Implement` role** — 写代码统一用 **`Coder`**。
+> **没有 `Closer` Agent 角色** — 关单是审查员写的 **`Reviewer` + `verdict: CLOSED`** 块。  
+> **没有 `Fix` / `Implement` role** — 写代码统一用 **`Coder`**。
+
+**历史 case** 可能仍有 `role: Closer` 旧块，视为审查员关单，新留痕勿再用。
 
 ### 2.2 verdict 含义（无歧义）
 
 | verdict | 含义 | TASKS 状态 | 下一步 |
 |---|---|---|---|
-| `APPROVED` | 本条 ref（或整 case）代码 OK | 仍 `审阅中`，等其它 ref 或 Closer | 全 OK → 写 **Closer** |
+| `APPROVED` | 本条 ref 代码 OK | 仍 `审阅中`，等其它 ref 或关单 | 全 OK → 审查员写 **CLOSED** 块 |
 | `REQUEST_CHANGES` | 必须改代码 | → **`开发中`** | Coder 新块 → 再 **`待审`** |
-| `ESCALATED`（Analyst） | 不当轮修 | — | 转 complexity，**不**在 case 里硬改 |
+| `CLOSED` | **审查员宣布 case 结束** | — | `git mv` → `done/` · **TASKS 删行** |
+| `ESCALATED`（Analyst） | 不当轮修 | — | 转 complexity |
 
-**`APPROVED` ≠ case 结束**。case 结束 **只看** 有没有 **`role: Closer`** 块。
+**`APPROVED` ≠ case 结束**。case 结束 **只看** 有没有审查员的 **`Reviewer` + `verdict: CLOSED`** 块。
 
 ### 2.3 一轮 vs 多轮
 
 - **一轮** = 一个 agent 追加 **一个** block。  
 - Coder 与 Reviewer **一人一块**交替；同一 Reviewer 可连写多块（不同 `ref`）。  
-- **最后一轮必须是 `Closer`**（审查员身份，`role: Closer`）。
+- **最后一轮**必须是 **审查员** 的 **`Reviewer` + `verdict: CLOSED`**（`ref: case`，含 `archive:`）。
 
 ---
 
@@ -174,13 +177,13 @@ summary: <一行摘要，必填>
       [2] Analyst    ← 可选
       [3] Coder
       [4] Reviewer   verdict: APPROVED
-      [5] Closer     case-status: CLOSED
+      [5] Reviewer   verdict: CLOSED  ← 审查员关单（同一角色，非 Closer Agent）
 ```
 
 ### 3.2 DEBUG（打回一次）
 
 ```text
-… Coder → Reviewer(REQUEST_CHANGES) → Coder → Reviewer(APPROVED) → Closer
+… Coder → Reviewer(REQUEST_CHANGES) → Coder → Reviewer(APPROVED) → Reviewer(CLOSED)
          TASKS: 待审→开发中          TASKS: 开发中→待审
 ```
 
@@ -194,7 +197,7 @@ summary: <一行摘要，必填>
       [1] Coder      ← 实现
       [2] Reviewer   ← 审 plan 范围 + diff
       … 打回则同 DEBUG …
-      [N] Closer
+      [N] Reviewer   verdict: CLOSED
 ```
 
 ---
@@ -248,13 +251,13 @@ summary: diff 与单测一致
 ----- agent-block end -----
 
 ----- agent-block begin -----
-role: Closer
+role: Reviewer
 agent: PM-Review
 time: 2026-06-11 16:05
 ref: case
-case-status: CLOSED
+verdict: CLOSED
 archive: test-to-settle/done/round-2026-06-11-v1.1-deploy.md
-summary: T-0611-20 目的达成，本 case 关闭
+summary: 全 ref 已过，本 case 关闭
 
 ----- agent-block end -----
 ```
@@ -268,7 +271,7 @@ summary: T-0611-20 目的达成，本 case 关闭
 | 角色 | 看 TASKS | 写 Case |
 |---|---|---|
 | **Coder** | `未开发` / `开发中` | **Coder** block；完工 → TASKS **`待审`** |
-| **Reviewer** | `待审` / `审阅中` | **Reviewer** block；全过 → **Closer** → `done/` → **删 TASKS 行** |
+| **Reviewer**（代码审查员） | `待审` / `审阅中` | **Reviewer** block；全过 → **CLOSED** 关单 → `done/` → **删 TASKS 行** |
 | **Recorder/Analyst** | 通常无单独行 | 在 case **Agent Blocks** 追加（开 case 后） |
 
 ---
@@ -287,9 +290,10 @@ summary: T-0611-20 目的达成，本 case 关闭
 | 谁负责遵守？ | **生成 case 的 Agent**（Recorder/PM/架构师）— 见上文 **「生成 case 的 Agent」** |
 | §1 要用 agent-block 吗？ | **不要**。§1 是固定任务描述表/列表。 |
 | Recorder 还写 block 吗？ | **可选**。§1 已有清单时，block 可只写联调细节。 |
-| 审查员能改代码吗？ | **不能**。只写 Reviewer / Closer block，打回 Coder。 |
+| 审查员能改代码吗？ | **不能**。只写 **Reviewer** block，打回 Coder。 |
 | 多个 bug 在一个 case？ | §1 多行 `T-*`；blocks 用 `ref:` 区分；每个 ref 需 Reviewer APPROVED 或 ESCALATED。 |
-| 谁宣布 CLOSED？ | **仅审查员**，且必须单独 **`role: Closer`** 块。 |
+| 有 Closer Agent 吗？ | **没有**。关单 = 审查员 **`Reviewer` + `verdict: CLOSED`**。旧 `role: Closer` 块只读。 |
+| 谁宣布 CLOSED？ | **仅代码审查员**，最后一轮 **Reviewer(CLOSED)** 块。 |
 | CLOSED 后 TASKS 还留吗？ | **删除**该行。 |
 
 ---

@@ -22,7 +22,7 @@
 - [x] `v1.1-DEPLOY-GUIDE.md` 编写完成
 - [x] `application-prod.yml` 生产 `ddl-auto: validate`
 - [x] `I-RI-39-notification.sql` 源文件 `read`→`is_read` 修复
-- [x] §6 Review **APPROVED** + **Closer** 块
+- [x] §6 Review **APPROVED** + 审查员 **Reviewer(CLOSED)**
 
 ---
 
@@ -225,11 +225,11 @@ summary: I-RI-39 + application-prod.yml + v1.1-DEPLOY-GUIDE 交付完整
 ----- agent-block end -----
 
 ----- agent-block begin -----
-role: Closer
+role: Reviewer
 agent: Auto（代审查员；**后续关单由审查员按 CODE-REVIEWER.md 执行**）
 time: 2026-06-12 12:00
 ref: case
-case-status: CLOSED
+verdict: CLOSED
 archive: upgrade_to_settle/done/plan-2026-06-11-deploy-pipeline.md
 summary: plan-2026-06-11-deploy-pipeline 目的达成，case 关闭
 
