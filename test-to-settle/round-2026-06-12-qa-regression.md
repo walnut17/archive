@@ -39,7 +39,7 @@
 | **T-0612-01** | DEPLOY | P0 | `mvn compile`：`AgentEngine.java` 缺类闭合 `}` | **FIXED** @ `96abc32` · 125 已验证 BUILD SUCCESS |
 | **T-0612-02** | DEPLOY | P0 | `ArchiveMaterialPathResolver.getMaterial()` 不存在；`AuditLogService.truncate` 缺失 | **FIXED** @ `16eec7a` |
 | **T-0612-03** | DEPLOY | P1 | `ClientErrorControllerTest` 误 import `mock.bean.MockBean`（`-DskipTests` 仍 testCompile 失败） | **FIXED** @ `5408bee` |
-| **T-0612-04** | DEPLOY | **P0** | 知识库聊天 UI：第 1 问 `/api/qa/ask` OK；**第 2 问起** `POST /api/qa/turn/{sessionId}` → **500**。根因：`MultiTurnController` qa-agent 降级遗漏，Python 服务未跑时抛异常不降级 Java。**验收**：同 session 连续 2 问均 200 | **VERIFY** | 修 `MultiTurnController.ask()` qa-agent 失败后降级 Java |
+| **T-0612-04** | DEPLOY | **P0** | 知识库聊天 UI：第 1 问 `/api/qa/ask` OK；**第 2 问起** `POST /api/qa/turn/{sessionId}` → **500**。根因：`MultiTurnController` 双路径均不可用时抛 IllegalStateException。**验收**：同 session 连续 2 问均 200（或 503 明文） | **VERIFY** | 第 3 路径: 双不可用 → 503 文案，不抛 500 |
 | **T-0612-06** | DEPLOY | P2 | 离题拒答时思考过程显示「无法解析 LLM 输出,直接返回原文」+ `FINAL_ANSWER`；用户可见答案正确但思考链不美观。**验收**：离题问仍拒答；思考链不出现 parse fallback 文案（或改为明确「直接拒答」步骤） | **VERIFY** | `parseAgentStep` 改为 "直接返回结果" |
 | **T-0612-05** | DEPLOY | P1 | 新建项目仍手工表单入口，非 RI-16 上传优先 | **ESCALATED** → [`plan-2026-06-12-qa-python-upload-first`](../upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md)（含 RI-16 + 二期） |
 

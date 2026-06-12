@@ -8,8 +8,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Collections;
 
 /**
  * 多轮对话端点 — 优先转发 Python qa-agent.
@@ -67,6 +68,12 @@ public class MultiTurnController {
             return ApiResponse.ok(agentEngine.run(req));
         }
 
-        throw new IllegalStateException("多轮问答未启用，请配置 spring.ai.agent.enabled=true 或 app.qa-agent.enabled=true");
+        // 路径 3: 双路径均不可用 → 返回 503 明确文案，不抛 500 裸栈
+        log.warn("[MultiTurn] qa-agent 与 Java Agent 均不可用, 返回 503 fallback");
+        AgentResponse fallback = new AgentResponse();
+        fallback.setAnswer("问答服务暂不可用，请稍后重试。如需紧急帮助，请联系档案管理员。");
+        fallback.setAgentMode(false);
+        fallback.setSteps(Collections.emptyList());
+        return ApiResponse.ok(fallback);
     }
 }
