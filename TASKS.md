@@ -32,11 +32,8 @@ TASKS.md
 
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
 |---|---|---|---|---|---|---|
-| **round-2026-06-11-v1.1-deploy** | DEBUG | [`test-to-settle/round-2026-06-11-v1.1-deploy.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) | `开发中` | — | 2026-06-12 | v1.1 部署回归；T-0611-09/18 OPEN；其余已审或已转 plan |
-| **plan-2026-06-11-archive-local-fs-tools** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) | `待审` | Sisyphus | 2026-06-12 | archive_fs；R1 已修，待复审 |
-| **plan-2026-06-11-agent-intent-classification** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-agent-intent-classification.md`](upgrade_to_settle/plan-2026-06-11-agent-intent-classification.md) | `待审` | Sisyphus | 2026-06-12 | 离题拒答；R2-1 已修，待复审 |
-| **plan-2026-06-11-chat-ui** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-chat-ui.md`](upgrade_to_settle/plan-2026-06-11-chat-ui.md) | `待审` | Sisyphus | 2026-06-12 | 聊天 UI 已实现，§6 待审 |
-| **plan-2026-06-11-test-governance** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-test-governance.md`](upgrade_to_settle/plan-2026-06-11-test-governance.md) | `待审` | Sisyphus | 2026-06-12 | 测试治理；R5-1 已修，待复审 |
+| **plan-2026-06-12-agent-source-display** | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-agent-source-display.md`](upgrade_to_settle/plan-2026-06-12-agent-source-display.md) | `未开发` | — | 2026-06-12 | Agent 模式来源区契约（升格 C-0611-06）|
+| **plan-2026-06-12-frontend-error-standard** | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-frontend-error-standard.md`](upgrade_to_settle/plan-2026-06-12-frontend-error-standard.md) | `未开发` | — | 2026-06-12 | 前端 errorHandler 标准化 + 上报（升格 C-0611-07）|
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
 > **不在本表**：complexity 中转 · AT-* 自动化 · 已 CLOSED（见各 `done/`）
