@@ -135,7 +135,7 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
 
         # v1.1: 从 find_project 结果提取切换 hint + 置信徽章 + 来源
         if tool == "find_project" and isinstance(obs, list):
-            for item in obs[:1]:  # 只看 top 1
+            for item in obs[:1]:
                 if isinstance(item, dict):
                     sd = item.get("switchDecision")
                     if sd and sd != "SAME_CONFIRMED":
@@ -150,8 +150,8 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
                             confidence_badge = "PENDING_REVIEW"
                     agent_sources.append({
                         "type": "PROJECT",
-                        "id": item.get("projectCode", ""),
-                        "title": item.get("projectName", ""),
+                        "id": item.get("projectCode") or item.get("code", ""),
+                        "title": item.get("projectName") or item.get("name", ""),
                     })
         # v1.1: search_fulltext → MATERIAL 来源
         if tool == "search_fulltext" and isinstance(obs, list):
