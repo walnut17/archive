@@ -31,12 +31,12 @@ TASKS.md
 
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
 |---|---|---|---|---|---|---|
-| **CASE-D-0611** | DEBUG | [`test-to-settle/round-2026-06-11-v1.1-deploy.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) | `审阅中` | 投委会档案项目PM | 2026-06-12 | v1.1 部署回归；多项 FIXED 待/已审 |
-| **UP-0611-01** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) | `开发中` | Sisyphus | 2026-06-11 | archive_fs；Reviewer REQUEST_CHANGES |
-| **UP-0611-02** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-agent-intent-classification.md`](upgrade_to_settle/plan-2026-06-11-agent-intent-classification.md) | `开发中` | Sisyphus | 2026-06-11 | 离题拒答；Reviewer REQUEST_CHANGES |
-| **UP-0611-03** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-deploy-pipeline.md`](upgrade_to_settle/plan-2026-06-11-deploy-pipeline.md) | `待审` | Sisyphus | 2026-06-11 | 部署 SOP；Reviewer APPROVED |
-| **UP-0611-04** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-chat-ui.md`](upgrade_to_settle/plan-2026-06-11-chat-ui.md) | `待审` | Sisyphus | 2026-06-11 | 聊天 UI；Reviewer APPROVED(P2) |
-| **UP-0611-05** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-test-governance.md`](upgrade_to_settle/plan-2026-06-11-test-governance.md) | `开发中` | Sisyphus | 2026-06-11 | 测试治理；Reviewer REQUEST_CHANGES |
+| **CASE-D-0611** | DEBUG | [`test-to-settle/round-2026-06-11-v1.1-deploy.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) | `开发中` | — | 2026-06-12 | v1.1 部署回归；T-0611-09/18 → VERIFY；其余已审或已转 UP |
+| **UP-0611-01** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) | `待审` | Sisyphus | 2026-06-12 | archive_fs；R1 已修，待复审 |
+| **UP-0611-02** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-agent-intent-classification.md`](upgrade_to_settle/plan-2026-06-11-agent-intent-classification.md) | `待审` | Sisyphus | 2026-06-12 | 离题拒答；R2-1 已修，待复审 |
+| **UP-0611-03** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-deploy-pipeline.md`](upgrade_to_settle/plan-2026-06-11-deploy-pipeline.md) | `审阅中` | 投委会档案项目PM | 2026-06-12 | 部署 SOP；§6 APPROVED，待 Closer |
+| **UP-0611-04** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-chat-ui.md`](upgrade_to_settle/plan-2026-06-11-chat-ui.md) | `待审` | Sisyphus | 2026-06-12 | 聊天 UI 已实现，§6 待审 |
+| **UP-0611-05** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-test-governance.md`](upgrade_to_settle/plan-2026-06-11-test-governance.md) | `待审` | Sisyphus | 2026-06-12 | 测试治理；R5-1 已修，待复审 |
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
 > **不在本表**：complexity 中转 · AT-* 自动化 · 已 CLOSED（见各 `done/`）
@@ -44,7 +44,7 @@ TASKS.md
 ### Coder SOP
 
 1. 选 `未开发` 或 `开发中` → 改 **`开发中`** + 填 Agent/时间 → push  
-2. 打开 **Case 路径** → 追加 **Coder** 块（[`CASE-FORMAT.md`](CASE-FORMAT.md)）  
+2. 打开 **Case 路径** → 先读 **§1 任务描述** → 追加 **Coder** 块（[`CASE-FORMAT.md`](CASE-FORMAT.md)）  
 3. 本项完工 → 状态改 **`待审`** → push  
 
 ### Reviewer SOP
