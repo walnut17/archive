@@ -65,6 +65,38 @@
 
 > Coder 占 [`TASKS.md`](../TASKS.md) **`plan-2026-06-12-qa-agent-followups`** → 追加 **Coder** 块；完工 → **待审**。
 
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-12 19:30
+ref: plan-2026-06-12-qa-agent-followups
+ref_commit: c44809f,5957f32
+verdict: REQUEST_CHANGES
+summary: F-03/04/05 大体 OK；F-01 零代码 commit；F-02 路径应用 DB 列非拼装
+
+**已通过 ✅**
+
+| 项 | commit | 结论 |
+|---|---|---|
+| F-03 v1.1 单测 | `5957f32` | `test_find_project_v11.py` 17 cases，分支表完整 |
+| F-04 Java 测试 | `c44809f` | `AgentIntegrationTest` + `@MockBean QaAgentClient` + `@Deprecated`；`08` §7 退役说明 |
+| F-05 isHealthy timeout | `5957f32` | connect 用 `timeoutSeconds`；read 固定 5s 可接受 |
+| pytest | — | **40 passed** |
+
+**阻塞关单**
+
+1. **F-01 未交付（P0）**：TASKS 写「全部 F-01~F-05」但 **main 无** `config_loader.py` / `config.py` 改造 / `application.yml` host:port / `/health` 的 `config_json`。`08` §5 文档已写，**代码未 commit**（工作区有 WIP，未审）。
+2. **F-02 路径解析偏 Java（P1）**：`_resolve_material_version` 用 `proposal_id/material_id` **拼装**路径；Java `ArchiveMaterialPathResolver` 读 **`material_version.storage_path` / `parsed_text_path`** 列。应改为 SELECT 这两列，与 DB 实际存储一致。
+
+**小项（顺手）**
+
+3. F-03 缺 plan 要求的 **turn/ask 层** `agent_sources` 非空断言（`_fmt` 单测已覆盖字段，可补 1 个 contract test）
+4. F-05：`QaAgentClient` 仍 **重复** `import java.util.Map`（L18–19）
+
+**修序**：commit F-01 WIP → F-02 改读 storage_path 列 → 补 import 清理 → 再 `待审`。
+
+----- agent-block end -----
+
 ---
 
 ## 4. 关单检查
