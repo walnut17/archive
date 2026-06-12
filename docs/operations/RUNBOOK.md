@@ -47,9 +47,14 @@ python -m venv .venv
 # 确认 D:\archive\config\config.json 已存在（见 config/README.md）
 ```
 
-**125 日常启动（推荐）**：
+**125 日常启动**（在 **`qa-agent` 目录** 或 **仓库根** 均可）：
 
 ```powershell
+# 已在 qa-agent 目录时（你当前这种）
+cd D:\projects-online\qa-agent
+.\start.ps1
+
+# 或在仓库根
 cd D:\projects-online
 .\deploy\scripts\start-qa-agent.ps1
 ```
