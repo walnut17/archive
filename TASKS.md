@@ -32,7 +32,7 @@ TASKS.md
 
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
 |---|---|---|---|---|---|---|
-| `plan-2026-06-12-qa-python-upload-first` | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md`](upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md) | `审阅中` | Auto (Reviewer) | 2026-06-12 | §1.2 F/G APPROVED(847b813) · §1.4 125 Co-test 待 Operator |
+| `plan-2026-06-12-qa-agent-followups` | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-agent-followups.md`](upgrade_to_settle/plan-2026-06-12-qa-agent-followups.md) | `未开发` | Auto (Reviewer) | 2026-06-12 | 自 python-upload-first 拆出：config/archive_fs/单测/Java测 |
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
 > **不在本表**：complexity 中转 · AT-* 自动化 · 已 CLOSED（见各 `done/`）
@@ -73,6 +73,7 @@ TASKS.md
 - **依赖**: **125** 已部署 qa-agent（`182.168.1.125:8001` 对本机可达）+ MySQL `archive_db`
 - **执行**: 开发机 `qa-agent/scripts/run_remote_smoke.ps1`（用户叫「开始实测」后跑）
 - **验收**: live + smoke 全绿 → 案例 §3 PASS + 本节 `已完成`；FAIL → test_bug + round
+- **覆盖**: 原 plan `plan-2026-06-12-qa-python-upload-first` **§1.4** Co-test 8 条（plan 已 CLOSED）
 - **commit 模板**: `test(at-001): qa-agent remote smoke PASS by <Agent>`
 
 ---

@@ -11,7 +11,7 @@
 |---|---|
 | **路由 ID** | `plan-2026-06-12-qa-python-upload-first` |
 | **类型** | `UPGRADE` |
-| **Case 状态** | `OPEN` |
+| **Case 状态** | `CLOSED` |
 | **标题** | Python qa-agent（MVP→全工具）+ Java BFF + RI-16 + 125 部署 + Java Agent 退役 |
 | **需求锚点** | §5.6 · §5.10.2 · RI-16 · RI-47/22 · T-0612-04/05/06 |
 | **架构锚点** | [`08-qa-agent-python-service.md`](../docs/architecture/08-qa-agent-python-service.md) · [`07-archive-fs-agent-tools.md`](../docs/architecture/07-archive-fs-agent-tools.md) |
@@ -425,13 +425,36 @@ summary: §1.2 F/G 代码路径通过 — 无锁定切换+badge 映射已对齐 
 
 ----- agent-block end -----
 
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-12 19:00
+ref: case
+verdict: CLOSED
+archive: upgrade_to_settle/done/plan-2026-06-12-qa-python-upload-first.md
+summary: Python qa-agent 主交付完成；Coder 遗留拆至 followups plan；§1.4 归 AT-001
+
+**本 plan 范围内已交付**
+
+- qa-agent FastAPI + 8 工具 + v1.1 F/G（`847b813` APPROVED）
+- Java BFF · MultiTurn 降级 · RI-16 上传 · WinSW · health · deployment_log §11
+
+**拆出（不再悬空）**
+
+| 去向 | 内容 |
+|---|---|
+| [`plan-2026-06-12-qa-agent-followups`](../plan-2026-06-12-qa-agent-followups.md) | config 统一 · archive_fs materialVersionId · v1.1 单测 · Java 测试迁移 · QaAgentClient 小修 |
+| **AT-001** | §1.4 125 Co-test 8 条（Operator / Auto-test） |
+
+----- agent-block end -----
+
 ---
 
 ## 4. 关单检查
 
-- [ ] §1.4 验收 8 条 125 通过
-- [ ] §1.2 E～K 工单全部勾选
-- [ ] complexity **C-0612-01** 已删（complexity 表无活跃行）
-- [ ] round `round-2026-06-12-qa-regression`：**Reviewer(CLOSED)** → `done/` → TASKS 删 DEBUG 行
-- [ ] 本 plan：**Reviewer(CLOSED)** → `upgrade_to_settle/done/` → TASKS 删 UPGRADE 行
-- [ ] 无 `qa-agent/.venv` 进 git
+- [x] §1.4 → **AT-001**（Operator，非 Coder）
+- [x] §1.2 E～H 主交付完成；I/J 部分 → **followups plan**
+- [x] complexity **C-0612-01** 已转本 plan（complexity 表无活跃行）
+- [x] round `round-2026-06-12-qa-regression`：**CLOSED** → `done/`
+- [x] 本 plan：**Reviewer(CLOSED)** → `upgrade_to_settle/done/`
+- [x] 无 `qa-agent/.venv` 进 git
