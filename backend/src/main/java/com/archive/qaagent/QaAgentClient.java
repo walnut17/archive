@@ -63,7 +63,13 @@ public class QaAgentClient {
 
     public boolean isHealthy() {
         try {
-            RestClient.create(properties.getBaseUrl())
+            var factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+            factory.setConnectTimeout((int) properties.getTimeoutSeconds() * 1000);
+            factory.setReadTimeout(5000);
+            RestClient.builder()
+                    .baseUrl(properties.getBaseUrl())
+                    .requestFactory(factory)
+                    .build()
                     .get()
                     .uri("/health")
                     .retrieve()

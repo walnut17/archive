@@ -32,7 +32,7 @@ TASKS.md
 
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
 |---|---|---|---|---|---|---|
-| `plan-2026-06-12-qa-agent-followups` | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-agent-followups.md`](upgrade_to_settle/plan-2026-06-12-qa-agent-followups.md) | `未开发` | Auto (Reviewer) | 2026-06-12 | 自 python-upload-first 拆出：config/archive_fs/单测/Java测 |
+| `plan-2026-06-12-qa-agent-followups` | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-agent-followups.md`](upgrade_to_settle/plan-2026-06-12-qa-agent-followups.md) | `开发中` | Sisyphus | 2026-06-12 | 自 python-upload-first 拆出：config/archive_fs/单测/Java测 |
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
 > **不在本表**：complexity 中转 · AT-* 自动化 · 已 CLOSED（见各 `done/`）
