@@ -68,6 +68,7 @@
 
 - [ ] `qa-agent/.gitignore`：`.venv/` · `__pycache__/` · `.pytest_cache/` · `.env`
 - [ ] **不要** commit `qa-agent/.venv/`
+- [ ] **配置**：qa-agent 共用 **`config/config.json`**（`config_loader.py` 与 Java 同序）；模板已加 `qaAgent` 段
 - [ ] 根 `README.md` §0.4 或 `qa-agent/README.md` 链到本 plan
 
 ---
@@ -105,7 +106,7 @@
 | `docs/operations/RUNBOOK.md` | 改 — 启停 / 日志路径 |
 | `docs/operations/deployment_log.md` | 联调后追加 §11 |
 
-环境变量（与 `config.json` 同步）：`GLM_API_KEY` · `MYSQL_*` · `QA_AGENT_PORT=8001` · `FILE_ROOT` · `PARSED_ROOT`
+环境：**共用** `config/config.json`（125：`CONFIG_JSON_PATH=D:\archive\config\config.json`，backend 与 qa-agent 相同）。可选 env 仅作单项覆盖。
 
 **I. Java Agent 退役（Python 稳定后）**
 
@@ -184,7 +185,7 @@ round 全过 → Reviewer **CLOSED** → `test-to-settle/done/` · **删** TASKS
 ### 2.2 Python `archive_fs` 实现要点
 
 ```text
-config: FILE_ROOT / PARSED_ROOT（与 app.storage 同值）
+config: FILE_ROOT / PARSED_ROOT ← `storage.fileRoot` / `storage.parsedRoot`（同一 config.json）
 ArchivePathGuard: normalize + startsWith(root)
 materialVersionId → SQL 查 storage_path / parsed_text_path
 actions: list(max 100) | grep(max 200 lines, 2MB) | read(max 512KB)
@@ -326,6 +327,39 @@ summary: 9ec01b2/e167257 修掉上轮 7/10 项；§1.2 F v1.1 响应字段仍空
 3. `archive_fs` 缺 `materialVersionId` 绑路径
 4. `AgentIntegrationTest` 未迁 mock Python
 5. §1.4 125 Co-test 8 条待 Operator
+
+----- agent-block end -----
+
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-12 18:00
+ref: plan-2026-06-12-qa-python-upload-first
+ref_commit: 0c15186
+verdict: REQUEST_CHANGES
+summary: §1.2 G timeout 已接；§1.2 F 实现与 find_project 契约脱节，switch_hint/sources 运行时仍空
+
+**本轮已修 ✅**
+
+| 项 | 结论 |
+|---|---|
+| §1.2 G `timeoutSeconds` | `QaAgentClient.post()` 已设 connect/read timeout |
+| `engine.py` v1.1 聚合骨架 | 循环内收集 hint/badge/sources 并回传 |
+| pytest | 本地 **23 passed**（不含 live HTTP） |
+
+**仍阻塞 §1.2 F（P0）**
+
+1. **字段名不一致**：`engine.py` 读 `switchDecision` / `projectCode` / `projectName`，但 `find_project.py` 实际返回 `code` / `name` / `confidence`，**无** `switchDecision` → `project_switch_hint` 恒为 null，`agent_sources[].id/title` 为空。
+2. **5 级隐式切换未移植**：Java `FindProjectTool.applyImplicitSwitchRule` + `ctx.lockedProjectCode` 逻辑在 Python `find_project` 中缺失；应在 tool 层产出 `switchDecision`（对齐 `SwitchDecision` 枚举）再由 engine 映射 hint/badge（语义应对齐 Java `populateV11Fields`，非仅 raw confidence 阈值）。
+3. **缺回归测**：`test_api_contract.py` mock 仍用 `code`/`name`，未断言 v1.1 三字段非空。
+
+**小项（非阻塞，建议顺手）**
+
+- `QaAgentClient.java` 重复 `import java.util.List/Map`、未使用的 `Duration`；`isHealthy()` 仍未用 timeout。
+- Coder 未追加 **0c15186** 的 Coder block（仅 commit message）。
+- §1.4 125 Co-test、§1.2 I/J、`archive_fs` materialVersionId 仍待后续。
+
+**修序建议**：`find_project.py` 对齐 Java 输出契约 + 切换规则 → engine 改读 tool 产出 → 补单测 → 再 `待审`。
 
 ----- agent-block end -----
 
