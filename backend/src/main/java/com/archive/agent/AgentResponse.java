@@ -15,7 +15,9 @@ public class AgentResponse {
     private String confidenceBadge;
     /** v1.1 (plan-source-display): Agent 工具调用命中的结构化来源列表. */
     private List<Source> agentSources;
-    
+    /** v1.2: 是否降级 (GLM 不可用时) */
+    private Boolean degraded;
+
     public AgentResponse() {}
     
     public String getAnswer() { return answer; }
@@ -32,4 +34,7 @@ public class AgentResponse {
     public void setConfidenceBadge(String confidenceBadge) { this.confidenceBadge = confidenceBadge; }
     public List<Source> getAgentSources() { return agentSources; }
     public void setAgentSources(List<Source> agentSources) { this.agentSources = agentSources; }
+
+    public Boolean getDegraded() { return degraded; }
+    public void setDegraded(Boolean degraded) { this.degraded = degraded; }
 }

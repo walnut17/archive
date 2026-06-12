@@ -54,6 +54,8 @@ public class QaResponse {
 
     /** v1.1 (plan-source-display): Agent 工具调用命中的结构化来源列表. */
     private List<Source> agentSources;
+    /** v1.2: 是否降级 (GLM 不可用时返 true) */
+    private Boolean degraded;
 
     /**
      * 从 AgentResponse 转换为 QaResponse(兼容老前端).
@@ -66,6 +68,7 @@ public class QaResponse {
                 .reranked(false)
                 .agentMode(true)
                 .steps(ar.getSteps())
+                .degraded(ar.getDegraded() != null && ar.getDegraded())
                 .toolCalls(ar.getSteps() != null ? ar.getSteps().size() : 0)
                 .projectSwitchHint(ar.getProjectSwitchHint())
                 .confidenceBadge(ar.getConfidenceBadge())
