@@ -1,160 +1,57 @@
-# Bug 跟踪轮次 — Round TEMPLATE
+# DEBUG Case 模板 — `round-YYYY-MM-DD-<简述>.md`
 
-> **复制本文件**为 `round-YYYY-MM-DD-<简述>.md`，删去本说明段，填元信息。
->
-> **仅在有 bug 时使用**：交互式 deploy 发现，或 Agent 自主跑用例发现。**测过无缺陷不要开 round。**
->
-> **一轮一文件**；文件内走齐四段 agent 工作流，**全部 bug CLOSED 或已升级 `complexity.md`**，轮次才算结束。
+> **Case** = 本文件。路由在 [`TASKS.md`](../TASKS.md)（类型 DEBUG）。  
+> **留痕格式**：[`CASE-FORMAT.md`](../CASE-FORMAT.md) — 所有 agent 在 **§ Agent Blocks** 追加块。
 
----
-
-## 0. 轮次元信息
-
-| 字段 | 内容 |
-|---|---|
-| **轮次** | vX.X / YYYYMMDD 简述 |
-| **环境** | 例 `182.168.1.125` / 本地 / staging |
-| **代码基线** | commit / tag |
-| **轮次状态** | `IN_PROGRESS` / `CLOSED` |
-| **操作时间线** | 见 `docs/operations/deployment_log.md`（如有） |
-
-### 轮次完成条件（全部满足才改 `CLOSED`）
-
-- [ ] §1 每条 bug 已记录且有 ID
-- [ ] §2 每条可分析项已有根因 + 修改建议（或已标 `ESCALATED`）
-- [ ] §3 每条拟修项已有 commit / 改动说明（或 `ESCALATED` / `WONTFIX`）
-- [ ] §4 每条已修项已评审通过（或 `ESCALATED`）
-- [ ] §5 结论已写；升级项已写入 [`complexity.md`](complexity.md)
+复制本文件 → 删本说明段 → 填元信息 → 在 TASKS 加一行。
 
 ---
 
-## 1. 测试记录（Recorder Agent）
-
-> **职责**：执行/汇总测试，记现象、复现步骤、严重度。**不改代码、不写修复方案。**
-
-### 1.1 Agent 留痕
+## 0. Case 元信息
 
 | 字段 | 内容 |
 |---|---|
-| **Agent** | *填写你的名字* |
-| **时间** | YYYY-MM-DD HH:mm |
-| **摘要** | 本轮从哪发现 bug（DEPLOY / AUTO）、涉及哪些模块 |
-
-### 1.2 测试范围（可选，便于追溯）
-
-| # | 项 | 结果 | 备注 |
-|---|---|---|---|
-| 1 | | PASS / FAIL | FAIL 须在 §1.3 有对应 bug 行 |
-
-### 1.3 Bug 清单
-
-| ID | 来源 | 严重度 | 模块 | 现象 | 复现步骤 | 状态 |
-|---|---|---|---|---|---|---|
-| **T-MMDD-01** | `DEPLOY` / `AUTO` | P? | | | | `RECORDED` |
-
-**来源**：`DEPLOY` = 交互式部署/联调发现；`AUTO` = Agent 自主跑用例/脚本发现。
-
-**状态（§1）**：`RECORDED` → 交给 §2 分析
+| **Case ID** | `CASE-D-MMDD` 或自定义 |
+| **类型** | `DEBUG` |
+| **Case 状态** | `OPEN` / `CLOSED` |
+| **文件路径** | `test-to-settle/round-YYYY-MM-DD-*.md` |
+| **环境 / 基线** | |
+| **关联** | `deployment_log` · complexity |
 
 ---
 
-## 2. 分析与修改建议（Analyst Agent）
+## 1. 背景与 Bug 清单（Recorder / 初稿）
 
-> **职责**：根因分析、改哪几个文件、建议怎么改。**默认不改代码**；若判断为大改，标 `ESCALATED` 并写 `complexity.md`。
-
-### 2.1 Agent 留痕
-
-| 字段 | 内容 |
-|---|---|
-| **Agent** | |
-| **时间** | |
-| **摘要** | 分析了 N 条，建议修 M 条，升级 K 条 |
-
-### 2.2 逐条分析
-
-#### T-MMDD-01 — <标题>
-
-| 字段 | 内容 |
-|---|---|
-| **根因** | |
-| **建议修改** | 文件 + 改法（尽量可执行） |
-| **建议级别** | `SMALL_FIX` / `ESCALATED` |
-| **状态** | `ANALYZED` / `ESCALATED` |
-
-*若 `ESCALATED`：在 [`complexity.md`](complexity.md) 追加 **C-MMDD-NN**，此处链过去。*
-
----
-
-## 3. 代码修改（Fix Agent）
-
-> **职责**：按 §2 建议做小修；commit；在表内写清改动与 commit。**不搞不定还硬改** — 升级 complexity。
-
-### 3.1 Agent 留痕
-
-| 字段 | 内容 |
-|---|---|
-| **Agent** | |
-| **时间** | |
-| **摘要** | 修了 N 条，commit … |
-
-### 3.2 修改记录
-
-| Bug ID | 改动摘要 | 涉及文件 | Commit | 状态 |
+| ID | 来源 | 严重度 | 现象 | 状态 |
 |---|---|---|---|---|
-| T-MMDD-01 | | | `abc1234` | `FIXED` / `SKIPPED` / `ESCALATED` |
+| **T-MMDD-01** | DEPLOY / AUTO | P? | | `OPEN` |
 
-**状态（§3）**：`FIXED` → 交给 §4 评审；审查员打回 → `REOPEN`
-
-### 3.3 审查反馈回复（Fix Agent，审查员 `REQUEST_CHANGES` / `REOPEN` 后填写）
-
-| 轮次 | 审查员意见摘要 | Fix 回复 / 措施 | Commit | 时间 |
-|---|---|---|---|---|
-| R1 | | | | |
+> 大改不在这里硬修 → complexity；case 内子项状态由 Agent Blocks 与上表同步。
 
 ---
 
-## 4. 修改评审（代码审查员）
+## 2. Agent Blocks
 
-> **职责**：对 §3 的 diff 做代码评审。**入口**：[`CODE-REVIEWER.md`](../CODE-REVIEWER.md) · [`STATUS.md`](STATUS.md) 待审查队列。
+> **按时间顺序追加**。格式见 [`CASE-FORMAT.md`](../CASE-FORMAT.md)。
 
-### 4.1 Agent 留痕
+<!-- 示例
+----- agent-block begin -----
+role: Recorder
+agent: ...
+time: 2026-06-11 10:00
+ref: T-MMDD-01
+source: DEPLOY
+summary: ...
 
-| 字段 | 内容 |
-|---|---|
-| **Agent** | |
-| **时间** | |
-| **摘要** | 评审 N 条，通过 M 条，打回 K 条 |
-
-### 4.2 评审记录
-
-| Bug ID | 结论 | 意见 | 状态 |
-|---|---|---|---|
-| T-MMDD-01 | `APPROVED` / `REQUEST_CHANGES` / `REOPEN` | | `CLOSED` / `REOPEN` |
-
-**状态（§4）**：`CLOSED` = 本条 bug 结束，同步 §1.3 + TASKS；`REOPEN` / `REQUEST_CHANGES` = Fix 填 §3.3 后重审
-
-### 4.3 审查对线（可选，意见较多时用）
-
-#### Round 1 — 审查员
-
-- **时间**：
-- **意见**：
-
-#### Round 1 — Fix 回复
-
-见 §3.3 表 R1 行。
+----- agent-block end -----
+-->
 
 ---
 
-## 5. 轮次结论
+## 3. 关单（Closer 块 + 移 done/）
 
-| 项 | 结论 |
-|---|---|
-| **可继续功能验收？** | 🟢 / 🟡 / 🔴 |
-| **可正式上线？** | 🟢 / 🟡 / 🔴 |
-| **未闭合 bug** | 无 / 列表（含 complexity ID） |
-| **下轮回归** | checklist |
+- [ ] 清单项均已 CLOSED / ESCALATED / WONTFIX
+- [ ] TASKS 对应行已 **删除**
+- [ ] `git mv` → [`done/`](done/README.md)
 
----
-
-*模板版本：2026-06-11*
+*模板 · 2026-06-11*

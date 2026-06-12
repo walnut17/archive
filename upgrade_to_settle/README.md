@@ -1,7 +1,6 @@
 # 功能升级计划 — `upgrade_to_settle/`
 
-> **Coder** → [`TASKS.md`](../TASKS.md) **🎯 UPGRADE 路由** 占坑 → 本目录 `plan-*.md` §5 实现。  
-> **代码审查员** → [`CODE-REVIEWER.md`](../CODE-REVIEWER.md) · [`STATUS.md`](STATUS.md) 待审查队列 → plan **§6**。
+> **Case** = 本目录 `plan-*.md`（1 文件 = 1 case）。**Coder / 审查员入口**：[`TASKS.md`](../TASKS.md) → [`CASE-FORMAT.md`](../CASE-FORMAT.md)。
 >
 > **来源**：① 产品/架构主动立项；② **`complexity.md` 分析完成后** 升格（出站后 complexity **删行**，与 test round **无关**）。
 >

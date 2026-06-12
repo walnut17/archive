@@ -255,6 +255,10 @@ public interface ArchiveFsAction {
 | GrepArchiveAction | (当前) | substring grep | `DONE` |
 | ReadTextArchiveAction | (当前) | 截断 read | `DONE` |
 | ArchiveFsTool | (当前) | AgentTool 实现 | `DONE` |
+| ArchiveMaterialPathResolver | (当前) | materialVersionId → 存储路径 | `DONE` |
+| ArchivePathGuardTest | (当前) | 6 测例：路径越界/双 root/非法 zone | `DONE` |
+| ArchiveFsToolTest | (当前) | 6 测例：list/grep/read/越界/未知 action | `DONE` |
+| AgentSystemPrompt 工具数 7→8 | (当前) | 评审 R1-4 | `DONE` |
 | AgentSystemPrompt 工具 7→8 | (当前) | archive_fs 说明 | `DONE` |
 
 ---
@@ -273,12 +277,12 @@ public interface ArchiveFsAction {
 
 ### 6.1 意见清单
 
-| # | 严重度 | 意见 | 依据/位置 |
-|---|---|---|---|
-| R1-1 | **P0** | `ArchiveMaterialPathResolver.java` 未实现 | plan §4.1 列了但 commit `2ac9226` 没建；导致 `materialVersionId` 走不通，LLM 只能用 `relativePath`（违反 §4.2 推荐） |
-| R1-2 | **P0** | `ArchivePathGuardTest.java` 未实现 | plan §4.1 列了，缺单测覆盖 `..` 越界、双 root |
-| R1-3 | **P0** | `ArchiveFsToolTest.java` 未实现 | plan §4.1 列了，缺 list/grep/read 集成测 |
-| R1-4 | **P1** | `AgentSystemPrompt.java` "7 个工具"应为"8 个" | commit `2ac9226` 加了 archive_fs（编号 7），但头部写"7 个"——数字与列表不一致，会误导 LLM 期望 |
+| # | 严重度 | 意见 | 依据/位置 | 修复 |
+|---|---|---|---|---|---|
+| R1-1 | **P0** | `ArchiveMaterialPathResolver.java` 未实现 | plan §4.1 列了但 commit `2ac9226` 没建；导致 `materialVersionId` 走不通，LLM 只能用 `relativePath`（违反 §4.2 推荐） | ✅ 已实现 |
+| R1-2 | **P0** | `ArchivePathGuardTest.java` 未实现 | plan §4.1 列了，缺单测覆盖 `..` 越界、双 root | ✅ 已实现 |
+| R1-3 | **P0** | `ArchiveFsToolTest.java` 未实现 | plan §4.1 列了，缺 list/grep/read 集成测 | ✅ 已实现 |
+| R1-4 | **P1** | `AgentSystemPrompt.java` "7 个工具"应为"8 个" | commit `2ac9226` 加了 archive_fs（编号 7），但头部写"7 个"——数字与列表不一致，会误导 LLM 期望 | ✅ 已修正 |
 
 ### 6.2 修复要求
 

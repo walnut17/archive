@@ -8,7 +8,7 @@
 > **基线 commit**: `0c6325f` (v1.0 + v1.1 §5.6 评审修)
 > **生产服务器**: 182.168.1.125 (单机, Windows + Caddy + Spring Boot)
 >
-> 🚨 **接手 Agent 必读**: 认角色 → **Coder**：[§1.0](#10-找任务接-agent-第一站) + [`TASKS.md`](TASKS.md) · **代码审查员**：[`CODE-REVIEWER.md`](CODE-REVIEWER.md) + 两目录 `STATUS.md`
+> 🚨 **接手 Agent 必读**：**Coder** 与 **代码审查员** 共用 [`TASKS.md`](TASKS.md) → **Case 文件** → [`CASE-FORMAT.md`](CASE-FORMAT.md) 写块。
 
 ---
 
@@ -17,7 +17,7 @@
 - [§0. 项目是什么](#-0-项目是什么)
 - [§0.4 快速寻址（30 秒）](#-04-快速寻址30-秒)
 - [§1. 角色导航 (核心)](#-1-角色导航-核心)
-- [§1.0 找任务（接 Agent 第一站）](#10-找任务接-agent-第一站)
+- [§1.0 找任务（TASKS → Case）](#10-找任务tasks--case)
 - [§1.11 代码审查员](#111-代码审查员)
 - [§2. 文档与文件夹导航](#-2-文档与文件夹导航)
 - [§3. 项目背景与版本路线](#-3-项目背景与版本路线)
@@ -113,28 +113,22 @@ projects-online/
 
 > **接 agent 第一件事**：认角色 → 看 **[§1.0 找任务](#10-找任务接-agent-第一站)** → 打开 [`TASKS.md`](TASKS.md) **🎯 任务路由**（coder 类工作）或对应 round / `test_task`（记录 / 测试类）。
 
-### 1.0 找任务（接 Agent 第一站）
+### 1.0 找任务（TASKS → Case）
 
-> **[`TASKS.md`](TASKS.md) = 路由表**，只存 ID + 类型 + 详情路径 + 占用状态；**任务全文**在 `test-to-settle/`（DEBUG）或 `upgrade_to_settle/`（UPGRADE）。
+> **Case** = 一份文件：`test-to-settle/round-*.md`（DEBUG）或 `upgrade_to_settle/plan-*.md`（UPGRADE）。  
+> **Coder 与代码审查员入口都是 [`TASKS.md`](TASKS.md)** — 看 **状态** 列找活，打开 **Case 路径**，按 [`CASE-FORMAT.md`](CASE-FORMAT.md) 追加块。
 
-| 你是谁 | 第一步：找任务 | 第二步：读详情 | 第三步：干活 |
-|---|---|---|---|
-| **程序员 / Fix Agent**（写代码） | [`TASKS.md`](TASKS.md) **🎯 任务路由** — 挑 `未开发` 的 **DEBUG** 或 **UPGRADE** 行 | 按「详情路径」打开 `test-to-settle/round-*.md` 或 `upgrade_to_settle/plan-*.md` | DEBUG → round **§3** + commit；UPGRADE → plan **§5** + commit |
-| **测试 Agent** | TASKS **AT-*** 节（有案例时） | [`test_task/<案例>.md`](test_task/README.md) | PASS → 案例 §3；FAIL → `test_bug-*.md` |
-| **Recorder Agent** | 当前 [`round-*.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) §1 待记项 | round-TEMPLATE / 当前 round | **只记 bug**；需 coder 修时同步加 TASKS **DEBUG** 行 |
-| **Analyst Agent** | round §1 里 `RECORDED` 行 | 同上 round **§2** | 根因 + 建议；大改 → [`complexity.md`](test-to-settle/complexity.md)（**不进 TASKS**） |
-| **代码审查员** | [`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) + [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md) | 选「待审」→ round **§4** / plan **§6** | 审 diff、对线、关单、移 **done/** |
-| **架构师 / PM** | [`complexity.md`](test-to-settle/complexity.md) `PENDING` | 分析 → 更 docs → plan → TASKS UPGRADE → **删 complexity 行** |
-| **Co-test Guide / Operator** | 联调步骤表 | [`deployment_log.md`](docs/operations/deployment_log.md) + round §1 | 操作记 log；bug 记 round |
-| **Review / Subject Agent** | [`docs/reviews/`](docs/reviews/README.md) OPEN 的 `review-*.md` | 对应 review 文件 | 对线留痕（非 TASKS 路由） |
-| **查历史 Plan I RI** | TASKS **📜 历史占表**（勿占） | [`ARCH-DECOMPOSITION.md`](docs/requirements/ARCH-DECOMPOSITION.md) | 仅供追溯 |
+| 你是谁 | TASKS 找什么状态 | Case 里写什么块 |
+|---|---|---|
+| **Coder（程序员 / Fix）** | `未开发` · `开发中` | **Coder**（完工 → TASKS 改 **`待审`**） |
+| **代码审查员** | `待审` · `审阅中` | **Reviewer**（全过 → **Closer** → `done/` → **删 TASKS 行**） |
+| **Recorder / Analyst** | case 已存在、无单独 TASKS 行时 | 在 case 内 **Recorder** / **Analyst** 块 |
+| **测试 Agent** | TASKS **AT-***（若有） | `test_task/`（非 case 流程） |
+| **架构师 / PM** | complexity `PENDING` | docs + plan → 新 case + TASKS 行 |
 
 ```text
-coder 开工：TASKS 占行 → 读 test-to-settle 或 upgrade_to_settle 详情 → 写代码 → TASKS 标已完成
-大改：complexity 加一行 → docs/plan/TASKS UPGRADE → 删 complexity 行
+TASKS 占行 → Case 文件 Agent Block → 待审 → Review → CLOSED → done/ → 删 TASKS 行
 ```
-
-**当前活跃路由**（详见 TASKS）：T-0611-08/09/18/20（DEBUG）· UP-0611-01（UPGRADE）· 升级项见 complexity C-01～11
 
 ---
 
@@ -391,23 +385,15 @@ Review Agent Round 2：CONTINUE 续提要求 或 CLOSED 宣布评审结束
 
 ### 1.11 代码审查员
 
-> **完整 SOP**：[`CODE-REVIEWER.md`](CODE-REVIEWER.md)（根目录，与 TASKS 同级）。  
-> **与 `docs/reviews/` 的 Review Agent 不同**：本角色只审 **test-to-settle** DEBUG 修复与 **upgrade_to_settle** UPGRADE 实现。
+> **入口**：[`TASKS.md`](TASKS.md) 状态 **`待审` / `审阅中`**（与 Coder 同表）。  
+> **SOP**：[`CODE-REVIEWER.md`](CODE-REVIEWER.md) · **块格式**：[`CASE-FORMAT.md`](CASE-FORMAT.md)
 
-**接手流程**：
+1. TASKS 占 **`待审`** → **`审阅中`**
+2. 打开 Case 路径 → 读 **Coder** 块 + diff → 追加 **Reviewer** 块
+3. 打回：TASKS → **`开发中`**
+4. 整 case 通过：**Closer** 块 → `done/` → **删除 TASKS 行**
 
-1. 打开 [`test-to-settle/STATUS.md`](test-to-settle/STATUS.md)、[`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md) → **「待代码审查」**
-2. 选 `审查状态 = 待审` 的任务（可选改 `审阅中` + 填审查员名）
-3. 读 `round-*.md` **§3～§4** 或 `plan-*.md` **§5～§6**，对照 `git diff`
-4. 写审查意见；程序员在 **§3.3 / §5.2** 回复
-5. 认可后：`APPROVED` → bug/plan **CLOSED** → 移 **`done/`** → 更新索引 + TASKS
-
-| 类型 | 审哪里 | 程序员回复 | 归档 |
-|---|---|---|---|
-| DEBUG | round §4 | round §3.3 | `test-to-settle/done/` |
-| UPGRADE | plan §6 | plan §5.2 | `upgrade_to_settle/done/` |
-
-**你不能**：未读 diff 通过；自己改业务代码；归档后留活跃索引行。
+**你不能**：未读 diff 通过；自己改业务代码；CLOSED 后仍留 TASKS 行。
 
 ---
 
@@ -421,8 +407,9 @@ Review Agent Round 2：CONTINUE 续提要求 或 CLOSED 宣布评审结束
 | 文件 | 为何留根 | 链接 |
 |---|---|---|
 | **`README.md`** | 项目入口，角色导航 | 本文 |
-| **`TASKS.md`** | Coder **任务路由 + 占用** | [TASKS.md](TASKS.md) |
-| **`CODE-REVIEWER.md`** | **代码审查员**接手 SOP | [CODE-REVIEWER.md](CODE-REVIEWER.md) |
+| **`TASKS.md`** | **Coder + 审查员唯一入口**（Case 路由） | [TASKS.md](TASKS.md) |
+| **`CASE-FORMAT.md`** | Case 内 Agent Block 格式 | [CASE-FORMAT.md](CASE-FORMAT.md) |
+| **`CODE-REVIEWER.md`** | 审查员 SOP | [CODE-REVIEWER.md](CODE-REVIEWER.md) |
 | **`MULTI-AGENT-REPO-ARCHITECTURE.md`** | 多 Agent 协作框架（可套用） | [协作架构](MULTI-AGENT-REPO-ARCHITECTURE.md) |
 
 其它 markdown **不应**出现在根目录（历史文件已迁入 `docs/` / `test-to-settle/`）。
@@ -617,45 +604,24 @@ mvn compile -DskipTests -B -o   # 期望 BUILD SUCCESS
 
 **编译挂** → `docs/reviews/LESSONS-LEARNED.md`
 
-### 5.2 Step 1: 在 TASKS 找任务 (1 分钟)
+### 5.2 Step 1: TASKS 找 Case (1 分钟)
 
-打开 [`TASKS.md`](TASKS.md) **🎯 任务路由**，挑一行：
+打开 [`TASKS.md`](TASKS.md) → 选 **`未开发` / `开发中`** 行 → 记下 **Case 路径**。
 
-| 类型 | 找什么 | 详情在哪 |
-|---|---|---|
-| **DEBUG** | `未开发` 或 `VERIFY` 的 T-* 行 | `test-to-settle/round-*.md`（路径在表格里） |
-| **UPGRADE** | `未开发` 的 UP-* 行 | `upgrade_to_settle/plan-*.md` |
+### 5.3 Step 2: 占坑 (10 秒)
 
-**不要占** TASKS **📜 历史占表**里的 Plan I / MOD 行。
+1. 改该行：`状态` → **`开发中`**，`最后 Agent` / `最后更新` 填好  
+2. push TASKS.md
 
-**测试 Agent** → TASKS **AT-*** 节，见 [§9](#-9-自动化测试任务-test_task)。
+### 5.4 Step 3: 写 Case + 代码
 
-### 5.3 Step 2: 占用 (10 秒)
+1. 打开 Case 文件 → 追加 **Coder** 块（[`CASE-FORMAT.md`](CASE-FORMAT.md)）  
+2. commit 代码 + case + TASKS  
+3. 本 case 项完工 → TASKS **`待审`**
 
-1. 改路由表该行：`未开发` → `占用-<名字> (<时间>)`
-2. **10 秒内** push：
-   ```bash
-   git add TASKS.md
-   git commit -m "chore(tasks): claim T-0611-XX by <名字>"
-   git push origin main
-   ```
-3. **push 成功 = 占用成功**
+### 5.5 Step 4: 审查与关单（审查员）
 
-### 5.4 Step 3: 读详情 + 干活 (1–3 小时)
-
-| 类型 | 读 | 写 |
-|---|---|---|
-| **DEBUG** | round 对应 §（现象/根因/建议） | round **§3** + 代码 + `fix(...,T-*):` |
-| **UPGRADE** | plan **§0～§4** | plan **§5** + 代码 + `feat(...,UP-*):` |
-
-跑验收：`mvn test` / 浏览器 / plan 或 round 里的验收项。
-
-### 5.5 Step 4: 完工 (10 秒)
-
-1. TASKS 路由行 → `已完成 (<名字> / <日期>)`
-2. DEBUG：round bug 行 → `CLOSED`（Reviewer 审过后）
-3. UPGRADE：plan §7 验收通过 → `git mv` 到 `upgrade_to_settle/done/`
-4. commit + push 代码 + TASKS
+见 [`CODE-REVIEWER.md`](CODE-REVIEWER.md)：Reviewer 块 → Closer → `done/` → **删 TASKS 行**
 
 ### 5.6 严禁
 

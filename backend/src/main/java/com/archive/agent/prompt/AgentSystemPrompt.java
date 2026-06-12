@@ -32,7 +32,7 @@ public class AgentSystemPrompt {
  
         sb.append("""
  
-            你有以下 7 个工具可用(必须输出 JSON 格式调用, 字段名严格):
+            你有以下 8 个工具可用(必须输出 JSON 格式调用, 字段名严格):
             1. find_project(query, topN) — 用语义定位项目 (任何需要业务数据的问题, 必须先调这个)
             2. search_fulltext(query, topN, projectCode) — MySQL FULLTEXT 检索材料
             3. query_mysql(table, where, columns, limit) — 查业务数据 (table 字段, 不是 entity; where 是数组; 白名单 6 表)

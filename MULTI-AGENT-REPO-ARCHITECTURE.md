@@ -77,25 +77,17 @@ handoff/        → 怎么交（版本交付指南）
 
 ---
 
-## 4. 任务层 — `TASKS.md`
+## 4. 任务层 — `TASKS.md` + **Case**
 
-**`TASKS.md` = 路由表 + 占用表**，不是任务详情。新 agent **先占本表一行**，再按「详情路径」打开 `test-to-settle/` 或 `upgrade_to_settle/` 读全文开工。
+**`TASKS.md` = Coder 与代码审查员唯一入口**。一行 = 一个 **Case**（一份 `round-*.md` 或 `plan-*.md`）。
 
-| 类型 | ID 前缀 | 详情位置 | 本表何时挂行 |
-|---|---|---|---|
-| **DEBUG**（修 bug） | **T-*** | `test-to-settle/round-*.md` 或 `test_bug-*.md` | 需 coder 修 / VERIFY |
-| **UPGRADE**（新能力） | **UP-*** | `upgrade_to_settle/plan-*.md` | plan 定稿、待 Implement |
-| **自动化测试** | **AT-*** | `test_task/<案例>.md` | 有真实 AT 案例 |
-| *complexity 中转* | **C-*** | `test-to-settle/complexity.md` | **不挂行**，直到升格 UPGRADE |
+| 状态 | Coder | Reviewer |
+|---|---|---|
+| `未开发` / `开发中` | ✅ | — |
+| `待审` / `审阅中` | — | ✅ |
+| CLOSED | — | 删行；case 在 `done/` |
 
-```text
-TASKS.md（挑 + 占）
-    ├─ DEBUG  → test-to-settle/（小修 round §2～§4）
-    │              大改 → complexity 加一行 → 分析 → docs/plan → TASKS UPGRADE → 删 complexity 行
-    └─ UPGRADE → upgrade_to_settle/plan-*.md → done/
-```
-
-历史 Plan I / MOD 占表见 TASKS **📜 历史占表**，新工作只用 **🎯 任务路由**。
+Case 内留痕：[`CASE-FORMAT.md`](CASE-FORMAT.md) **Agent Block**。
 
 ### 4.1 占用 SOP（通用）
 
@@ -180,23 +172,13 @@ TASKS.md（挑 + 占）
 
 ---
 
-## 6.6 代码审查员 — `CODE-REVIEWER.md` + 两目录 `STATUS.md`
-
-**与 §7 `docs/reviews/` 独立**；统一审 DEBUG 修复与 UPGRADE 实现。
+## 6.6 代码审查员 — 与 Coder 共用 `TASKS.md`
 
 ```text
-接手 → test-to-settle/STATUS.md + upgrade_to_settle/STATUS.md（待审查）
-    → round §4 / plan §6 写意见
-    → Fix/Implement §3.3 / §5.2 回复
-    → APPROVED → CLOSED → git mv done/ → 更新索引 + TASKS
+TASKS（待审）→ Case 文件 Reviewer 块 → 全过 → Closer → done/ → 删 TASKS 行
 ```
 
-| 目录 | 索引 | 归档 |
-|---|---|---|
-| `test-to-settle/` | [`STATUS.md`](test-to-settle/STATUS.md) | [`test-to-settle/done/`](test-to-settle/done/README.md) |
-| `upgrade_to_settle/` | [`STATUS.md`](upgrade_to_settle/STATUS.md) | [`upgrade_to_settle/done/`](upgrade_to_settle/done/README.md) |
-
-详见 [`CODE-REVIEWER.md`](CODE-REVIEWER.md)。
+详见 [`CODE-REVIEWER.md`](CODE-REVIEWER.md) · [`CASE-FORMAT.md`](CASE-FORMAT.md)。
 
 ---
 

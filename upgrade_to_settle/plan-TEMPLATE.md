@@ -1,200 +1,60 @@
-# 功能升级 Plan — TEMPLATE
+# UPGRADE Case 模板 — `plan-YYYY-MM-DD-<简述>.md`
 
-> **复制本文件**为 `plan-YYYY-MM-DD-<简述>.md`，删去本说明段。
->
-> **命名**：文件名必须含日期 `YYYY-MM-DD`。
->
-> **完工**：§7 全部勾选且 `CLOSED` 后 → `git mv` 至 [`done/`](done/)。
+> **Case** = 本文件。路由在 [`TASKS.md`](../TASKS.md)（类型 UPGRADE，路由 ID = Plan ID）。  
+> **留痕格式**：[`CASE-FORMAT.md`](../CASE-FORMAT.md) — 所有 agent 在 **§ Agent Blocks** 追加块。
 
 ---
 
-## 0. Plan 元信息
+## 0. Case 元信息
 
 | 字段 | 内容 |
 |---|---|
-| **Plan ID** | `UP-MMDD-NN` |
+| **Case ID / Plan ID** | `UP-MMDD-NN` |
+| **类型** | `UPGRADE` |
+| **Case 状态** | `DRAFT` / `OPEN` / `CLOSED` |
 | **标题** | |
-| **状态** | `DRAFT` / `IN_PROGRESS` / `VERIFY` / `CLOSED` |
-| **优先级** | P0 / P1 / P2 |
-| **目标版本** | v1.2 / hotfix |
-| **代码基线** | commit / tag |
-| **负责人（PM）** | |
-| **架构师** | |
-| **需求追溯** | 见 §1 |
-| **架构追溯** | 见 §2 |
-
-### 完成条件（全部满足才 `CLOSED` + 移 done/）
-
-- [ ] §4 开发项全部实现或明确 `WONTFIX`
-- [ ] §5 Implement 留痕 + commit 列表完整
-- [ ] §6 Reviewer 通过
-- [ ] §7 验收（含联调 / 单测）通过
-- [ ] 需求 / 架构锚点文档已同步（或注明「无正文变更」）
+| **需求 / 架构锚点** | `docs/requirements/` · `docs/architecture/` 章节 |
 
 ---
 
-## 1. 需求追溯（Analyst）
+## 1. 范围与验收（PM / 架构定稿）
 
-> **开 plan 时定稿**。每条必须链到 `docs/requirements/` 具体章节。
-
-| 字段 | 内容 |
-|---|---|
-| **Agent** | |
-| **时间** | |
-| **摘要** | |
-
-### 1.1 业务背景
-
-（用户 / 联测为什么要做）
-
-### 1.2 需求锚点
-
-| 文档 | 章节 | 要点 |
-|---|---|---|
-| [`REQUIREMENTS.md`](../docs/requirements/REQUIREMENTS.md) | §x.x | |
-| [`AGENT-REQUIREMENTS.md`](../docs/requirements/AGENT-REQUIREMENTS.md) | §x.x | |
-| [`ARCH-DECOMPOSITION.md`](../docs/requirements/ARCH-DECOMPOSITION.md) | RI-xx | |
-
-### 1.3 验收标准（产品）
-
-- [ ] …
+- **做**：
+- **不做**：
+- **验收**：
 
 ---
 
-## 2. 架构追溯（Architect）
+## 2. 开发说明（架构师，Implement 只读）
 
-> **开 plan 时定稿**。
-
-| 字段 | 内容 |
+| 路径 | 说明 |
 |---|---|
-| **Agent** | |
-| **时间** | |
-| **摘要** | |
-
-### 2.1 架构锚点
-
-| 文档 | 章节 | 设计决策 |
-|---|---|---|
-| [`02-backend-layer-architecture.md`](../docs/architecture/02-backend-layer-architecture.md) | | |
-| 其它 | | |
-
-### 2.2 与现有系统关系
-
-（改哪些包、是否破坏 Agent 双路径、配置项）
+| | |
 
 ---
 
-## 3. PM 范围与决策
+## 3. Agent Blocks
 
-| 字段 | 内容 |
-|---|---|
-| **Agent** | |
-| **时间** | |
-| **摘要** | |
+> **按时间顺序追加**。Coder = 实现；Reviewer = 审查。
 
-| 项 | 决策 |
-|---|---|
-| **做** | |
-| **不做** | |
-| **风险** | |
-| **估时** | BE / FE / 测试 |
+<!-- 示例
+----- agent-block begin -----
+role: Coder
+agent: ...
+time: ...
+ref: UP-MMDD-NN
+commits: abc1234
+summary: ...
 
----
-
-## 4. 开发说明（Implementer 执行清单）
-
-> **架构师写细**：文件、类、接口、配置、测试、禁止事项。
-
-### 4.1 改动文件清单
-
-| 类型 | 路径 | 说明 |
-|---|---|---|
-| 新增 | | |
-| 修改 | | |
-
-### 4.2 实现要点
-
-（分步骤，可勾选）
-
-- [ ] …
-
-### 4.3 测试
-
-- [ ] 单测：…
-- [ ] 集成：…
-- [ ] 联测步骤：…
+----- agent-block end -----
+-->
 
 ---
 
-## 5. 实现留痕（Implement Agent）
+## 4. 关单
 
-| 字段 | 内容 |
-|---|---|
-| **Agent** | |
-| **时间** | |
-| **摘要** | |
+- [ ] Reviewer APPROVED + Closer 块
+- [ ] TASKS 行 **删除**
+- [ ] `git mv` → [`done/`](done/README.md)
 
-| 项 | Commit | 说明 | 状态 |
-|---|---|---|---|
-| | | | `PENDING` / `FIXED` |
-
-### 5.2 审查反馈回复（Implement Agent，审查员 `REQUEST_CHANGES` 后填写）
-
-| 轮次 | 审查员意见摘要 | 实现回复 / 措施 | Commit | 时间 |
-|---|---|---|---|---|
-| R1 | | | | |
-
----
-
-## 6. 评审（代码审查员）
-
-> **入口**：[`CODE-REVIEWER.md`](../CODE-REVIEWER.md) · [`STATUS.md`](STATUS.md)
-
-### 6.1 评审结论
-
-| 字段 | 内容 |
-|---|---|
-| **Agent** | |
-| **时间** | |
-| **摘要** | |
-
-| 结论 | 意见 |
-|---|---|
-| `PENDING` / `APPROVED` / `REQUEST_CHANGES` | |
-
-### 6.2 审查对线（可选）
-
-#### Round 1 — 审查员
-
-- **时间**：
-- **意见**：
-
-#### Round 1 — Implement 回复
-
-见 §5.2 表 R1 行。
-
----
-
-## 7. 验收与归档
-
-### 7.1 验收记录
-
-| # | 项 | 结果 | 时间 |
-|---|---|---|---|
-| 1 | | | |
-
-### 7.2 结论
-
-| 项 | 内容 |
-|---|---|
-| **Plan 状态** | |
-| **归档路径** | `upgrade_to_settle/done/plan-….md` |
-
-### 7.3 变更记录
-
-| 日期 | 作者 | 变更 |
-|---|---|---|
-
----
-
-*模板 · 见 [`upgrade_to_settle/README.md`](README.md)*
+*模板 · 2026-06-11*

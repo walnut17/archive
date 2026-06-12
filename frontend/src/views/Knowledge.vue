@@ -54,6 +54,13 @@ const messages = ref<ChatEntry[]>([])
 const loading = ref(false)
 const turnCount = ref(0)
 
+const exampleQuestions = [
+  '新能源那个项目今年盈利怎么样?',
+  'PRJ-2026-001 剩余金额是多少?',
+  '今年否决了哪些项目?',
+  '今天有哪些待办事项?',
+]
+
 function safeSources(src: Source[] | null | undefined): Source[] {
   return src ?? []
 }
@@ -139,15 +146,6 @@ async function onAsk(question: string) {
     </div>
   </div>
 </template>
-
-<script lang="ts">
-const exampleQuestions = [
-  '新能源那个项目今年盈利怎么样?',
-  'PRJ-2026-001 剩余金额是多少?',
-  '今年否决了哪些项目?',
-  '今天有哪些待办事项?',
-]
-</script>
 
 <style scoped>
 .knowledge-chat {

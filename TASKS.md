@@ -1,70 +1,63 @@
-# 任务路由与占用 — `TASKS.md`
+# 任务路由 — `TASKS.md`
 
-> **本文档 = 接手 Agent 的入口路由表**：列出当前有哪些**待开发**工作（**DEBUG 修 bug** + **UPGRADE 新能力**）。新 agent **先占本表一行**，再按「详情路径」打开 [`test-to-settle/`](test-to-settle/README.md) 或 [`upgrade_to_settle/`](upgrade_to_settle/README.md) 读全文开工。
->
-> **详情不在本文件**：两目录存具体任务；本表只存 **ID + 路径 + 占用状态**。  
-> **协作架构**：[`MULTI-AGENT-REPO-ARCHITECTURE.md`](MULTI-AGENT-REPO-ARCHITECTURE.md)
+> **Coder 与代码审查员共用本表** — 唯一入口。占一行 → 打开 **Case 路径** → 在 case 文件里按 [`CASE-FORMAT.md`](CASE-FORMAT.md) 写 **Agent Block**。  
+> **Case** = 一份文件（DEBUG：`test-to-settle/round-*.md` · UPGRADE：`upgrade_to_settle/plan-*.md`）。  
+> **CLOSED 后**：case 移 `done/`，**本表删除该行**（不再路由）。
 
-> **Coder** → 下文 **🎯 任务路由** · **代码审查员** → [`CODE-REVIEWER.md`](CODE-REVIEWER.md) + [`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) / [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)
+> **占用**：改状态 + `最后 Agent` + `最后更新` → 10 秒内 push main。
 
 ---
 
-## 🎯 任务路由（接手 Agent 看这里）
+## 🎯 活跃 Case 路由
 
-### 三种路径
+### 状态（只看这一列找活）
+
+| 状态 | Coder | Reviewer |
+|---|---|---|
+| **`未开发`** | ✅ 占 → `开发中` | — |
+| **`开发中`** | ✅ 继续写代码 | — |
+| **`待审`** | — | ✅ 占 → `审阅中` |
+| **`审阅中`** | 等打回 | ✅ 写 Reviewer 块 |
+| *（删行）* | case 已 CLOSED 归档 | 已完工 |
 
 ```text
-TASKS.md（挑任务、占坑）
-    │
-    ├─ DEBUG ──→ test-to-settle/round-*.md 或 test_bug-*.md
-    │              小修：round §2～§4 当轮闭环
-    │              大改：ESCALATED → complexity.md（暂挂，不进本表）
-    │
-    └─ UPGRADE ─→ upgrade_to_settle/plan-YYYY-MM-DD-*.md
-                   完工 → upgrade_to_settle/done/
-
-complexity.md（大改中转路由，不在 TASKS）
-    → 分析 → 更新 docs + upgrade_to_settle/plan → TASKS UPGRADE
-    → 删 complexity 对应行（全文在 docs/plan，防膨胀）
+TASKS.md
+  ├─ DEBUG case → test-to-settle/round-*.md
+  └─ UPGRADE case → upgrade_to_settle/plan-*.md
+        ↓ Coder 块 → 待审 → Reviewer 块 → Closer → done/ → 删 TASKS 行
 ```
 
-| 类型 | 详情目录 | 本表何时挂行 |
-|---|---|---|
-| **DEBUG** | [`test-to-settle/`](test-to-settle/README.md) | 需 coder 修 bug / VERIFY |
-| **UPGRADE** | [`upgrade_to_settle/`](upgrade_to_settle/README.md) | plan 已定稿、待 Implement |
-| **AT-*** | [`test_task/`](test_task/README.md) | 有真实 AT 案例 |
-| *complexity* | [`test-to-settle/complexity.md`](test-to-settle/complexity.md) | **不**挂行，直到升格 UPGRADE |
+### 路由表
 
-### 活跃路由表（2026-06-11）
+| 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
+|---|---|---|---|---|---|---|
+| **CASE-D-0611** | DEBUG | [`test-to-settle/round-2026-06-11-v1.1-deploy.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) | `审阅中` | 投委会档案项目PM | 2026-06-12 | v1.1 部署回归；多项 FIXED 待/已审 |
+| **UP-0611-01** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) | `开发中` | Sisyphus | 2026-06-11 | archive_fs；Reviewer REQUEST_CHANGES |
+| **UP-0611-02** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-agent-intent-classification.md`](upgrade_to_settle/plan-2026-06-11-agent-intent-classification.md) | `开发中` | Sisyphus | 2026-06-11 | 离题拒答；Reviewer REQUEST_CHANGES |
+| **UP-0611-03** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-deploy-pipeline.md`](upgrade_to_settle/plan-2026-06-11-deploy-pipeline.md) | `待审` | Sisyphus | 2026-06-11 | 部署 SOP；Reviewer APPROVED |
+| **UP-0611-04** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-chat-ui.md`](upgrade_to_settle/plan-2026-06-11-chat-ui.md) | `待审` | Sisyphus | 2026-06-11 | 聊天 UI；Reviewer APPROVED(P2) |
+| **UP-0611-05** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-test-governance.md`](upgrade_to_settle/plan-2026-06-11-test-governance.md) | `开发中` | Sisyphus | 2026-06-11 | 测试治理；Reviewer REQUEST_CHANGES |
 
-> **不在本表** = 已 ESCALATED 见 [`complexity.md`](test-to-settle/complexity.md)；已 VERIFY 待 Reviewer CLOSED 见 round §1.3。
+> **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
+> **不在本表**：complexity 中转 · AT-* 自动化 · 已 CLOSED（见各 `done/`）
 
-| 路由 ID | 类型 | 详情路径 | 状态 | 占用人 | 摘要 |
-|---|---|---|---|---|---|
-| **T-0611-08** | DEBUG | [`test-to-settle/round-2026-06-11-v1.1-deploy.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) §1.3 · `LlmUsage.vue` | `VERIFY` | — | 125 pull 后 AI 用量无双 `/api` |
-| **T-0611-09** | DEBUG | 同上 §1.3 · `LlmUsageService` | `已完成(Sisyphus / 2026-06-11)` | Sisyphus | recent 查询改为 findByUsername |
-| **T-0611-18** | DEBUG | 同上 §1.3 · `LlmUsageController` | `已完成(Sisyphus / 2026-06-11)` | Sisyphus | `hasRole('admin')`→`hasRole('ADMIN')` 大小写修复 |
-| **T-0611-20** | DEBUG | 同上 §1.9 · `FindProjectTool` | `VERIFY` | — | lmz find_project；125 rebuild |
-| **UP-0611-01** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) | `已完成(Sisyphus / 2026-06-11)` | Sisyphus | archive_fs ls/grep/read |
+### Coder SOP
 
-**complexity 中转（不进本表）**：T-0611-15→C-0611-01 · T-0611-19→C-0611-08 · T-0611-05/06/10/11→C-0611-04/09/10/11 · 架构 A-1～A-6→C-0611-02～07
+1. 选 `未开发` 或 `开发中` → 改 **`开发中`** + 填 Agent/时间 → push  
+2. 打开 **Case 路径** → 追加 **Coder** 块（[`CASE-FORMAT.md`](CASE-FORMAT.md)）  
+3. 本项完工 → 状态改 **`待审`** → push  
 
-> 索引：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)
+### Reviewer SOP
 
-### 占用 SOP
+见 [`CODE-REVIEWER.md`](CODE-REVIEWER.md)：占 **`待审`** → **`审阅中`** → Reviewer 块 → 全过则 Closer + `done/` + **删本行**。
 
-1. 选 `未开发` → 改 `占用-<名>` → push TASKS.md  
-2. 打开详情路径读全文  
-3. DEBUG → round/plan §3 Fix；UPGRADE → plan §5 Implement  
-4. 完工 → 本表 `已完成`；UPGRADE plan 移 `upgrade_to_settle/done/`
-
-### 维护：何时加路由行
+### 何时新增一行
 
 | 事件 | 操作 |
 |---|---|
-| 新 bug 要修 | round 记 `T-MMDD-NN` + **TASKS DEBUG 行** |
-| complexity 出 plan + docs 已更 | **upgrade_to_settle/plan-*.md** + **TASKS UPGRADE** + **删 complexity 行** |
-| 大改暂不做 | 只写 complexity，**不加** TASKS 行 |
+| 新 DEBUG case | 新建 `round-*.md` + 本表 **DEBUG** 行 `未开发` |
+| complexity 升格 | 新建 `plan-*.md` + 本表 **UPGRADE** 行 `未开发` |
+| 大改暂不做 | 只写 complexity，**不加行** |
 
 ---
 

@@ -1,6 +1,6 @@
 # Bug 跟踪与修复 — `test-to-settle/`
 
-> **`test-to-settle/` 存 DEBUG 类任务的详情**（现象、根因、改法、评审）。**接手 coder 不要只读这里** — 先到根 [`TASKS.md`](../TASKS.md) **🎯 任务路由** 占 `DEBUG` 行，再按路径打开本目录具体文件。
+> **`test-to-settle/` 存 DEBUG case**（`round-*.md`）。**Coder / 审查员入口**：[`TASKS.md`](../TASKS.md) → Case 路径 → [`CASE-FORMAT.md`](../CASE-FORMAT.md)。
 >
 > **Bug 从哪来**（二选一或兼有，记入 round §1）：
 > 1. **交互式 deploy** — 上环境、点页面、走验收时**发现**的异常
@@ -18,7 +18,7 @@
 test-to-settle/
 ├── README.md                 ← 本文件
 ├── round-TEMPLATE.md         ← 新开 bug 轮次（复制）
-├── round-YYYY-MM-DD-*.md     ← 当轮 bug 主文件（§1～§5）
+├── round-YYYY-MM-DD-*.md     ← DEBUG **case** 文件
 ├── test_bug-TEMPLATE.md      ← 自动化案例 FAIL 入口（复制）
 ├── test_bug-YYYY-MM-DD-*.md  ← FAIL 实例（收入 round §1）
 ├── done/                     ← CLOSED 的 round 归档
@@ -30,12 +30,12 @@ test-to-settle/
 
 | 路径 | 用途 |
 |---|---|
-| **`round-*.md`** | **有 bug 才记** — 四轮次 Agent 主文件 |
-| [`test_bug-TEMPLATE.md`](test_bug-TEMPLATE.md) | 案例 FAIL → 复制为 `test_bug-*.md` |
-| [`complexity.md`](complexity.md) | 大改中转路由（出站删行） |
-| [`STATUS.md`](STATUS.md) | **索引**：coder 队列 + **审查员待审** |
-| [`done/`](done/README.md) | CLOSED 的 `round-*.md` 归档 |
-| [`logs/`](logs/README.md) | `mvn-*.log`（gitignore） |
+| **`round-*.md`** | **DEBUG case**（1 文件 = 1 case） |
+| [`round-TEMPLATE.md`](round-TEMPLATE.md) | 新开 case |
+| [`STATUS.md`](STATUS.md) | 辅索引（**主入口 TASKS**） |
+| [`complexity.md`](complexity.md) | 大改中转（不进 TASKS） |
+| [`test_bug-TEMPLATE.md`](test_bug-TEMPLATE.md) | FAIL 入口 → 收入 case |
+| [`done/`](done/README.md) | CLOSED case 归档 |
 | [`old/`](old/README.md) | 旧版 ACCEPTANCE-GUIDE、M1/V2、VERIFICATION-REPORT |
 
 ---
