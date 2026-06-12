@@ -4,6 +4,6 @@
 
 | Case 文件 | Case 状态 | 摘要 | 最后更新 |
 |---|---|---|---|
-| [`round-2026-06-11-v1.1-deploy.md`](round-2026-06-11-v1.1-deploy.md) | `IN_PROGRESS`（缺 Closer 块）| v1.1 部署回归；T-0611-09/18/20 + 8 项已 CLOSED；T-15/19 ESCALATED → plan | 2026-06-12 |
+| _(无活跃 case — round-0611 已于 2026-06-12 09:45 Closer 归入 `done/`)_ | — | — | — |
 
 **CLOSED** → 移 [`done/`](done/README.md)，并从本表删除。
