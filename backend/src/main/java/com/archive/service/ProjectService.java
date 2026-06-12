@@ -71,7 +71,13 @@ public class ProjectService {
                 .orElseThrow(() -> new NoSuchElementException("项目不存在: id=" + id));
 
         if (!p.getCode().equals(req.getCode())) {
-            throw new IllegalArgumentException("项目编号不可修改");
+            if (!"草稿".equals(p.getStatus())) {
+                throw new IllegalArgumentException("项目编号不可修改");
+            }
+            if (projectRepository.existsByCode(req.getCode())) {
+                throw new IllegalArgumentException("项目编号已存在: " + req.getCode());
+            }
+            p.setCode(req.getCode());
         }
         if (req.getStatus() != null && !VALID_STATUSES.contains(req.getStatus())) {
             throw new IllegalArgumentException("非法状态: " + req.getStatus());

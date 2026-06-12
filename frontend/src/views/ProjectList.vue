@@ -51,7 +51,7 @@ async function onDelete(row: Project) {
 }
 
 function goCreate() {
-  router.push({ name: 'project-form' })
+  router.push({ name: 'project-create-upload' })
 }
 
 function goEdit(row: Project) {

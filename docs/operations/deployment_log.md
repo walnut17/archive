@@ -9,7 +9,8 @@
 
 | 版本 | 日期 | 服务器 | 指挥/执行 | 状态 |
 |---|---|---|---|---|
-| **v1.1 / 0611 续** | 2026-06-11 | `182.168.1.125` | Auto (Guide) + 用户 (Operator) | 🟡 Co-test VERIFY 进行中 |
+| **v1.1 / 0611 续** | 2026-06-11 | `182.168.1.125` | Auto (Guide) + 用户 (Operator) | ✅ VERIFY 已记录（§9）；round-0611 已 CLOSED |
+| **v1.1 / 0612 新轮** | 2026-06-12 | `182.168.1.125` | Auto (Co-test Guide) + 用户 (Operator) | 🟡 Step 2e 新建项目流程 🔴 与 RI-16 不符 |
 
 ---
 
@@ -43,8 +44,13 @@
 | `1ca9099` | Mavis：`v1.1-DEPLOY-GUIDE.md` |
 | `59f25f7` | 阿根廷：首版 `migrate_260611_01.sql`（14 个 I-RI 合并） |
 | `5551b74` | 阿根廷：**完整版** migrate — 含 v2/Plan I 旧表 ALTER + 幂等列检测 |
+| `fca37d1` | docs(tasks)：TASKS 瘦身 + Plan I 历史归档 |
+| `96abc32` | fix(agent)：`AgentEngine.java` 补类闭合 `}`（125 mvn 阻塞 T-0612-01） |
+| `16eec7a` | fix(build)：`ArchiveMaterialPathResolver` + `AuditLogService.truncate`（T-0612-02） |
+| `5408bee` | fix(test)：`ClientErrorControllerTest` MockBean import（T-0612-03） |
 
-用户 125 上首次 pull 到约 `90b8616`；迁移脚本以 **`5551b74` 及之后** 为准。
+用户 125 上首次 pull 到约 `90b8616`；迁移脚本以 **`5551b74` 及之后** 为准。  
+**0612 Co-test 当前基线**：`5408bee`（125 已 pull，`mvn` 成功，后端已重启）。
 
 ---
 
@@ -231,8 +237,9 @@ git pull origin main
 ## 4. 尚未完成（下次继续）
 
 - [x] 确认 `migrate_260611_01.sql` 在 125 执行成功（**112 queries OK**）
-- [ ] 浏览器登录无 500，通知/待办/health 正常
-- [ ] **AI 用量** — 已修 `LlmUsage.vue` 双 `/api` 路径（`/api/api/llm` → `/api/llm`），125 需 `git pull` 后刷新
+- [x] 0612 新轮：125 对齐 `5408bee`，`mvn -DskipTests clean package` **SUCCESS**，后端 jar 已重启
+- [ ] **Step 2 冒烟**（healthcheck、5173 登录、Console 无 500、AI 用量 / 知识库 / 侧栏回归）
+- [ ] 浏览器登录无 500，通知/待办/health 正常（0612 待 Operator 确认）
 - [ ] 跑 `v1.1-DEPLOY-GUIDE.md` **7 大场景** + v1.0 零回归 4 项
 - [ ] 改 `admin` 默认密码、配真实 GLM API key
 - [ ] （可选）正式对外：`npm run build` + Caddy/IIS 托管 `dist`，统一 `:80` 入口
@@ -253,6 +260,10 @@ git pull origin main
 | `http://125/` 无 Vue 页 | Caddy `:80` 仅反代 8080，未托管 dist | 验收用 `:5173`；正式再 build+Caddy |
 | PowerShell 迁移脚本语法错误 | 多行粘成一行 | 用 `source xxx.sql` |
 | `Duplicate column` 跑迁移 | Hibernate `ddl-auto:update` 已加过列 | 完整版脚本应跳过；可忽略 |
+| `mvn compile`：`AgentEngine.java` 文件结尾 | 缺类闭合 `}` | `git pull` ≥ `96abc32` |
+| `mvn compile`：`getMaterial()` 找不到 | `ArchiveMaterialPathResolver` 误用 JPA 关联 | `git pull` ≥ `16eec7a` |
+| `mvn compile`：`truncate` 找不到 | `AuditLogService.logClientError` 缺 helper | 同上 |
+| `mvn testCompile`：`mock.bean.MockBean` 不存在 | 测试 import 包名写错 | `git pull` ≥ `5408bee`；正确包为 `mock.mockito.MockBean` |
 
 ---
 
@@ -312,13 +323,91 @@ A：healthcheck 无 token；浏览器带 token 会走 RBAC，DB 未迁移时在 
 
 ---
 
+## 10. Co-test 联调 — 2026-06-12 新轮（Step 0～1）
+
+| 字段 | 内容 |
+|---|---|
+| **Guide** | Auto（Co-test Guide） |
+| **Operator** | 用户 |
+| **环境** | `182.168.1.125`，`D:\projects-online` |
+| **开场 SOP** | 每轮**先问 125 当前 git 版本**，对齐后再操作 |
+| **目标** | 新轮验收：`main` 拉齐 → 重建 jar → 重启后端 →（下一步）冒烟 + 7 大场景 |
+| **起始基线** | `fca37d1`（与阿根廷 `origin/main` 一致） |
+| **最终基线** | `5408bee`（含 3 次 compile 热修） |
+
+### 步骤记录
+
+| Step | 操作 | 结果 | 时间 |
+|---|---|---|---|
+| 0 | Co-test 开场：确认 125 git 版本 | ✅ Operator 确认与 Guide 一致（`fca37d1`） | 2026-06-12 |
+| 1a | Operator 杀掉旧后端进程 | ✅ 已执行 | 2026-06-12 |
+| 1b | `mvn -DskipTests clean package`（@ `fca37d1`） | ❌ **T-0612-01**：`AgentEngine.java:464` 语法错误「到达文件结尾」— 缺类闭合 `}` | 2026-06-12 ~11:12 |
+| 1c | Guide push `96abc32`；125 `git pull` 后重编 | ❌ **T-0612-02**：12 errors — `ArchiveMaterialPathResolver.getMaterial()` 不存在；`AuditLogService.truncate()` 缺失 | 2026-06-12 ~11:24 |
+| 1d | Guide push `16eec7a`；125 pull 后重编 | ❌ **T-0612-03**：testCompile — `ClientErrorControllerTest` 误 import `mock.bean.MockBean` | 2026-06-12 ~11:31 |
+| 1e | Guide push `5408bee`；125 pull 后重编 | ✅ **`BUILD SUCCESS`**；产物 `backend\target\archive.jar` | 2026-06-12 ~11:33+ |
+| 1f | 重启 `archive.jar` | ✅ Operator 确认后端日志正常（Tomcat / Started ArchiveApplication） | 2026-06-12 |
+| 2c | 知识库问「今天天气怎么样？」 | ✅ **离题拒答 UX 通过**（相对 0611 T-0611-15 改进）：答案「我是投委会档案助手，只回答项目档案相关问题。请问您想查询哪个项目？」；Console **无报错**；思考过程：`💭 无法解析 LLM 输出,直接返回原文` → `🔧 FINAL_ANSWER`（Agent 未走结构化 JSON，fallback 原文即拒答文案，与 `AgentSystemPrompt` 拒绝示例一致） | 2026-06-12 |
+| 2d | 同会话第 2 问「lmz项目下有多少份材料？」 | 🔴 **T-0612-04 OPEN**：UI「问答失败: Request failed with status code 500」；Network `POST /api/qa/turn/{sessionId}` **500**；**前置**：第 1 问已成功（走 `/api/qa/ask`） | 2026-06-12 |
+| 2d+ | Operator：同会话**后续任意再问** | 🔴 **同 T-0612-04**：第 2 问起 `turnCount≥1`，**每条**都走 `POST /api/qa/turn/...` → 全部 500；**非 lmz 独有**，会话内多轮整体不可用 | 2026-06-12 |
+| 2e | 零回归：**新建项目** | 🔴 **T-0612-05 OPEN**（需求/产品）：侧栏「项目管理」→「+ 新建项目」→ **直接进入结构化表单**（编号/名称/类别…）；Operator：**应先上传材料再 AI 预填**，当前业务逻辑错误 | 2026-06-12 |
+
+#### T-0612-05 对照（Guide 读需求 + 代码）
+
+| 项 | 内容 |
+|---|---|
+| **需求** | RI-16 §5.11.4：**上传材料 → LLM 抽取 → 申请表预填 → 用户改 → 提交**（[`ARCH-DECOMPOSITION.md`](../../requirements/ARCH-DECOMPOSITION.md)） |
+| **现状** | `ProjectList.goCreate()` → `/projects/new`，**无** `?materialVersionId=`；`ProjectForm` 默认空表单手工填；AI 预填**仅**在 URL 带 `materialVersionId` 时触发 |
+| **后端** | `POST /api/projects/extract-preview`、`create` 已支持 `materialVersionId`（部分 MOD-06） |
+| **缺口** | **缺「上传优先」入口页/向导**；主路径仍是 v1.0 式手工建项 |
+| **归类** | 非 125 部署环境问题；**需求未闭环**（→ **C-0612-01** · [`plan-2026-06-12-project-create-upload-first`](../../upgrade_to_settle/plan-2026-06-12-project-create-upload-first.md)） |
+
+#### T-0612-04 根因（Guide 对照代码）
+
+| 层 | 实际行为 |
+|---|---|
+| **前端** `Knowledge.vue` | `turnCount > 0` 时 **`POST /api/qa/turn/{sessionId}`** + JSON `{ question }`（见 plan chat-ui §4.2） |
+| **后端** `MultiTurnController` | 仅 **`GET /api/qa/turn/{sessionId}?question=...`**（`@RequestParam`，无 `@PostMapping`） |
+| **结论** | 聊天 UI 多轮接口 **前后端契约不一致** → **第 1 问后本会话内所有后续提问均 500**；与具体问句 / find_project 无关 |
+| **临时绕过** | **Ctrl+F5 刷新** → 新 session，`turnCount=0`，**仅下一条**可走 `/api/qa/ask`；再发第 2 条仍会 500 |
+
+### 编译阻塞摘要（已修，待收入 round §1 若需正式路由）
+
+| ID | 严重度 | 现象 | 修复 commit |
+|---|---|---|---|
+| **T-0612-01** | P0 | `AgentEngine.java` 缺 `}`，`mvn compile` 失败 | `96abc32` |
+| **T-0612-02** | P0 | `ArchiveMaterialPathResolver` 调用不存在的 `getMaterial()`；`AuditLogService` 缺 `truncate` | `16eec7a` |
+| **T-0612-03** | P1 | `ClientErrorControllerTest` MockBean 包名错误（`-DskipTests` 仍 testCompile） | `5408bee` |
+
+### 下一步（未做）
+
+- [ ] Step 2a：`healthcheck.ps1`
+- [ ] Step 2b：确认 / 重启 `npm run dev`（`:5173`）
+- [x] Step 2c（部分）：知识库离题问「今天天气怎么样？」→ ✅ 拒答文案 + 无 Console 报错
+- [ ] Step 2c（续）：2c 后**不刷新**侧栏切换（T-0611-16/17 回归）— **待 Operator 反馈**
+- [ ] Step 2e：新建项目 — 🔴 T-0612-05（RI-16 上传优先未实现主路径）
+- [ ] Step 2d：lmz 材料数 — 🔴 多轮路径 500（T-0612-04）；**可刷新后单轮重测**
+- [ ] Step 3：`v1.1-DEPLOY-GUIDE.md` 7 大场景 + 零回归 4 项
+
+### 观察项（非阻塞，暂不记 round）
+
+| 项 | 说明 |
+|---|---|
+| 思考过程「无法解析 LLM 输出」 | LLM 未返回可解析的 ReAct JSON，`AgentEngine` fallback 直接展示原文；**用户可见答案正确**，仅思考链展示不够「干净」 |
+
+---
+
 ## 8. 变更记录
 
 | 日期 | 记录人 | 变更 |
 |---|---|---|
 | 2026-06-11 | 阿根廷 | 创建本文件，记录 0611 v1.1 引导部署全过程 |
 | 2026-06-11 | Auto | 开启 Co-test 续：§9 VERIFY 回归，框架补 §7.5 Co-test 角色 |
+| 2026-06-12 | Auto (Co-test Guide) | §10 0612 新轮：Step 0 git 对齐 + mvn 三轮编译修复 + 后端重启；索引/Git 时间线/速查表同步 |
+| 2026-06-12 | Auto (Co-test Guide) | §10 Step 2c：离题问「今天天气怎么样？」— 拒答 UX ✅，Console 无报错 |
+| 2026-06-12 | Auto (Co-test Guide) | §10 Step 2d：多轮第 2 问 lmz → 500（T-0612-04）；后续同会话全 500 |
+| 2026-06-12 | Auto (Co-test Guide) | §10 Step 2e：新建项目仍手工表单入口 — T-0612-05 vs RI-16 上传优先 |
+| 2026-06-12 | Auto (Co-test Guide) | 任务分流：DEBUG [`round-2026-06-12-qa-regression`](../../test-to-settle/round-2026-06-12-qa-regression.md) + UPGRADE plan + complexity C-0612-01 |
 
 ---
 
-*下次部署或排错：先看 §0 状态表 + §5 速查表，再 pull 最新 `migrate_260611_01.sql`。*
+*下次部署或排错：先看 §0 状态表 + §5 速查表，再 pull 最新 `main`（当前 Co-test 基线 `5408bee`）。*

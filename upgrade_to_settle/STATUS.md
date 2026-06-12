@@ -26,6 +26,7 @@
 
 | Plan 文件 | Plan ID | 状态 | 摘要 | 更新 |
 |---|---|---|---|---|
-| _(无 — 全部 CLOSED，见 [`done/README.md`](done/README.md))_ | — | — | — | — |
+| [`plan-2026-06-12-qa-python-upload-first.md`](plan-2026-06-12-qa-python-upload-first.md) | plan-2026-06-12-qa-python-upload-first | **READY** | 一期骨架已落盘 + **二期全量工单**（工具/部署/退役/round关单） | 2026-06-12 |
+| [`plan-2026-06-12-project-create-upload-first.md`](plan-2026-06-12-project-create-upload-first.md) | plan-2026-06-12-project-create-upload-first | **SUPERSEDED** | 已合并进 qa-python-upload-first | 2026-06-12 |
 
 > plan **CLOSED** 后 `git mv` → `done/`，从本表删除，写入 [`done/README.md`](done/README.md)。

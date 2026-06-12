@@ -25,6 +25,7 @@ const form = ref<Project>({
 })
 const loading = ref(false)
 const materialVersionId = ref<number | null>(null)
+const draftProjectId = ref<number | null>(null)
 const failureType = ref<FailureType | null>(null)
 const failureMessage = ref('')
 const retryable = ref(false)
@@ -85,6 +86,10 @@ onMounted(async () => {
   if (mv) {
     materialVersionId.value = Number(mv)
   }
+  const dp = route.query.draftProjectId
+  if (dp) {
+    draftProjectId.value = Number(dp)
+  }
   const id = route.params.id
   if (id) {
     isEdit.value = true
@@ -94,8 +99,21 @@ onMounted(async () => {
     } finally {
       loading.value = false
     }
+  } else if (draftProjectId.value) {
+    isEdit.value = true
+    loading.value = true
+    try {
+      form.value = await getProject(draftProjectId.value)
+    } finally {
+      loading.value = false
+    }
+    if (materialVersionId.value) {
+      await runExtractPreview()
+    }
   } else if (materialVersionId.value) {
     await runExtractPreview()
+  } else if (!route.params.id) {
+    router.replace({ name: 'project-create-upload' })
   }
 })
 
@@ -109,9 +127,10 @@ async function onSubmit() {
   retryable.value = false
   loading.value = true
   try {
-    if (isEdit.value) {
-      await updateProject(form.value.id!, form.value)
-      ElMessage.success('更新成功')
+    if (isEdit.value && (form.value.id || draftProjectId.value)) {
+      const pid = form.value.id ?? draftProjectId.value!
+      await updateProject(pid, form.value)
+      ElMessage.success('保存成功')
     } else {
       await createProject({
         ...form.value,

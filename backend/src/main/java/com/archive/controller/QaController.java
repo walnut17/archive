@@ -6,6 +6,8 @@ import com.archive.agent.AgentResponse;
 import com.archive.common.ApiResponse;
 import com.archive.dto.QaRequest;
 import com.archive.dto.QaResponse;
+import com.archive.qaagent.QaAgentClient;
+import com.archive.qaagent.QaAgentProperties;
 import com.archive.service.GlmService;
 import com.archive.service.KnowledgeSearchService;
 import com.archive.service.KnowledgeSearchService.SearchResult;
@@ -23,9 +25,10 @@ import java.util.List;
 /**
  * 知识库问答 API.
  *
- * 双路径:
- *   1. Agent 模式(spring.ai.agent.enabled=true):AgentEngine 手写 5 步 ReAct 循环
- *   2. 老路径(降级):KnowledgeSearchService FULLTEXT → GlmService rerank → GlmService generate
+ * 路径优先级:
+ *   1. Python qa-agent (app.qa-agent.enabled=true)
+ *   2. Java AgentEngine (spring.ai.agent.enabled=true)
+ *   3. 老 FULLTEXT 路径
  *
  * @author Mavis
  */
@@ -41,7 +44,13 @@ public class QaController {
     @Autowired(required = false)
     private AgentEngine agentEngine;
 
-    @Value("${spring.ai.agent.enabled:true}")
+    @Autowired(required = false)
+    private QaAgentClient qaAgentClient;
+
+    @Autowired
+    private QaAgentProperties qaAgentProperties;
+
+    @Value("${spring.ai.agent.enabled:false}")
     private boolean agentEnabled;
 
     public QaController(KnowledgeSearchService searchService, GlmService glmService) {
@@ -53,7 +62,20 @@ public class QaController {
     public ApiResponse<QaResponse> ask(@Valid @RequestBody QaRequest req) {
         long start = System.currentTimeMillis();
 
-        // 路径 1:Agent 模式
+        // 路径 1: Python qa-agent
+        if (qaAgentProperties.isEnabled() && qaAgentClient != null) {
+            try {
+                AgentResponse ar = qaAgentClient.ask(req.getQuestion(), null);
+                QaResponse qr = QaResponse.fromAgentResponse(ar);
+                qr.setQuestion(req.getQuestion());
+                qr.setElapsedMs(System.currentTimeMillis() - start);
+                return ApiResponse.ok(qr);
+            } catch (Exception e) {
+                log.warn("Python qa-agent 失败,尝试降级", e);
+            }
+        }
+
+        // 路径 2: Java AgentEngine
         if (agentEnabled && agentEngine != null) {
             try {
                 AgentRequest agentReq = AgentRequest.fromQaRequest(req);
@@ -68,7 +90,7 @@ public class QaController {
             }
         }
 
-        // 路径 2:老 FULLTEXT 路径(原 M2)
+        // 路径 3:老 FULLTEXT 路径(原 M2)
         return legacyAsk(req, start);
     }
 

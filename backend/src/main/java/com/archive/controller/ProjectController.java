@@ -5,25 +5,33 @@ import com.archive.dto.FactEventDiff;
 import com.archive.dto.PageResponse;
 import com.archive.dto.ProjectRequest;
 import com.archive.dto.ProjectResponse;
+import com.archive.dto.StagingUploadResponse;
 import com.archive.entity.Project;
 import com.archive.security.JwtAuthFilter;
 import com.archive.engine.ExtractionEngine;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.archive.qaagent.QaAgentClient;
+import com.archive.qaagent.QaAgentProperties;
 import com.archive.service.GlmService;
 import com.archive.service.ExportService;
 import com.archive.service.AuditLogService;
 import com.archive.service.NotificationService;
+import com.archive.service.ProjectCreateStagingService;
 import com.archive.service.ProjectFactEventService;
 import com.archive.service.ProjectService;
 import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -43,6 +51,11 @@ public class ProjectController {
     private final NotificationService notificationService;
     private final AuditLogService auditLogService;
     private final ExtractionEngine extractionEngine;
+    private final ProjectCreateStagingService stagingService;
+    private final QaAgentProperties qaAgentProperties;
+
+    @Autowired(required = false)
+    private QaAgentClient qaAgentClient;
 
     @GetMapping
     public ApiResponse<PageResponse<ProjectResponse>> list(
@@ -111,7 +124,16 @@ public class ProjectController {
     }
 
     /**
-     * 立项 AI 预填 — 从材料版本同步抽取, 失败返回 failureType (RI-30).
+     * RI-16: 上传材料 → 草稿项目+议案+材料版本.
+     */
+    @PostMapping(value = "/staging-upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<StagingUploadResponse> stagingUpload(@RequestParam("file") MultipartFile file) {
+        String uploadedBy = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ApiResponse.ok(stagingService.stagingUpload(file, uploadedBy));
+    }
+
+    /**
+     * 立项 AI 预填 — 优先 Python qa-agent，失败走 Java ExtractionEngine.
      */
     @PostMapping("/extract-preview")
     public ResponseEntity<ApiResponse<GlmService.ExtractionFailureResponse>> extractPreview(
@@ -119,6 +141,17 @@ public class ProjectController {
         if (body.getMaterialVersionId() == null) {
             throw new IllegalArgumentException("materialVersionId 不能为空");
         }
+
+        if (qaAgentProperties.isEnabled() && qaAgentClient != null) {
+            QaAgentClient.ExtractionResult py = qaAgentClient.extractProjectFields(body.getMaterialVersionId());
+            GlmService.ExtractionFailureResponse mapped = mapExtraction(py);
+            if (!mapped.isSuccess()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ApiResponse<>(40030, mapped.getMessage(), mapped));
+            }
+            return ResponseEntity.ok(ApiResponse.ok(mapped));
+        }
+
         GlmService.ExtractionFailureResponse result =
                 extractionEngine.extractForPreview(body.getMaterialVersionId());
         if (!result.isSuccess()) {
@@ -126,6 +159,25 @@ public class ProjectController {
                     .body(new ApiResponse<>(40030, result.getMessage(), result));
         }
         return ResponseEntity.ok(ApiResponse.ok(result));
+    }
+
+    private GlmService.ExtractionFailureResponse mapExtraction(QaAgentClient.ExtractionResult py) {
+        ObjectMapper mapper = new ObjectMapper();
+        GlmService.ExtractionFailureResponse r = new GlmService.ExtractionFailureResponse();
+        r.setSuccess(py.isSuccess());
+        if (py.getData() != null) {
+            r.setData(mapper.valueToTree(py.getData()));
+        }
+        r.setMessage(py.getMessage());
+        if (py.getFailureType() != null) {
+            try {
+                r.setFailureType(com.archive.common.FailureType.valueOf(py.getFailureType()));
+            } catch (IllegalArgumentException ignored) {
+                r.setFailureType(com.archive.common.FailureType.API_ERROR);
+            }
+        }
+        r.setRetryable(Boolean.TRUE.equals(py.getRetryable()));
+        return r;
     }
 
     @PostMapping

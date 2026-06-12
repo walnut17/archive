@@ -66,9 +66,8 @@ cp test_task/case-TEMPLATE.md test_task/AT-XXX-<简述>.md
 
 | AT ID | 案例文件 | 说明 |
 |---|---|---|
-| — | [`case-TEMPLATE.md`](case-TEMPLATE.md) | **唯一预设文件**；复制后改名再建 TASKS 条目 |
-
-*暂无其他案例文件。*
+| AT-001 | [`AT-001-qa-agent-http-smoke.md`](AT-001-qa-agent-http-smoke.md) | 直连 qa-agent HTTP 冒烟（部署后执行） |
+| — | [`case-TEMPLATE.md`](case-TEMPLATE.md) | 复制模板新建案例 |
 
 ---
 
