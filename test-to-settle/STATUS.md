@@ -10,7 +10,7 @@
 
 | 文件 | 轮次状态 | 审查状态 | 待审项 | 审查员 | 最后更新 |
 |---|---|---|---|---|---|
-| [`round-2026-06-11-v1.1-deploy.md`](round-2026-06-11-v1.1-deploy.md) | `IN_PROGRESS` | **待审** | T-0611-12/13/14/16/17（§3 FIXED，§4 VERIFY） | — | 2026-06-11 |
+| [`round-2026-06-11-v1.1-deploy.md`](round-2026-06-11-v1.1-deploy.md) | `IN_PROGRESS` | **`审阅中`** | T-0611-12/13/14/16/17 + 08/02/04/07/20（§3 FIXED，§4 6 PASS + 1 缺验） | 投委会档案项目PM | 2026-06-12 |
 
 **审查状态**：`待审` · `审阅中` · `有问题` · `已通过` · `CLOSED`（已移 `done/`）
 
@@ -20,7 +20,7 @@
 
 | 文件 | 状态 | 待办摘要 | 最后更新 |
 |---|---|---|---|
-| `round-2026-06-11-v1.1-deploy.md` | `IN_PROGRESS` | TASKS：T-08/09/18/20；complexity：C-01～11 | 2026-06-11 |
+| `round-2026-06-11-v1.1-deploy.md` | `IN_PROGRESS` | 6 修复已评审（4 CLOSED + 1 缺 GLM 验 + 1 APPROVED 含 P2）; 5 OPEN (T-09/15/18/19 + C-01/08) | 2026-06-12 |
 
 > 轮次 **CLOSED** 后移 [`done/`](done/README.md)，并从本表删除。
 
@@ -32,7 +32,7 @@
 
 ## complexity/
 
-- 活跃路由 §2 行数（出站即删）：**11** 条 `PENDING`（C-0611-01～11）
+- 活跃路由 §2 行数（出站即删）：**2** 条 `PENDING`（C-0611-01/08）—— 其余 9 条已 SCHEDULED/DONE
 - 详见 [`complexity.md`](complexity.md)
 
 ## TASKS 路由（coder，非审查员）
