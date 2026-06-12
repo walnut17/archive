@@ -49,7 +49,7 @@ python -m venv .venv
 
 - 代码：`D:\projects-online\qa-agent`（`git pull` → 本地建 `.venv`）
 - 配置：`D:\archive\config\config.json`（启动脚本设 `CONFIG_JSON_PATH`）
-- 启动：在 `qa-agent` 目录 `.\start.ps1`，或仓库根 `.\deploy\scripts\start-qa-agent.ps1`
+- 启动：默认后台 `.\start.ps1` 或 `.\deploy\scripts\start-qa-agent.ps1`；停止 `.\stop.ps1`
 - **后续**：WinSW / 与 backend 一体化部署（`deploy/winsw/qa-agent.xml` 已预留，暂不必装）
 
 健康检查：`GET /health` → 含 `config_json` 路径，便于确认读到的文件。

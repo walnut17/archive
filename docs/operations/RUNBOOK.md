@@ -28,10 +28,10 @@ Python FastAPI 微服务，专司智能问答 + 字段抽取。
 
 | 项目 | 内容 |
 |------|------|
-| **当前启停** | 手工：`deploy/scripts/start-qa-agent.ps1`（前台）或下方命令；**Ctrl+C** 停止 |
+| **当前启停** | 后台：`deploy/scripts/start-qa-agent.ps1` · 停止：`stop-qa-agent.ps1` · 开发前台：加 `-Foreground` |
 | **代码 / venv** | `D:\projects-online\qa-agent`（`git pull` 后本地 `python -m venv .venv` + `pip install -r requirements.txt`） |
 | **配置文件** | `D:\archive\config\config.json`（与 Java **同文件**；启动前设 `CONFIG_JSON_PATH`） |
-| **端口** | `127.0.0.1:8001`（`config.json` → `qaAgent.port`） |
+| **端口** | `0.0.0.0:8001`（跨设备可访问 `182.168.1.125:8001`；Java BFF 仍连 `127.0.0.1:8001`） |
 | **健康检查** | `curl http://127.0.0.1:8001/health`（响应含 `config_json` 路径） |
 
 **后续一体化（未实施）**：WinSW `qa-agent-service.exe` · `deploy/winsw/qa-agent.xml` · `net start qa-agent` · 日志 `D:\archive\logs\qa-agent\`
@@ -47,27 +47,28 @@ python -m venv .venv
 # 确认 D:\archive\config\config.json 已存在（见 config/README.md）
 ```
 
-**125 日常启动**（在 **`qa-agent` 目录** 或 **仓库根** 均可）：
+**125 日常启动**（默认**后台**，关 PowerShell 窗口也继续跑）：
 
 ```powershell
-# 已在 qa-agent 目录时（你当前这种）
+cd D:\projects-online
+.\deploy\scripts\start-qa-agent.ps1
+
+# 已在 qa-agent 目录
 cd D:\projects-online\qa-agent
 .\start.ps1
 
-# 或在仓库根
-cd D:\projects-online
-.\deploy\scripts\start-qa-agent.ps1
+# 停止
+.\deploy\scripts\stop-qa-agent.ps1
+# 或 qa-agent 目录: .\stop.ps1
+
+# 重启（先停再起）
+.\deploy\scripts\start-qa-agent.ps1 -Force
+
+# 开发调试（前台 + 热重载）
+.\deploy\scripts\start-qa-agent.ps1 -Foreground -Reload
 ```
 
-或一行：
-
-```powershell
-cd D:\projects-online\qa-agent
-$env:CONFIG_JSON_PATH = "D:\archive\config\config.json"
-.\.venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8001
-```
-
-本机开发加 `-Reload`：`.\deploy\scripts\start-qa-agent.ps1 -Reload`
+日志：`D:\archive\logs\qa-agent\uvicorn.log` · PID 文件：`qa-agent.pid`
 
 可选 env 覆盖（开发用）：`GLM_API_KEY`、`MYSQL_PASSWORD` 等 — 见 `qa-agent/.env.example`；**125 生产只改 config.json**。
 
