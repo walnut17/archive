@@ -88,6 +88,9 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
     steps: list[dict[str, Any]] = []
     ctx: dict[str, Any] = {"project_code": None}
     final_answer: str | None = None
+    project_switch_hint: str | None = None
+    confidence_badge: str | None = None
+    agent_sources: list[dict[str, Any]] = []
 
     if session_id:
         append_memory(session_id, "user", question)
@@ -130,6 +133,36 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
             logger.exception("Tool %s failed", tool)
             step["observation"] = _truncate(f"ERROR: {e}")
 
+        # v1.1: 从 find_project 结果提取切换 hint + 置信徽章 + 来源
+        if tool == "find_project" and isinstance(obs, list):
+            for item in obs[:1]:  # 只看 top 1
+                if isinstance(item, dict):
+                    sd = item.get("switchDecision")
+                    if sd and sd != "SAME_CONFIRMED":
+                        project_switch_hint = sd
+                    conf = item.get("confidence", 0)
+                    if isinstance(conf, (int, float)):
+                        if conf >= 0.85:
+                            confidence_badge = "CONFIRMED"
+                        elif conf >= 0.60:
+                            confidence_badge = "AI_INFERRED"
+                        elif conf > 0:
+                            confidence_badge = "PENDING_REVIEW"
+                    agent_sources.append({
+                        "type": "PROJECT",
+                        "id": item.get("projectCode", ""),
+                        "title": item.get("projectName", ""),
+                    })
+        # v1.1: search_fulltext → MATERIAL 来源
+        if tool == "search_fulltext" and isinstance(obs, list):
+            for item in obs[:3]:
+                if isinstance(item, dict) and item.get("materialId"):
+                    agent_sources.append({
+                        "type": "MATERIAL",
+                        "id": str(item.get("materialId", "")),
+                        "title": item.get("materialTitle", ""),
+                    })
+
         steps.append(step)
 
         # ask_clarification 中断 ReAct 循环
@@ -164,7 +197,7 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
         "agent_mode": True,
         "steps": steps,
         "tool_calls": len(steps),
-        "project_switch_hint": None,
-        "confidence_badge": None,
-        "agent_sources": [],
+        "project_switch_hint": project_switch_hint,
+        "confidence_badge": confidence_badge,
+        "agent_sources": agent_sources,
     }

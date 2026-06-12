@@ -13,7 +13,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+import java.time.Duration;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.List;
 import java.util.Map;
 
@@ -74,8 +77,12 @@ public class QaAgentClient {
     }
 
     private <T> T post(String path, Object body, Class<T> type) {
+        var factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout((int) properties.getTimeoutSeconds() * 1000);
+        factory.setReadTimeout((int) properties.getTimeoutSeconds() * 1000);
         RestClient client = RestClient.builder()
                 .baseUrl(properties.getBaseUrl())
+                .requestFactory(factory)
                 .build();
         return client.post()
                 .uri(path)
