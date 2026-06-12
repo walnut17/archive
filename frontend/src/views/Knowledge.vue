@@ -66,45 +66,134 @@ function safeSources(src: Source[] | null | undefined): Source[] {
   return src ?? []
 }
 
+interface StreamEvent {
+  event: 'step' | 'token' | 'source' | 'done' | 'error'
+  data: Record<string, any>
+}
+
+interface AgentSource {
+  type: 'PROJECT' | 'MATERIAL' | 'TODO' | 'TERM'
+  id: string
+  title: string
+  snippet?: string
+}
+
 async function onAsk(question: string) {
   // 添加用户消息
   messages.value.push({ role: 'user', content: question })
-  // 添加占位 loading
+  // 添加占位 assistant (loading 状态, content 渐追加)
   const idx = messages.value.length
-  messages.value.push({ role: 'assistant', content: '', loading: true })
+  messages.value.push({
+    role: 'assistant',
+    content: '',
+    loading: true,
+    steps: [],
+    sources: null,
+    agentSources: null,
+    confidenceBadge: null,
+  })
 
   loading.value = true
   try {
-    let resp: any
-    if (turnCount.value === 0) {
-      // 首次提问走 /qa/ask
-      resp = await http.post<any>('/qa/ask', {
-        question,
-        topN: 10,
-        rerank: true,
-        agentMode: true,
-      })
-    } else {
-      // 多轮走 /qa/turn/{sessionId}
-      resp = await http.post<any>(`/qa/turn/${sessionId.value}`, { question })
+    // v1.2: 流式 SSE 消费
+    const path = turnCount.value === 0
+      ? '/qa/ask/stream'
+      : `/qa/turn/${sessionId.value}/stream`
+    const body = turnCount.value === 0
+      ? { question, topN: 10, rerank: true, agentMode: true }
+      : { question }
+
+    const resp = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+
+    if (!resp.ok || !resp.body) {
+      throw new Error(`HTTP ${resp.status}`)
     }
 
-    const data = getData<QaResponse>(resp)
+    const reader = resp.body.getReader()
+    const decoder = new TextDecoder('utf-8')
+    let buffer = ''
+    let accAnswer = ''
+    const accSteps: AgentStep[] = []
+    const accAgentSources: AgentSource[] = []
+    let accBadge: string | null = null
+    const seenSourceKeys = new Set<string>()
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      // 按 \n\n 切 SSE 事件
+      let idx2: number
+      while ((idx2 = buffer.indexOf('\n\n')) !== -1) {
+        const ev = buffer.substring(0, idx2)
+        buffer = buffer.substring(idx2 + 2)
+        if (!ev.trim()) continue
+        const eventName = ev.match(/^event: (\S+)/m)?.[1]
+        const dataLine = ev.match(/^data: (.+)$/m)?.[1]
+        if (!eventName || !dataLine) continue
+        let data: any
+        try { data = JSON.parse(dataLine) } catch { continue }
+
+        if (eventName === 'token') {
+          accAnswer += data.delta || ''
+          // 实时更新最后一条消息
+          messages.value[idx] = {
+            ...messages.value[idx],
+            content: accAnswer,
+            loading: false,
+          }
+        } else if (eventName === 'step') {
+          accSteps.push({
+            iteration: data.iteration,
+            thought: data.thought || '',
+            tool: data.tool || '',
+            toolArgs: data.toolArgs || '',
+            observation: data.observation || '',
+          })
+          messages.value[idx] = {
+            ...messages.value[idx],
+            steps: [...accSteps],
+            loading: false,
+          }
+        } else if (eventName === 'source') {
+          const key = `${data.type}-${data.id}`
+          if (!seenSourceKeys.has(key)) {
+            seenSourceKeys.add(key)
+            accAgentSources.push(data as AgentSource)
+            messages.value[idx] = {
+              ...messages.value[idx],
+              agentSources: [...accAgentSources],
+              loading: false,
+            }
+          }
+        } else if (eventName === 'done') {
+          accBadge = data.confidence_badge ?? null
+          messages.value[idx] = {
+            role: 'assistant',
+            content: data.answer ?? accAnswer,
+            steps: data.steps ?? accSteps,
+            sources: safeSources(data.sources) as Source[],
+            confidenceBadge: accBadge,
+            agentSources: data.agent_sources ?? accAgentSources,
+            loading: false,
+          }
+        } else if (eventName === 'error') {
+          accAnswer = '问答失败: ' + (data.message || '请稍后重试')
+          messages.value[idx] = { ...messages.value[idx], content: accAnswer, loading: false }
+        }
+      }
+    }
+
     turnCount.value++
-
-    // 替换 loading 为真实消息
-    messages.value[idx] = {
-      role: 'assistant',
-      content: data.answer ?? '',
-      steps: data.steps ?? null,
-      sources: safeSources(data.sources) as Source[],
-      confidenceBadge: data.confidenceBadge ?? null,
-      agentSources: (data as any).agentSources ?? null,
-    }
   } catch (e: any) {
     messages.value[idx] = {
       role: 'assistant',
       content: '问答失败: ' + (e.message || '请稍后重试'),
+      loading: false,
     }
   } finally {
     loading.value = false
