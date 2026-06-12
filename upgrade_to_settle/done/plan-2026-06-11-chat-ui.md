@@ -168,12 +168,31 @@ npm run build  # 0 错
 
 ## 6. 评审（Reviewer Agent）
 
-| Agent | 时间 | 结论 |
-|---|---|---|
-| | | |
+| 字段 | 内容 |
+|---|---|
+| **Agent** | 投委会档案项目PM（代码审查员） |
+| **时间** | 2026-06-11 23:59（首轮）· 2026-06-12 09:35（复审） |
+| **摘要** | 首轮 1 P2（Knowledge.vue exampleQuestions 死代码）；commit de629dc 移到 <script setup> 区并用上 + f928f00 修 ChatInput 命名冲突 |
 
----
+| 结论 | 意见 |
+|---|---|
+| `APPROVED` ✅ | 复审通过，可 CLOSED |
 
+### 6.1 意见清单（复审）
+
+复审全部意见均已修完（commit `de629dc` 一次性合并），逐条标 ✅。详见 §5 末 DONE 表。
+
+### 6.2 复审意见
+
+- 程序员 commit `de629dc` 一次性合并所有修复
+- 代码审查员**同时认可**程序员自我评审发现的额外 2 项 P2 修复（commit `f928f00`）
+
+### 6.3 关单
+
+- 结论：✅ `APPROVED` + `CLOSED`
+- 移动：`git mv upgrade_to_settle/plan-...UP-0611-04.md upgrade_to_settle/done/`
+- 同步：TASKS.md 路由表 `UP-0611-04` `待审` → `CLOSED`（已移 done/）
+- STATUS.md：从「待代码审查」表删除；写入 `done/README.md`
 ## 7. 验收
 
 | Agent/Operator | 时间 | 结论 |

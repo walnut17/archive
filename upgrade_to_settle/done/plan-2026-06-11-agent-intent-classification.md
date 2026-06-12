@@ -187,27 +187,31 @@ curl -X POST http://localhost:8080/api/qa/ask \
 
 ## 6. 评审（Reviewer Agent）
 
-| Agent | 时间 | 结论 |
-|---|---|---|
-| 投委会档案项目PM | 2026-06-11 23:59 | `REQUEST_CHANGES`（1 P1）— **已修** |
+| 字段 | 内容 |
+|---|---|
+| **Agent** | 投委会档案项目PM（代码审查员） |
+| **时间** | 2026-06-11 23:59（首轮）· 2026-06-12 09:35（复审） |
+| **摘要** | 首轮 1 P1（AgentSystemPrompt '6 个工具'→'8'）；commit de629dc 已修 |
 
-### 6.1 意见清单
+| 结论 | 意见 |
+|---|---|
+| `APPROVED` ✅ | 复审通过，可 CLOSED |
 
-| # | 严重度 | 意见 | 依据/位置 | 修复 |
-|---|---|---|---|---|
-| R2-1 | **P1** | "6 个工具"应为"8 个" | commit `2de2eba` 在 prompt 头部写"6 个工具"；实际现在有 8 个（含 plan-2026-06-11-archive-local-fs-tools 加的 archive_fs） | ✅ 已修正，AgentSystemPrompt 当前为 "8 个工具" |
+### 6.1 意见清单（复审）
 
-### 6.2 修复要求
+复审全部意见均已修完（commit `de629dc` 一次性合并），逐条标 ✅。详见 §5 末 DONE 表。
 
-- 改 `AgentSystemPrompt.java` 头部数字 6 → 8
-- 改完 plan §5 加 1 行 `DONE`，§6.1 标 ✅ 后重提审
+### 6.2 复审意见
 
-### 6.3 总评
+- 程序员 commit `de629dc` 一次性合并所有修复
+- 代码审查员**同时认可**程序员自我评审发现的额外 2 项 P2 修复（commit `f928f00`）
 
-方案 A（prompt 约束）实施干净，拒答规则 + 引导示例到位；与 `AgentResponse` 契约兼容。
+### 6.3 关单
 
----
-
+- 结论：✅ `APPROVED` + `CLOSED`
+- 移动：`git mv upgrade_to_settle/plan-...UP-0611-02.md upgrade_to_settle/done/`
+- 同步：TASKS.md 路由表 `UP-0611-02` `待审` → `CLOSED`（已移 done/）
+- STATUS.md：从「待代码审查」表删除；写入 `done/README.md`
 ## 7. 验收
 
 | Agent/Operator | 时间 | 结论 |

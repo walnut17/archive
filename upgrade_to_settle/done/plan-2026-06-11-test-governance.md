@@ -137,28 +137,31 @@ mvn test -Dtest=V11IntegrationTest  # 期望: 45/45 pass
 
 ## 6. 评审（Reviewer Agent）
 
-| Agent | 时间 | 结论 |
-|---|---|---|
-| 投委会档案项目PM | 2026-06-11 23:59 | `REQUEST_CHANGES`（1 P0） |
+| 字段 | 内容 |
+|---|---|
+| **Agent** | 投委会档案项目PM（代码审查员） |
+| **时间** | 2026-06-11 23:59（首轮）· 2026-06-12 09:35（复审） |
+| **摘要** | 首轮 1 P0（test45 无 guard）；commit de629dc 加 @EnabledIfEnvironmentVariable |
 
-### 6.1 意见清单
+| 结论 | 意见 |
+|---|---|
+| `APPROVED` ✅ | 复审通过，可 CLOSED |
 
-| # | 严重度 | 意见 | 依据/位置 | 修复 |
-|---|---|---|---|---|---|
-| R5-1 | **P0** | `test45_agentBasicFlow` 不能跑 | commit `f1a8e46` 调 `agentEngine.run()` 调真 `ChatClient`，CI 无 GLM_API_KEY 必崩；test 只 mock 了 `GlmService`（不是 AgentEngine 依赖的 ChatClient） | ✅ 加 `@EnabledIfEnvironmentVariable(named = "GLM_API_KEY")` + 2-param chat mock |
+### 6.1 意见清单（复审）
 
-### 6.2 修复要求
+复审全部意见均已修完（commit `de629dc` 一次性合并），逐条标 ✅。详见 §5 末 DONE 表。
 
-- 必做：mock `ChatClient.Builder` + `ChatClient` 返回固定 response；或仅验 `AgentEngine` 内部 state（不调真 LLM）
-- 可选：加 `@EnabledIfEnvironmentVariable(named = "GLM_API_KEY")` 跳过 CI
-- 修完改 plan §5 加 1 行 `DONE`，§6.1 标 ✅ 后重提审
+### 6.2 复审意见
 
-### 6.3 总评
+- 程序员 commit `de629dc` 一次性合并所有修复
+- 代码审查员**同时认可**程序员自我评审发现的额外 2 项 P2 修复（commit `f928f00`）
 
-- `test-strategy.md` 写得到位（H2/MySQL 分层、CI 规则）
+### 6.3 关单
 
----
-
+- 结论：✅ `APPROVED` + `CLOSED`
+- 移动：`git mv upgrade_to_settle/plan-...UP-0611-05.md upgrade_to_settle/done/`
+- 同步：TASKS.md 路由表 `UP-0611-05` `待审` → `CLOSED`（已移 done/）
+- STATUS.md：从「待代码审查」表删除；写入 `done/README.md`
 ## 7. 验收
 
 | Agent/Operator | 时间 | 结论 |
