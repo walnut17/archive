@@ -52,6 +52,9 @@ public class QaResponse {
     /** v1.1: 置信度徽章 (CONFIRMED / AI_INFERRED / PENDING_REVIEW). */
     private String confidenceBadge;
 
+    /** v1.1 (plan-source-display): Agent 工具调用命中的结构化来源列表. */
+    private List<Source> agentSources;
+
     /**
      * 从 AgentResponse 转换为 QaResponse(兼容老前端).
      */
@@ -66,6 +69,7 @@ public class QaResponse {
                 .toolCalls(ar.getSteps() != null ? ar.getSteps().size() : 0)
                 .projectSwitchHint(ar.getProjectSwitchHint())
                 .confidenceBadge(ar.getConfidenceBadge())
+                .agentSources(ar.getAgentSources())
                 .build();
     }
 }

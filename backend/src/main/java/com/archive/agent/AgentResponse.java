@@ -1,5 +1,7 @@
 package com.archive.agent;
 
+import com.archive.dto.Source;
+
 import java.util.List;
 
 public class AgentResponse {
@@ -11,6 +13,8 @@ public class AgentResponse {
     private String projectSwitchHint;
     /** v1.1: AI_INFERRED / PENDING_REVIEW, null = 不显示. */
     private String confidenceBadge;
+    /** v1.1 (plan-source-display): Agent 工具调用命中的结构化来源列表. */
+    private List<Source> agentSources;
     
     public AgentResponse() {}
     
@@ -26,4 +30,6 @@ public class AgentResponse {
     public void setProjectSwitchHint(String projectSwitchHint) { this.projectSwitchHint = projectSwitchHint; }
     public String getConfidenceBadge() { return confidenceBadge; }
     public void setConfidenceBadge(String confidenceBadge) { this.confidenceBadge = confidenceBadge; }
+    public List<Source> getAgentSources() { return agentSources; }
+    public void setAgentSources(List<Source> agentSources) { this.agentSources = agentSources; }
 }

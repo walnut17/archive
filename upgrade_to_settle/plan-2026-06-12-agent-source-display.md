@@ -1,7 +1,7 @@
 # Agent 模式来源区契约与实现
 
 > **来源**：`test-to-settle/complexity.md` C-0611-06（升格自 round-0611 T-0611-12/13）
-> **状态**：`OPEN` · **类型**：`UPGRADE` · **PM 拍板**：2026-06-12
+> **状态**：`VERIFY` · **类型**：`UPGRADE` · **PM 拍板**：2026-06-12
 
 ---
 
@@ -94,3 +94,30 @@
 > 顺序：`Coder` ↔ `Reviewer` → **`Closer`（必）**
 
 <!-- 从 Coder 块开始 -->
+
+## 3. Agent Blocks
+
+### Coder — Sisyphus (2026-06-12)
+
+| 字段 | 内容 |
+|---|---|
+| **Agent** | Sisyphus |
+| **时间** | 2026-06-12 |
+| **改动清单** | Source DTO + AgentResponse/ToolResult/AgentEngine/QaResponse source 管道 + 前端 ChatMessage 分组展示 |
+
+**实现项**：
+- `Source.java`：PROJECT/MATERIAL/TODO/TERM 类型 DTO
+- `AgentResponse.java`：新增 `List<Source> agentSources`
+- `ToolResult.java`：新增 `List<Source> sources` + `ok(data, sources)` 工厂
+- `AgentEngine.java`：run() 内收集工具 sources + `extractSources()` 从 data 推断 + 去重
+- `QaResponse.java`：新增 `agentSources` 字段 + `fromAgentResponse` 传递
+- `ChatMessage.vue`：`AgentSource` 接口 + `groupedAgentSources` 按 type 分组 + "引用证据"折叠卡
+- `Knowledge.vue`：传递 `agentSources` 到 ChatMessage
+
+---
+
+## 4. Reviewer
+
+| Agent | 时间 | 结论 |
+|---|---|---|
+| | | |

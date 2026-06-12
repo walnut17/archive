@@ -66,6 +66,7 @@ public class AgentEngine {
         String sessionId = request.getSessionId() != null ? request.getSessionId() : "default";
         AgentContext ctx = new AgentContext(question);
         List<String> sources = new ArrayList<>();
+        List<com.archive.dto.Source> agentSources = new ArrayList<>();
         String finalAnswer = null;
         int loopHintCount = 0; // 本次请求的死循环提示计数
 
@@ -129,6 +130,22 @@ public class AgentEngine {
                     : "ERROR: " + result.getError();
             step.setObservation(truncate(observation, 2000));
 
+            // 5.5) 收集工具调用的来源区数据（plan-source-display）
+            // 优先用工具显式返回的 sources，否则从 data 形状推断
+            List<com.archive.dto.Source> toolSources = result.getSources();
+            if (result.isOk() && (toolSources == null || toolSources.isEmpty())) {
+                toolSources = extractSources(step.getTool(), result.getData());
+            }
+            if (toolSources != null) {
+                for (com.archive.dto.Source src : toolSources) {
+                    boolean dup = agentSources.stream()
+                            .anyMatch(s -> s.getType() == src.getType() && s.getId().equals(src.getId()));
+                    if (!dup) {
+                        agentSources.add(src);
+                    }
+                }
+            }
+
             // 6) 记录工具调用日志
             logToolCall(step, question);
         }
@@ -142,6 +159,7 @@ public class AgentEngine {
         response.setAnswer(finalAnswer);
         response.setSteps(ctx.getSteps());
         response.setSources(sources);
+        response.setAgentSources(agentSources.isEmpty() ? null : agentSources);
         response.setAgentMode(true);
         populateV11Fields(response, ctx);
         return response;
@@ -366,4 +384,67 @@ public class AgentEngine {
                 .replace("\r", "\\r")
                 .replace("\t", "\\t");
     }
+
+    /**
+     * 从工具执行结果中提取结构化 Source 条目.
+     * 根据工具名称和返回数据形状自动推断来源类型.
+     */
+    @SuppressWarnings("unchecked")
+    private List<com.archive.dto.Source> extractSources(String toolName, Object data) {
+        List<com.archive.dto.Source> result = new ArrayList<>();
+        if (data == null) return result;
+
+        try {
+            switch (toolName) {
+                case "find_project" -> {
+                    // data = List<Map> with projectCode, projectName
+                    List<Map<String, Object>> list = (List<Map<String, Object>>) data;
+                    for (Map<String, Object> item : list) {
+                        result.add(com.archive.dto.Source.builder()
+                                .type(com.archive.dto.Source.SourceType.PROJECT)
+                                .id(str(item.get("projectCode")))
+                                .title(str(item.get("projectName")))
+                                .build());
+                    }
+                }
+                case "search_fulltext" -> {
+                    // data = List<Map> with materialTitle, projectCode
+                    List<Map<String, Object>> list = (List<Map<String, Object>>) data;
+                    for (Map<String, Object> item : list) {
+                        result.add(com.archive.dto.Source.builder()
+                                .type(com.archive.dto.Source.SourceType.MATERIAL)
+                                .id(str(item.get("materialId")))
+                                .title(str(item.get("materialTitle")))
+                                .snippet(truncate(str(item.get("snippet")), 100))
+                                .build());
+                    }
+                }
+                case "get_project_business_data" -> {
+                    // data = Map with projectCode, name
+                    Map<String, Object> map = (Map<String, Object>) data;
+                    result.add(com.archive.dto.Source.builder()
+                            .type(com.archive.dto.Source.SourceType.PROJECT)
+                            .id(str(map.get("projectCode")))
+                            .title(str(map.get("name")))
+                            .build());
+                }
+                case "network_dict_lookup" -> {
+                    Map<String, Object> map = (Map<String, Object>) data;
+                    if (Boolean.TRUE.equals(map.get("found"))) {
+                        result.add(com.archive.dto.Source.builder()
+                                .type(com.archive.dto.Source.SourceType.TERM)
+                                .id(str(map.get("source")))
+                                .title(str(map.get("query")))
+                                .snippet(truncate(str(map.get("definition")), 100))
+                                .build());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[Agent] extractSources 异常: tool={}, {}", toolName, e.getMessage());
+        }
+        return result;
+    }
+
+    private String str(Object o) { return o == null ? "" : o.toString(); }
 }

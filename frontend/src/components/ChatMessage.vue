@@ -15,6 +15,13 @@ interface Source {
   snippet: string
 }
 
+interface AgentSource {
+  type: 'PROJECT' | 'MATERIAL' | 'TODO' | 'TERM'
+  id: string
+  title: string
+  snippet?: string
+}
+
 const props = defineProps<{
   role: 'user' | 'assistant'
   content: string
@@ -22,7 +29,25 @@ const props = defineProps<{
   steps?: AgentStep[] | null
   sources?: Source[] | null
   confidenceBadge?: string | null
+  agentSources?: AgentSource[] | null
 }>()
+
+const groupedAgentSources = computed(() => {
+  if (!props.agentSources) return null
+  const groups: Record<string, AgentSource[]> = {}
+  for (const s of props.agentSources) {
+    if (!groups[s.type]) groups[s.type] = []
+    groups[s.type].push(s)
+  }
+  return groups
+})
+
+const typeLabel: Record<string, string> = {
+  PROJECT: '项目',
+  MATERIAL: '材料',
+  TODO: '待办',
+  TERM: '术语',
+}
 
 const bubbleClass = computed(() => ({
   'chat-bubble': true,
@@ -85,6 +110,17 @@ const tagText = computed(() => {
         <div v-for="(s, i) in sources" :key="s.versionId" class="source-item">
           <el-tag size="small" style="margin-right: 4px">[{{ i + 1 }}]</el-tag>
           <span style="font-size: 12px">{{ s.materialTitle }}</span>
+        </div>
+      </div>
+
+      <!-- plan-source-display: Agent 结构化来源分组展示 -->
+      <div v-if="groupedAgentSources" class="agent-sources" style="margin-top: 8px">
+        <el-divider content-position="left">引用证据</el-divider>
+        <div v-for="(items, type) in groupedAgentSources" :key="type" class="source-group">
+          <div style="font-size: 12px; color: #909399; margin-bottom: 4px">{{ typeLabel[type] || type }}</div>
+          <el-tag v-for="item in items" :key="`${item.type}-${item.id}`" size="small" style="margin: 2px 4px 2px 0; max-width: 100%">
+            {{ item.title }}
+          </el-tag>
         </div>
       </div>
     </div>

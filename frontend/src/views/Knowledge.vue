@@ -47,6 +47,7 @@ interface ChatEntry {
   steps?: AgentStep[] | null
   sources?: Source[] | null
   confidenceBadge?: string | null
+  agentSources?: any[] | null
 }
 
 const sessionId = ref(crypto.randomUUID())
@@ -98,6 +99,7 @@ async function onAsk(question: string) {
       steps: data.steps ?? null,
       sources: safeSources(data.sources) as Source[],
       confidenceBadge: data.confidenceBadge ?? null,
+      agentSources: (data as any).agentSources ?? null,
     }
   } catch (e: any) {
     messages.value[idx] = {
@@ -138,6 +140,7 @@ async function onAsk(question: string) {
         :steps="msg.steps"
         :sources="msg.sources"
         :confidence-badge="msg.confidenceBadge"
+        :agent-sources="msg.agentSources"
       />
     </div>
 
