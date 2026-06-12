@@ -32,7 +32,7 @@ TASKS.md
 
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
 |---|---|---|---|---|---|---|
-| `plan-2026-06-12-qa-python-upload-first` | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md`](upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md) | `开发中` | Auto (Reviewer) | 2026-06-12 | §1.2 F find_project 字段/切换逻辑未对齐 Java |
+| `plan-2026-06-12-qa-python-upload-first` | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md`](upgrade_to_settle/plan-2026-06-12-qa-python-upload-first.md) | `待审` | Sisyphus | 2026-06-12 | find_project 5级切换+字段对齐 Java · 待审查 |
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
 > **不在本表**：complexity 中转 · AT-* 自动化 · 已 CLOSED（见各 `done/`）
