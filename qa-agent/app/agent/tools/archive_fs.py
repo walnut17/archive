@@ -23,34 +23,15 @@ def _get_roots(ctx: dict[str, Any]) -> tuple[Path, Path]:
 
 
 def _resolve_material_version(material_version_id: int, zone: str) -> str | None:
-    """materialVersionId → SQL 查存储路径（对齐 Java ArchiveMaterialPathResolver）."""
+    """materialVersionId → SQL 查 storage_path / parsed_text_path（对齐 Java）. """
     try:
         with db_cursor() as cur:
-            if zone == "files":
-                cur.execute(
-                    """SELECT mv.id, m.id AS material_id, p.id AS proposal_id,
-                              mv.version_no, mv.original_filename
-                       FROM material_version mv
-                       JOIN material m ON m.id = mv.material_id
-                       JOIN proposal p ON p.id = m.proposal_id
-                       WHERE mv.id = %s""",
-                    (material_version_id,),
-                )
-                row = cur.fetchone()
-                if not row:
-                    return None
-                filename = row["original_filename"] or "unknown"
-                return f"{row['proposal_id']}/{row['material_id']}/v{row['version_no']}_{filename}"
-            else:  # parsed
-                cur.execute(
-                    """SELECT mv.id, mv.material_id, mv.version_no
-                       FROM material_version mv WHERE mv.id = %s""",
-                    (material_version_id,),
-                )
-                row = cur.fetchone()
-                if not row:
-                    return None
-                return f"{row['material_id']}/v{row['version_no']}_parsed.txt"
+            col = "storage_path" if zone == "files" else "parsed_text_path"
+            cur.execute(f"SELECT {col} FROM material_version WHERE id = %s", (material_version_id,))
+            row = cur.fetchone()
+            if row and row.get(col):
+                return str(row[col])
+            return None
     except Exception as e:
         logger.warning("materialVersionId 查询失败: %s", e)
         return None
