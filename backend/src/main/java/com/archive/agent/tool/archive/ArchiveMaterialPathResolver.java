@@ -38,34 +38,16 @@ public class ArchiveMaterialPathResolver {
         }
 
         MaterialVersion mv = mvOpt.get();
-        // 构造相对路径: {material_id}/v{version_no}/{filename}
         String relativePath = switch (zone) {
-            case "files" -> buildFilesPath(mv);
-            case "parsed" -> buildParsedPath(mv);
+            case "files" -> mv.getStoragePath();
+            case "parsed" -> mv.getParsedTextPath();
             default -> null;
         };
 
-        if (relativePath == null) {
+        if (relativePath == null || relativePath.isBlank()) {
             return Optional.empty();
         }
 
         return Optional.of(relativePath);
-    }
-
-    private String buildFilesPath(MaterialVersion mv) {
-        // files 区路径: {proposal_id}/{material_id}/v{version_no}_{original_filename}
-        Long materialId = mv.getMaterial() != null ? mv.getMaterial().getId() : 0;
-        Long proposalId = 0;
-        if (mv.getMaterial() != null && mv.getMaterial().getProposal() != null) {
-            proposalId = mv.getMaterial().getProposal().getId();
-        }
-        String filename = mv.getOriginalFilename() != null ? mv.getOriginalFilename() : "unknown";
-        return String.format("%d/%d/v%d_%s", proposalId, materialId, mv.getVersionNo(), filename);
-    }
-
-    private String buildParsedPath(MaterialVersion mv) {
-        // parsed 区路径: {material_id}/v{version_no}_parsed.txt
-        Long materialId = mv.getMaterial() != null ? mv.getMaterial().getId() : 0;
-        return String.format("%d/v%d_parsed.txt", materialId, mv.getVersionNo());
     }
 }

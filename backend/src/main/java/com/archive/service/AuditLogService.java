@@ -133,6 +133,13 @@ public class AuditLogService {
         return "\"" + raw.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ") + "\"";
     }
 
+    private static String truncate(String value, int maxLen) {
+        if (value == null) {
+            return null;
+        }
+        return value.length() <= maxLen ? value : value.substring(0, maxLen);
+    }
+
     /**
      * 记录审计日志(简洁版).
      */
