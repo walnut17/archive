@@ -62,6 +62,47 @@
 | **时间** | 2026-06-12 |
 | **摘要** | 0612 新轮 Co-test；§1 收录 T-0612-01～06；T-0612-05 升格 upgrade；本 case 主攻 QA 多轮与编译留痕 |
 
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-12 16:30
+ref: round-2026-06-12-qa-regression
+verdict: REQUEST_CHANGES
+summary: T-0612-01～03/06 可过；T-0612-04 在 125 默认配置下仍 500，不可关单
+
+**APPROVED（子项）**
+
+| ID | commit / 位置 | 结论 |
+|---|---|---|
+| T-0612-01 | `96abc32` AgentEngine 闭合括号 | ✅ |
+| T-0612-02 | `16eec7a` PathResolver + AuditLogService.truncate | ✅ |
+| T-0612-03 | `5408bee` MockBean import | ✅ |
+| T-0612-06 | `848e116` `parseAgentStep` thought→「直接返回结果」；Python `parser.py` 结构化拒答 | ✅ Java 路径；Python 路径待 qa-agent 部署后 Co-test |
+| T-0612-05 | ESCALATED → upgrade plan | ✅ 不在本 round 阻塞 |
+
+**P0 — T-0612-04 未修完**
+
+125 默认：`app.qa-agent.enabled=true` · `spring.ai.agent.enabled=false` · **Python 未部署**。
+
+- 第 1 问 `/api/qa/ask`：Python 失败 → 降级 `legacyAsk` → **200** ✅
+- 第 2 问 `/api/qa/turn/{sessionId}`：Python 失败 → Java Agent 未启用 → `IllegalStateException` → **500** ❌
+
+`848e116` 只加了「Python 失败 → Java AgentEngine」，**未覆盖「双路径皆不可用」**。与 §1.3 验收「同 session 连续 2 问均 200」不符。
+
+**建议修（二选一或组合）**
+
+1. `MultiTurnController` 第三路径：qa-agent + Java 均失败时 **503 明确文案** 或 **无状态降级**（调用 legacy 并提示丢失多轮上下文）
+2. 125 在 qa-agent WinSW 就绪前：`QA_AGENT_ENABLED=false` 或 `AGENT_ENABLED=true` 作临时兜底
+3. Co-test 复现后 §1.2 标 FIXED 再 `待审`
+
+**附：upgrade plan 一期骨架（同工作区，非本 round 关单条件）**
+
+- `qa-agent/` pytest **18 passed**（不含 live HTTP）
+- Java BFF + RI-16 上传页骨架已落；**二期 E～K 未做**
+- ⚠️ `main` HEAD 为 stash 式 commit `ee35f7c`，push 前需整理为正常 feature commit
+
+----- agent-block end -----
+
 ---
 
 ## 3. 关单检查（审查员 Reviewer(CLOSED) 完成后打勾）
