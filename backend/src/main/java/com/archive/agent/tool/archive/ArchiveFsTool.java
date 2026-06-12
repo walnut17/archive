@@ -3,7 +3,6 @@ package com.archive.agent.tool.archive;
 import com.archive.agent.AgentContext;
 import com.archive.agent.tool.AgentTool;
 import com.archive.agent.tool.ToolResult;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -20,7 +19,6 @@ import java.util.Map;
 public class ArchiveFsTool implements AgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(ArchiveFsTool.class);
-    private static final ObjectMapper mapper = new ObjectMapper();
 
     private final ArchiveFsActionRegistry registry;
     private final ArchivePathGuard guard;

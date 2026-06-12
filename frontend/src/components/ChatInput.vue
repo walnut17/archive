@@ -6,10 +6,10 @@ const emit = defineEmits<{
 }>()
 
 const text = ref('')
-const loading = defineProps<{ loading: boolean }>()
+const props = defineProps<{ loading: boolean }>()
 
 function onSend() {
-  if (!text.value.trim() || loading.loading) return
+  if (!text.value.trim() || props.loading) return
   emit('send', text.value.trim())
   text.value = ''
 }
@@ -24,12 +24,12 @@ function onSend() {
       placeholder="输入你的问题,例如:新能源那个项目今年盈利怎么样?"
       maxlength="500"
       show-word-limit
-      :disabled="loading"
+      :disabled="props.loading"
       @keydown.enter.prevent="!$event.shiftKey && onSend()"
     />
     <el-button
       type="primary"
-      :loading="loading"
+      :loading="props.loading"
       :disabled="!text.trim()"
       class="send-btn"
       @click="onSend"
