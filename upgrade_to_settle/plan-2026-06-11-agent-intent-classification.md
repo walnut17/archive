@@ -1,4 +1,4 @@
-# Plan UP-0611-02 — Agent 意图分类 + 离题拒答规则
+# plan-2026-06-11-agent-intent-classification — Agent 意图分类 + 离题拒答规则
 
 > **状态**：`VERIFY`（待 Reviewer 审 / 125 回归）
 > **活跃目录**：`upgrade_to_settle/` · 完工后 → `done/`
@@ -9,7 +9,7 @@
 
 | 字段 | 内容 |
 |---|---|
-| **Plan ID** | **UP-0611-02** |
+| **路由 ID** | **plan-2026-06-11-agent-intent-classification** |
 | **标题** | Agent 意图分类：离题问题拒答 + 业务域意图路由 |
 | **状态** | `DRAFT` |
 | **优先级** | **P1** |
@@ -195,7 +195,7 @@ curl -X POST http://localhost:8080/api/qa/ask \
 
 | # | 严重度 | 意见 | 依据/位置 | 修复 |
 |---|---|---|---|---|
-| R2-1 | **P1** | "6 个工具"应为"8 个" | commit `2de2eba` 在 prompt 头部写"6 个工具"；实际现在有 8 个（含 UP-0611-01 加的 archive_fs） | ✅ 已修正，AgentSystemPrompt 当前为 "8 个工具" |
+| R2-1 | **P1** | "6 个工具"应为"8 个" | commit `2de2eba` 在 prompt 头部写"6 个工具"；实际现在有 8 个（含 plan-2026-06-11-archive-local-fs-tools 加的 archive_fs） | ✅ 已修正，AgentSystemPrompt 当前为 "8 个工具" |
 
 ### 6.2 修复要求
 

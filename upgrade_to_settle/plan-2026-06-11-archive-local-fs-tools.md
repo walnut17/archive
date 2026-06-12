@@ -1,4 +1,4 @@
-# Plan UP-0611-01 — Agent 本地 Archive 只读文件工具（ls / grep / read）
+# plan-2026-06-11-archive-local-fs-tools — Agent 本地 Archive 只读文件工具（ls / grep / read）
 
 > **状态**：`VERIFY`（待 Reviewer 审 / 125 联测）  
 > **活跃目录**：`upgrade_to_settle/` · 完工后 → `upgrade_to_settle/done/`
@@ -9,7 +9,7 @@
 
 | 字段 | 内容 |
 |---|---|
-| **Plan ID** | **UP-0611-01** |
+| **路由 ID** | **plan-2026-06-11-archive-local-fs-tools** |
 | **标题** | Agent 只读访问 `D:/archive` 材料目录（ls / grep / read）+ 多模态扩展机制 |
 | **状态** | `DRAFT` |
 | **优先级** | **P1** |
@@ -317,4 +317,4 @@ public interface ArchiveFsAction {
 
 ---
 
-*Plan UP-0611-01 · [`upgrade_to_settle/README.md`](README.md)*
+*plan-2026-06-11-archive-local-fs-tools · [`upgrade_to_settle/README.md`](README.md)*

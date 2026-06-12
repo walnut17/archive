@@ -1,7 +1,18 @@
-# UPGRADE Case 模板 — `plan-YYYY-MM-DD-<简述>.md`
+# UPGRADE Case — `plan-YYYY-MM-DD-<简述>.md`
 
-> **Case** = 本文件。路由在 [`TASKS.md`](../TASKS.md)（类型 UPGRADE，路由 ID = Plan ID）。  
-> **留痕格式**：[`CASE-FORMAT.md`](../CASE-FORMAT.md) — 所有 agent 在 **§ Agent Blocks** 追加块。
+> **生成 case 的 Agent 必读**：[`CASE-FORMAT.md`](../CASE-FORMAT.md) **「生成 case 的 Agent」**  
+> **路由 ID** = 本文件名去掉 `.md`（= TASKS 首列 = §0 路由 ID）
+
+## 开新 case 步骤
+
+1. 复制本模板为 `plan-YYYY-MM-DD-<英文简述>.md`（例 `plan-2026-06-12-export-api.md`）
+2. 删本「开新 case」说明块
+3. §0 **路由 ID** 填与文件名一致（无 `.md`）
+4. §1 范围验收、§2 开发说明
+5. [`TASKS.md`](../TASKS.md) 加 UPGRADE 行，**路由 ID 列 = 文件名无后缀**
+6. 若自 complexity 升格：round 标「已转 plan-…」、complexity **删行** · push
+
+**禁止**：`UP-MMDD-NN`、路由 ID 与文件名不一致。
 
 ---
 
@@ -9,23 +20,23 @@
 
 | 字段 | 内容 |
 |---|---|
-| **Case ID / Plan ID** | `UP-MMDD-NN` |
+| **路由 ID** | `plan-YYYY-MM-DD-<简述>`（= 本文件名无 `.md`） |
 | **类型** | `UPGRADE` |
-| **Case 状态** | `DRAFT` / `OPEN` / `CLOSED` |
+| **Case 状态** | `DRAFT` → `OPEN` → `CLOSED` |
 | **标题** | |
 | **需求 / 架构锚点** | `docs/requirements/` · `docs/architecture/` 章节 |
 
 ---
 
-## 1. 范围与验收（PM / 架构定稿）
+## 1. 任务描述（PM / 架构，只写一次，非 agent-block）
 
 - **做**：
 - **不做**：
-- **验收**：
+- **验收**（Given/When/Then 或 checklist）：
 
 ---
 
-## 2. 开发说明（架构师，Implement 只读）
+## 2. 开发说明（架构师，非 agent-block；Coder 只读）
 
 | 路径 | 说明 |
 |---|---|
@@ -35,26 +46,12 @@
 
 ## 3. Agent Blocks
 
-> **按时间顺序追加**。Coder = 实现；Reviewer = 审查。
-
-<!-- 示例
------ agent-block begin -----
-role: Coder
-agent: ...
-time: ...
-ref: UP-MMDD-NN
-commits: abc1234
-summary: ...
-
------ agent-block end -----
--->
+> 顺序：`Coder` ↔ `Reviewer` → **`Closer`（必）** · 格式见 [`CASE-FORMAT.md`](../CASE-FORMAT.md)
 
 ---
 
-## 4. 关单
+## 4. 关单检查
 
-- [ ] Reviewer APPROVED + Closer 块
-- [ ] TASKS 行 **删除**
-- [ ] `git mv` → [`done/`](done/README.md)
-
-*模板 · 2026-06-11*
+- [ ] Reviewer 对全 scope **`APPROVED`**
+- [ ] 已有 **`role: Closer`** 块
+- [ ] `git mv` → [`done/`](done/README.md) · TASKS **删行**

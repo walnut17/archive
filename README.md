@@ -137,13 +137,12 @@ TASKS 占行 → Case 文件 Agent Block → 待审 → Review → CLOSED → do
 | **[需求开发人员](#11-需求开发人员)** (产品/业务分析师) | 把业务方嘴里"我们希望 XX"翻译成结构化需求 §X.Y | `docs/requirements/REQUIREMENTS.md` (现有) + 业务方访谈 | 在 `docs/requirements/REQUIREMENTS.md` 加 §X.Y 新章节, 含 5 字段 (业务/数据/角色/验收/依赖) | [§1.1](#11-需求开发人员) | ❌ 不写代码, 不写 RI 拆解 |
 | **[需求审核人员](#12-需求审核人员)** (PM/业务方代表) | 审新需求 / 拍板模糊点 / 维护术语 | `docs/requirements/REQUIREMENTS.md` + 业务背景资料 | 在 PR 评审里批 +/- 反馈, 维护 `docs/requirements/REQUIREMENTS.md` §13 决策记录 | [§1.2](#12-需求审核人员) | ❌ 不写代码, 不审 RI 拆解 |
 | **[架构师](#13-架构师)** (技术 Lead) | 拆 RI；complexity 升格写 UPGRADE plan | `ARCH-DECOMPOSITION.md` + [`complexity.md`](test-to-settle/complexity.md) | RI-N 或 [`upgrade_to_settle/plan-*.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) + TASKS UPGRADE 行 | [§1.3](#13-架构师) · [§1.0](#10-找任务接-agent-第一站) | ❌ 不直接写业务代码 (除非示范) |
-| **[程序员](#14-程序员)** (接手 AI / 后端 / 前端 / DBA) | 按 TASKS 路由抢 **DEBUG / UPGRADE** + 写代码 | [`TASKS.md`](TASKS.md) **🎯 任务路由** → 详情路径 | 代码 + 单元测试 + 更新 TASKS 占用 | [§1.0](#10-找任务接-agent-第一站) · [§5](#-5-coder-开工-抢任务-sop) | ❌ 不擅自改需求；大改走 complexity |
+| **[程序员 / Coder](#14-程序员)** (接手 AI / 后端 / 前端 / DBA) | 按 TASKS 修 bug / 做 UPGRADE | [`TASKS.md`](TASKS.md) → Case 路径 | **Coder** block + 代码 + TASKS 状态 | [§1.0](#10-找任务接-agent-第一站) · [§5](#-5-coder-开工-抢任务-sop) | ❌ 大改走 complexity |
 | **[测试 Agent](#19-测试-agenttest_task)** | 抢 **AT-*** 自动化测试 | TASKS AT 节 + [`test_task/`](test_task/README.md) | PASS 写 §3；FAIL 建 `test_bug` | [§1.0](#10-找任务接-agent-第一站) · [§9](#-9-自动化测试任务-test_task) | ❌ FAIL 时不擅自改业务代码 |
-| **[Recorder Agent](#15-recorder-agent)** | 发现 bug 并记入 round | 当前 `test-to-settle/round-*.md` | **§1** + 必要时 TASKS DEBUG 行 | [§1.0](#10-找任务接-agent-第一站) · [§8.2](#82-四轮次-agent-工作流) | ❌ 不写根因、不改代码 |
-| **[Analyst Agent](#15-analyst-agent)** | 根因分析 + 修改建议 | round **§1** `RECORDED` | **§2**；大改 → complexity | [§8.2](#82-四轮次-agent-工作流) | ❌ 默认不改代码 |
-| **[Fix Agent](#15-fix-agent)** | 按 TASKS DEBUG 行修 bug | **先占 TASKS DEBUG** → round **§2** `SMALL_FIX` | **§3** + commit | [§1.0](#10-找任务接-agent-第一站) · [§5](#-5-coder-开工-抢任务-sop) | ❌ 大改应升级 complexity |
-| **[代码审查员](#111-代码审查员)** | 审 DEBUG/UPGRADE 代码改动 | 两目录 `STATUS.md` + [`CODE-REVIEWER.md`](CODE-REVIEWER.md) | round **§4** / plan **§6**；CLOSED → **done/** | [§1.11](#111-代码审查员) | ❌ 不替 Fix 改代码 |
-| **[Co-test Guide](#110-co-test-双人联调)** | 对话里指挥联调 | `deployment_log` + round §1 | 代拟 log / round 草稿 | [§1.10](#110-co-test-双人联调) | ❌ 默认不改代码 |
+| **[Recorder Agent](#15-recorder-agent)** | 发现 bug 并记入 case | `test-to-settle/round-*.md` | **§1 任务描述**（表）+ 可选 **Recorder** block | [§1.0](#10-找任务接-agent-第一站) · [§8](#-8-bug-跟踪与修复-test) | ❌ 不写根因、不改代码 |
+| **[Analyst Agent](#15-analyst-agent)** | 根因分析 + 修改建议 | case **§1** Bug 表 | **Analyst** block；大改 → complexity | [§8](#-8-bug-跟踪与修复-test) | ❌ 默认不改代码 |
+| **[代码审查员](#111-代码审查员)** | 审 DEBUG/UPGRADE | [`TASKS.md`](TASKS.md) + [`CODE-REVIEWER.md`](CODE-REVIEWER.md) | **Reviewer** / **Closer** block → **done/** | [§1.11](#111-代码审查员) | ❌ 不替 Coder 改代码 |
+| **[Co-test Guide](#110-co-test-双人联调)** | 对话里指挥联调 | `deployment_log` + case §1 | 代拟 log / round 草稿 | [§1.10](#110-co-test-双人联调) | ❌ 默认不改代码 |
 | **[Co-test Operator](#110-co-test-双人联调)** | 在 125/浏览器执行 | Guide 给的步骤 | 反馈结果 | [§1.10](#110-co-test-双人联调) | ❌ 有 bug 先记再修 |
 | **[Review Agent](#16-review-agent)** | 代码/架构评审 | [`docs/reviews/`](docs/reviews/README.md) OPEN 项 | review 意见 → CLOSED | [§1.6](#16-评审对线-docsreviews) | ❌ 替 Subject 写回复 |
 | **[Subject Agent](#16-subject-agent)** | 被评审方 | 对应 `review-*.md` | 文件下方回复 | [§1.6](#16-评审对线-docsreviews) | ❌ **不得**自行 CLOSED |
@@ -236,8 +235,16 @@ TASKS 占行 → Case 文件 Agent Block → 待审 → Review → CLOSED → do
 
 **你不能**:
 - ❌ 写代码 (你的活儿是**拆清楚**, 实现交程序员)
-- ❌ 直接动 `TASKS.md` (那是程序员自己维护的)
 - ❌ 不审就放行程序员开工 (PR 流转: 需求审 → 架构审 → 实现)
+
+**开 UPGRADE case 时**（complexity 升格 / 主动立项）:
+1. 读 [`CASE-FORMAT.md`「生成 case 的 Agent」](CASE-FORMAT.md)
+2. 文件名 `plan-YYYY-MM-DD-<英文简述>.md` · **路由 ID = 文件名无 `.md`**
+3. [`TASKS.md`](TASKS.md) UPGRADE 行首列 = 同一路由 ID（**禁止 `UP-MMDD-NN`**）
+4. complexity 升格后 **删 complexity 行** · round bug 标「已转 plan-…」
+
+**你不能**（case 相关）:
+- ❌ 自造与文件名不一致的路由 ID
 
 ### 1.4 程序员（Coder：DEBUG + UPGRADE）
 
@@ -256,7 +263,7 @@ TASKS 占行 → Case 文件 Agent Block → 待审 → Review → CLOSED → do
 **你要写**:
 - **代码** + 单元测试
 - **1 commit / 任务**
-- **commit message**: `fix(<scope>,T-MMDD-NN): …` 或 `feat(<scope>,UP-MMDD-NN): …`
+- **commit message**: `fix(<scope>,T-MMDD-NN): …` 或 `feat(<scope>,plan-…): …`（scope 可用路由 ID 或模块名）
 - **TASKS.md** — `占用-<名>` → `已完成`
 - **round §3**（DEBUG）或 **plan §5**（UPGRADE）留痕
 
@@ -268,57 +275,24 @@ TASKS 占行 → Case 文件 Agent Block → 待审 → Review → CLOSED → do
 
 **历史 Plan I RI**：见 TASKS **📜 历史占表**，新工作勿占。
 
-### 1.5 测试轮次四 Agent（`test-to-settle/round-*.md`）
+### 1.5 DEBUG case 各 Agent（`test-to-settle/round-*.md`）
 
-> **`test-to-settle/` 只记 bug** — 交互式 deploy 发现，或 Agent 自主跑用例发现。**测过无缺陷不要开 round 行。**
-> **一轮一文件**；§1～§4 各由不同 agent 接手，**每段必填：Agent 名 + 时间 + 摘要**。  
-> 全部 bug **CLOSED** 或已升级 [`test-to-settle/complexity.md`](test-to-settle/complexity.md) 后，轮次标 **`CLOSED`**。  
-> 细节：[§8](#-8-bug-跟踪与修复-test) · [`test-to-settle/README.md`](test-to-settle/README.md) · 模板 [`test-to-settle/round-TEMPLATE.md`](test-to-settle/round-TEMPLATE.md)
+> **格式权威**：[`CASE-FORMAT.md`](CASE-FORMAT.md) · 模板 [`round-TEMPLATE.md`](test-to-settle/round-TEMPLATE.md)  
+> **开新 round 命名**：见 [`CASE-FORMAT.md`「生成 case 的 Agent」](CASE-FORMAT.md) — 路由 ID = `round-YYYY-MM-DD-<简述>` = 文件名无 `.md`  
+> **§1 任务描述**（Bug 表，只写一次）→ **Agent Blocks**（之后全部留痕，a-b 格式）
 
-| Agent | 改 round 哪一节 | 做什么 |
+```text
+§1 任务描述 → Recorder? → Analyst? → Coder ↔ Reviewer → Closer → done/
+```
+
+| Agent | 写什么 | 做什么 |
 |---|---|---|
-| **Recorder** | §1 | **只记 bug**（来源 DEPLOY/AUTO）、复现步骤 |
-| **Analyst** | §2 | 根因、修改建议；搞不定 → complexity |
-| **Fix** | §3 | 小修、commit |
-| **Reviewer** | §4 | 审 diff、CLOSED 或打回 |
+| **Recorder** | §1 表 + 可选 **Recorder** block | 记 bug；**开新 round 时**按 CASE-FORMAT 命名 + TASKS 行 |
+| **Analyst** | **Analyst** block | 根因；`ESCALATED` → complexity |
+| **Coder** | **Coder** block + commit | TASKS 占 **DEBUG** 行 |
+| **Reviewer** | **Reviewer** / **Closer** block | 审 diff；**Closer** 才关 case |
 
-#### 1.5.1 Recorder Agent
-
-**你要读**：[`test-to-settle/round-TEMPLATE.md`](test-to-settle/round-TEMPLATE.md) · [`test_task/README.md`](test_task/README.md) · [`docs/handoff/v1.1-DEPLOY-GUIDE.md`](docs/handoff/v1.1-DEPLOY-GUIDE.md)
-
-**你要写**：§1 Agent 留痕 + Bug 表（`T-MMDD-NN`，状态 `RECORDED`，**来源** `DEPLOY` / `AUTO`）
-
-**Bug 从哪来**：交互式 deploy 联调；或自主跑 [`test_task/`](test_task/README.md) 案例 / `mvn test` / `npm run build` 失败。
-
-**你不能**：写根因方案、改代码；**没有 bug 不要往 round 里加行**
-
-#### 1.5.2 Analyst Agent
-
-**你要读**：round **§1** 全部 `RECORDED` 行
-
-**你要写**：§2 逐条分析；标 `SMALL_FIX` 或 `ESCALATED`；升级项写入 [`test-to-settle/complexity.md`](test-to-settle/complexity.md)（`C-MMDD-NN`）
-
-**你不能**：默认直接改代码（除非用户明确授权 hotfix）
-
-#### 1.5.3 Fix Agent
-
-**找任务**：[`TASKS.md`](TASKS.md) **🎯 任务路由** — 占 **DEBUG** 行（与程序员同一 SOP，见 [§5](#-5-coder-开工-抢任务-sop)）
-
-**你要读**：TASKS 详情路径 → round **§2** 中 `SMALL_FIX` 项
-
-**你要写**：round **§3** + 代码 + commit；审查员打回时填 **§3.3** 回复
-
-**你不能**：擅自做大改；搞不定 → 升级 complexity → 等 plan + TASKS UPGRADE
-
-#### 1.5.4 Reviewer Agent
-
-**你要读**：round **§3** + git diff
-
-**你要写**：§4 `APPROVED`/`REJECTED`；通过则 bug **`CLOSED`**
-
-**你不能**：自己改代码代替评审（应 `REOPEN` 给 Fix）
-
-> **注意**：此 **Reviewer Agent** 只管 `test-to-settle/round-*.md` §4 的验收 bug 评审，与 [§1.6](#16-评审对线-docsreviews) 的 **Review Agent**（`docs/reviews/`）不是同一套流程。
+> **注意**：case **Reviewer** ≠ [§1.6](#16-评审对线-docsreviews) 的 **Review Agent**（`docs/reviews/`）。
 
 ### 1.6 评审对线（`docs/reviews/`）
 
@@ -338,7 +312,7 @@ Review Agent Round 2：CONTINUE 续提要求 或 CLOSED 宣布评审结束
 | **Review Agent** | `cp review-TEMPLATE.md` 新建文件；写/追加评审；验证后 **宣布 CLOSED** | 替 Subject 写回复 |
 | **Subject Agent** | 在文件**末尾**追加回复；改代码；填 commit/结果 | 把状态改 **CLOSED** |
 
-与 **§1.5 Reviewer Agent**（`test-to-settle/round` §4）分工：round 审 **bug 的小修**；`docs/reviews/` 审 **代码/架构/MOD 交付** 等，可多轮对线。
+与 **§1.5 case Reviewer** 分工：case 审 **TASKS 路由的代码**；`docs/reviews/` 审 **架构/交付对线**。
 
 #### 1.6.1 Review Agent
 
@@ -389,7 +363,7 @@ Review Agent Round 2：CONTINUE 续提要求 或 CLOSED 宣布评审结束
 > **SOP**：[`CODE-REVIEWER.md`](CODE-REVIEWER.md) · **块格式**：[`CASE-FORMAT.md`](CASE-FORMAT.md)
 
 1. TASKS 占 **`待审`** → **`审阅中`**
-2. 打开 Case 路径 → 读 **Coder** 块 + diff → 追加 **Reviewer** 块
+2. 打开 Case 路径 → 先读 **§1 任务描述** → 再读 **Agent Blocks** + diff → 追加 **Reviewer** 块
 3. 打回：TASKS → **`开发中`**
 4. 整 case 通过：**Closer** 块 → `done/` → **删除 TASKS 行**
 
@@ -408,7 +382,7 @@ Review Agent Round 2：CONTINUE 续提要求 或 CLOSED 宣布评审结束
 |---|---|---|
 | **`README.md`** | 项目入口，角色导航 | 本文 |
 | **`TASKS.md`** | **Coder + 审查员唯一入口**（Case 路由） | [TASKS.md](TASKS.md) |
-| **`CASE-FORMAT.md`** | Case 内 Agent Block 格式 | [CASE-FORMAT.md](CASE-FORMAT.md) |
+| **`CASE-FORMAT.md`** | Case 格式 + **生成 case 命名规范** | [CASE-FORMAT.md](CASE-FORMAT.md) |
 | **`CODE-REVIEWER.md`** | 审查员 SOP | [CODE-REVIEWER.md](CODE-REVIEWER.md) |
 | **`MULTI-AGENT-REPO-ARCHITECTURE.md`** | 多 Agent 协作框架（可套用） | [协作架构](MULTI-AGENT-REPO-ARCHITECTURE.md) |
 
@@ -570,7 +544,7 @@ docs/requirements/
 |---|---|---|
 | ① | [§1.0 找任务](#10-找任务接-agent-第一站) | 按角色定位：Fix 看 TASKS DEBUG；Recorder 看 round |
 | ② | [§8](#-8-bug-跟踪与修复-test) + [`test-to-settle/README.md`](test-to-settle/README.md) | 四 Agent 分工 + 留痕规则 |
-| ③ | [`TASKS.md`](TASKS.md) **🎯 任务路由** | **Fix Agent 占 DEBUG 行**；新 bug 要修时 Recorder 配合加行 |
+| ③ | [`TASKS.md`](TASKS.md) **🎯 任务路由** | **Coder 占 DEBUG/UPGRADE 行**；新 bug 时 Recorder 配合 §1 |
 | ④ | 当前 [`test-to-settle/round-*.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) | 只改你负责的那一节 |
 | ⑤ | [`test-to-settle/complexity.md`](test-to-settle/complexity.md) | 大改中转（不进 TASKS） |
 
@@ -591,7 +565,7 @@ docs/requirements/
 
 ## 🚀 5. Coder 开工: 抢任务 SOP
 
-> **Fix Agent / 程序员通用**。5 分钟：TASKS 占坑 → 读详情 → 写代码。
+> **Coder 通用**。5 分钟：TASKS 占坑 → 读 case §1 → 写 **Coder** block + 代码。
 
 ### 5.1 Step 0: 验证环境 (2 分钟)
 
@@ -615,7 +589,7 @@ mvn compile -DskipTests -B -o   # 期望 BUILD SUCCESS
 
 ### 5.4 Step 3: 写 Case + 代码
 
-1. 打开 Case 文件 → 追加 **Coder** 块（[`CASE-FORMAT.md`](CASE-FORMAT.md)）  
+1. TASKS 占 **`未开发`/`开发中`** → 打开 Case → 先读 **§1** → 追加 **Coder** 块（[`CASE-FORMAT.md`](CASE-FORMAT.md)）  
 2. commit 代码 + case + TASKS  
 3. 本 case 项完工 → TASKS **`待审`**
 
@@ -733,25 +707,19 @@ projects-online/
 
 > **`test-to-settle/` 只记 bug。** 发现途径：**(1) 交互式 deploy 联调** **(2) Agent 自主跑测试用例**。测过无缺陷、纯部署步骤 → 不进 `round-*.md`。
 >
-> **一轮一文件** `round-YYYY-MM-DD-*.md`：**§1 记 bug → §2 分析 → §3 改代码 → §4 评审**，各由不同 Agent 接手，**每段留痕（名字 + 时间 + 摘要）**。  
-> **小修**在 round 内闭环；**大改 / 搞不定** → [`test-to-settle/complexity.md`](test-to-settle/complexity.md) 交 PM + 架构。  
-> **细节以 [`test-to-settle/README.md`](test-to-settle/README.md) 为准**。
+> **Case** = `round-YYYY-MM-DD-*.md`。**§1 任务描述**（固定）→ **Agent Blocks**（动态，见 [`CASE-FORMAT.md`](CASE-FORMAT.md)）。  
+> **小修**在 case 内闭环；**大改** → [`complexity.md`](test-to-settle/complexity.md) → UPGRADE plan。  
+> **细节**：[`test-to-settle/README.md`](test-to-settle/README.md)
 
-### 8.1 四轮次 Agent 工作流
+### 8.1 Case 时间线
 
 ```text
-Recorder (§1)  →  Analyst (§2)  →  Fix (§3)  →  Reviewer (§4)  →  §5 CLOSED
-                      ↘ ESCALATED → complexity.md → PM/架构
+§1 任务描述 → Recorder? → Analyst? → Coder → Reviewer(APPROVED) → Closer → done/ → TASKS 删行
+                      ↘ ESCALATED → complexity.md → PM/架构 → plan
 ```
 
-| § | Agent | 做什么 | 留痕 |
-|---|---|---|---|
-| **§1** | Recorder | **只记 bug**（来源、复现、ID） | Agent + 时间 + 摘要 |
-| **§2** | Analyst | 根因、修改建议；大改标 ESCALATED | 同上 |
-| **§3** | Fix | 按建议小修、commit | 同上 |
-| **§4** | Reviewer | 审 diff、CLOSED 或打回 | 同上 |
-
-**轮次 `CLOSED` 条件**：§1～§4 留痕齐全；每条 bug 为 **`CLOSED`** 或已在 **`complexity.md`** 登记。
+**关 case 条件**：各 `T-*` 已 APPROVED / ESCALATED / WONTFIX，且有 **`role: Closer`** 块。  
+**历史 round** 可能仍含旧 §2～§7 表 — **新留痕只追加 Agent Blocks**。
 
 ### 8.2 目录与文件
 
@@ -759,27 +727,27 @@ Recorder (§1)  →  Analyst (§2)  →  Fix (§3)  →  Reviewer (§4)  →  §
 |---|---|
 | [`test-to-settle/README.md`](test-to-settle/README.md) | 工作流、状态机、Agent 一句话指引 |
 | [`test-to-settle/round-TEMPLATE.md`](test-to-settle/round-TEMPLATE.md) | **新开一轮**时复制 |
-| [`test-to-settle/round-*.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) | 当轮主文件（§1～§5） |
+| [`test-to-settle/round-*.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) | DEBUG case（§0/§1 + Agent Blocks） |
 | [`test-to-settle/complexity.md`](test-to-settle/complexity.md) | 大改中转路由；分析完删行，见文件文首 |
 | [`docs/operations/deployment_log.md`](docs/operations/deployment_log.md) | 部署**操作**时间线（不是 bug 清单） |
 
 **Bug ID**：`T-MMDD-NN` · **Complexity ID**：`C-MMDD-NN` · **Commit**：`fix(<scope>,T-0611-XX): …`
 
-### 8.3 各 Agent 只改哪一节
+### 8.3 各 Agent 写什么
 
-| 你是… | 找任务 | 打开 | 只编辑 |
+| 你是… | 找任务 | 打开 | 写什么 |
 |---|---|---|---|
-| **Coder / Fix** | TASKS **DEBUG/UPGRADE** | 详情路径 | round **§3** 或 plan **§5** + 代码 |
-| Recorder | 当前 round §1 | `round-*.md` | **§1** |
-| Analyst | round §1 `RECORDED` | 同上 | **§2** |
-| Reviewer | round §3 `FIXED` | 同上 + diff | **§4** |
-| PM / 架构 | complexity `PENDING` | 见 [`complexity.md`](test-to-settle/complexity.md) 文首 → docs/plan → 删行 |
+| **Coder** | TASKS **DEBUG/UPGRADE** | Case 路径 | **Coder** block + 代码 |
+| Recorder | case 已存在 | `round-*.md` | **§1** 表 + 可选 **Recorder** block |
+| Analyst | case §1 Bug 表 | 同上 | **Analyst** block |
+| Reviewer | TASKS **待审** | 同上 + diff | **Reviewer** / **Closer** block |
+| PM / 架构 | complexity | → plan §1/§2 → TASKS UPGRADE | 见 [`complexity.md`](test-to-settle/complexity.md) |
 
 ### 8.4 当前轮次
 
 | 轮次 | 文件 | 轮次状态 |
 |---|---|---|
-| v1.1 / 0611 | [`round-2026-06-11-v1.1-deploy.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) | `IN_PROGRESS`（§2 Analyst / §4 Reviewer 待留痕） |
+| v1.1 / 0611 | [`round-2026-06-11-v1.1-deploy.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) | `OPEN`（TASKS **`round-2026-06-11-v1.1-deploy`**） |
 
 ### 8.5 与 `TASKS.md` 的关系
 
@@ -788,7 +756,7 @@ Recorder (§1)  →  Analyst (§2)  →  Fix (§3)  →  Reviewer (§4)  →  §
 | **`TASKS.md` 🎯 任务路由** | **入口**：DEBUG / UPGRADE / AT-* 占坑 + 详情路径（不含全文） |
 | **`test-to-settle/`** | **DEBUG 详情**（round、test_bug）；小修当轮闭环 |
 | **`test-to-settle/complexity.md`** | 大改**中转路由**（不进 TASKS）；出站删行，全文在 docs/plan |
-| **`upgrade_to_settle/`** | **UPGRADE 详情**（plan §0～§7）；与 test round **脱钩** |
+| **`upgrade_to_settle/`** | **UPGRADE case**（plan：§0/§1/§2 + Agent Blocks）；与 DEBUG **脱钩** |
 | **`test_task/`** | 测试案例；**PASS** 写 §3 执行历史 |
 
 ```text
@@ -809,7 +777,7 @@ coder 开工：TASKS 占行 → 读 test-to-settle 或 upgrade_to_settle 详情 
 |---|---|
 | **`test_task/*.md`** | 步骤、预期、**通过**时的执行历史 |
 | **`TASKS.md` AT-*** | 谁占用 / 谁完工 |
-| **`test-to-settle/test_bug-*.md`** | **失败** bug 单 → 进 `round-*.md` 四轮次 |
+| **`test-to-settle/test_bug-*.md`** | **失败** bug 单 → 进 case **§1** |
 
 ### 9.2 工作流
 
@@ -849,7 +817,7 @@ coder 开工：TASKS 占行 → 读 test-to-settle 或 upgrade_to_settle 详情 
 | 入口 | `README.md` | **角色导航** + [§1.0 找任务](#10-找任务接-agent-第一站) |
 | Coder 路由 | `TASKS.md` | DEBUG / UPGRADE / AT-* **占坑 + 详情路径** |
 | **代码审查** | `CODE-REVIEWER.md` + 两目录 `STATUS.md` | 待审队列 → §4/§6 → **done/** |
-| DEBUG 详情 | `test-to-settle/` | round 四轮次、`complexity` 中转 |
+| DEBUG 详情 | `test-to-settle/` | case（§1 + Agent Blocks）、`complexity` 中转 |
 | UPGRADE 详情 | `upgrade_to_settle/` | plan §0～§7，完工 → `done/` |
 | 文档 | `docs/` | 需求 / 架构 / 评审 / 运维 |
 | 自动化测试 | `test_task/` | 案例 + PASS 历史 |

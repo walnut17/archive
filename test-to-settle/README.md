@@ -57,23 +57,27 @@ test-to-settle/
 
 ---
 
-## 3. 四轮次 Agent（`round-*.md`）
+## 3. Case 时间线（`round-*.md`）
+
+> 格式：[`CASE-FORMAT.md`](../CASE-FORMAT.md) · Coder/审查员入口：[`TASKS.md`](../TASKS.md)
 
 ```text
-§1 Recorder → §2 Analyst → §3 Fix → §4 Reviewer → §5 轮次 CLOSED
-                  ↘ ESCALATED → complexity.md
+§1 任务描述（Bug 表，非 block）
+  → Recorder? / Analyst?（Agent Blocks）
+  → Coder ↔ Reviewer
+  → Closer（审查员，必）
+  → done/ + TASKS 删行
+                  ↘ Analyst ESCALATED → complexity.md
 ```
 
-| 环节 | Agent | 只改 |
-|---|---|---|
-| §1 | Recorder | 记 bug（无 bug 不建行） |
-| §2 | Analyst | 根因 + 建议 |
-| §3 | Fix | 小修 + commit |
-| §4 | Reviewer | 审 diff → CLOSED / REOPEN |
+| 环节 | 写什么 |
+|---|---|
+| §1 | Recorder / Co-test：Bug 表（`T-MMDD-NN`，来源 `DEPLOY`/`AUTO`） |
+| Agent Blocks | **Recorder** / **Analyst** / **Coder** / **Reviewer** / **Closer**（a-b 格式） |
 
-**留痕必填**：Agent · 时间 · 摘要
+**与 `docs/reviews/` 区别**：case Reviewer 审 **TASKS 路由的代码改动**；reviews 审 **架构/交付对线**。
 
-**与 `docs/reviews/` 区别**：round §4 审 **运行缺陷小修**；reviews 审 **代码/架构对线**（仅 Review Agent 可 CLOSED）。
+**历史 case** 可能仍有旧 §2～§7 — 新工作**只追加 Agent Blocks**。
 
 ---
 
@@ -92,13 +96,26 @@ test-to-settle/
 
 ---
 
-## 5. 新开一轮
+## 5. 新开一轮（Recorder / Co-test Guide）
+
+> **命名规范**：[`CASE-FORMAT.md`](../CASE-FORMAT.md) **「生成 case 的 Agent」**
+
+**何时新建文件**：当前没有合适 **活跃 round**，或 PM/架构明确开新验收轮。  
+**何时不新建**：已有活跃 round（如 `round-2026-06-11-v1.1-deploy`）→ **只追加 §1 行**，不加 TASKS 行。
 
 ```bash
 cp test-to-settle/round-TEMPLATE.md test-to-settle/round-2026-06-12-v1.1-regression.md
 ```
 
-**Bug ID**：`T-MMDD-NN` · **Complexity ID**：`C-MMDD-NN`
+| 步骤 | 动作 |
+|---|---|
+| 1 | 文件名 = `round-YYYY-MM-DD-<英文简述>.md` |
+| 2 | §0 **路由 ID** = 文件名无 `.md` |
+| 3 | §1 Bug 表（`T-MMDD-NN`） |
+| 4 | [`TASKS.md`](../TASKS.md) 加 DEBUG 行，**首列路由 ID = 文件名无后缀** |
+| 5 | push |
+
+**Bug ID**：`T-MMDD-NN` · **Complexity ID**：`C-MMDD-NN`（complexity 用，不是 case 路由 ID）
 
 ---
 
@@ -106,7 +123,7 @@ cp test-to-settle/round-TEMPLATE.md test-to-settle/round-2026-06-12-v1.1-regress
 
 | 轮次 | 文件 | 状态 |
 |---|---|---|
-| v1.1 / 0611 部署 | [round-2026-06-11-v1.1-deploy.md](round-2026-06-11-v1.1-deploy.md) | `IN_PROGRESS` |
+| v1.1 / 0611 部署 | [round-2026-06-11-v1.1-deploy.md](round-2026-06-11-v1.1-deploy.md) | `OPEN`（T-0611-09/18 待修） |
 
 ---
 
@@ -114,12 +131,11 @@ cp test-to-settle/round-TEMPLATE.md test-to-settle/round-2026-06-12-v1.1-regress
 
 | 你是… | 打开… | 只改… |
 |---|---|---|
-| Recorder | 当前 `round-*.md` | **§1** |
-| Analyst | 同上 | **§2** |
-| Fix | 同上 | **§3** + 代码 |
-| Reviewer | 同上 + diff | **§4** |
-| **代码审查员** | [`STATUS.md`](STATUS.md) + [`CODE-REVIEWER.md`](../CODE-REVIEWER.md) | **§4**；CLOSED → [`done/`](done/README.md) |
-| PM / 架构 | [`complexity.md`](complexity.md) | 分析 → docs/plan → 删 §2 行 |
+| Recorder | 当前 `round-*.md` | **§1** + 可选 **Recorder** block |
+| Analyst | 同上 | **Analyst** block |
+| Coder | [`TASKS.md`](../TASKS.md) → case | **Coder** block + 代码 |
+| Reviewer | [`TASKS.md`](../TASKS.md) → case + diff | **Reviewer** / **Closer** block |
+| PM / 架构 | [`complexity.md`](complexity.md) | 分析 → plan → 删 §2 行 |
 
 ---
 

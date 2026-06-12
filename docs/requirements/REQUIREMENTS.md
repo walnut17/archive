@@ -634,7 +634,7 @@ Prompt 模板(预置):
 - [ ] 5 步预算: 单次 qa-ask 调用 LLM ≤ 5 次 (稳态), < 7 次 (含死循环保护)
 - [ ] 响应时间: Agent 模式 < 30s (P95)
 
-#### 5.6.7 Archive 本地只读文件工具 (v1.2 · UP-0611-01)
+#### 5.6.7 Archive 本地只读文件工具 (v1.2 · plan-2026-06-11-archive-local-fs-tools)
 
 > **Plan**：[`upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md`](../../upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md)  
 > **架构**：[`docs/architecture/07-archive-fs-agent-tools.md`](../architecture/07-archive-fs-agent-tools.md)

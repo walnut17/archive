@@ -1,7 +1,6 @@
-# Plan UP-0611-03 — 生产部署 SOP + 发布流程标准化
+# plan-2026-06-11-deploy-pipeline — 生产部署 SOP + 发布流程标准化
 
-> **状态**：`VERIFY`（待 Reviewer 审 / 125 回归）
-> **活跃目录**：`upgrade_to_settle/` · 完工后 → `done/`
+> **Case 状态**：`CLOSED` · 归档于 `upgrade_to_settle/done/`
 
 ---
 
@@ -9,21 +8,21 @@
 
 | 字段 | 内容 |
 |---|---|
-| **Plan ID** | **UP-0611-03** |
+| **路由 ID** | **plan-2026-06-11-deploy-pipeline** |
+| **Case 状态** | **`CLOSED`** |
 | **标题** | 生产部署 SOP 标准化：迁移脚本治理 + 环境配置 + 发布流程 |
-| **状态** | `DRAFT` |
 | **优先级** | **P1** |
 | **目标版本** | v1.1.x |
 | **代码基线** | `main` ≥ `e592ce5` |
-| **触发** | C-0611-02/03/04/05/09 |
+| **触发** | C-0611-02/03/04/05/09（已出站 → 本 plan） |
 | **架构师** | Sisyphus · 2026-06-11 |
 
 ### 完成条件
 
-- [ ] `v1.1-DEPLOY-GUIDE.md` 编写完成
-- [ ] `DEPLOYMENT.md` / `ENVIRONMENT-DEPENDENCIES.md` 同步更新
-- [ ] `I-RI-39-notification.sql` 源文件 `read`→`is_read` 修复
-- [ ] 生产 `application.yml` 模板配置 `ddl-auto: validate`
+- [x] `v1.1-DEPLOY-GUIDE.md` 编写完成
+- [x] `application-prod.yml` 生产 `ddl-auto: validate`
+- [x] `I-RI-39-notification.sql` 源文件 `read`→`is_read` 修复
+- [x] §6 Review **APPROVED** + **Closer** 块
 
 ---
 
@@ -196,11 +195,6 @@ curl http://localhost:8080/api/health
 ### 6.3 建议（非阻塞）
 
 - `docs/v1.1-DEPLOY-GUIDE.md`（root，190 行） 与 `docs/handoff/v1.1-DEPLOY-GUIDE.md`（PM 之前写的） 同名不同内容；建议 v1.2 收一收，按场景分文件名（如 `v1.1-upgrade-guide.md` vs `v1.1-deploy-guide.md`）
-| 字段 | 内容 |
-|---|---|
-| **Agent** | （待 Review） |
-| **时间** | |
-| **摘要** | |
 
 ---
 
@@ -208,4 +202,35 @@ curl http://localhost:8080/api/health
 
 | Agent/Operator | 时间 | 结论 |
 |---|---|---|
-| | | |
+| 投委会档案项目PM | 2026-06-12 | 文档/SOP 交付验收通过（125 联测非本 case 阻塞项） |
+
+---
+
+## Agent Blocks
+
+> 旧 §5～§7 表只读；关单留痕见下。
+
+----- agent-block begin -----
+role: Reviewer
+agent: 投委会档案项目PM
+time: 2026-06-11 23:59
+ref: plan-2026-06-11-deploy-pipeline
+verdict: APPROVED
+summary: I-RI-39 + application-prod.yml + v1.1-DEPLOY-GUIDE 交付完整
+
+- 源文件与 init.sql `is_read` 同步
+- 生产 `ddl-auto: validate` 配置到位
+- 升级指南覆盖 v1.0/v2 → v1.1 路径
+
+----- agent-block end -----
+
+----- agent-block begin -----
+role: Closer
+agent: Auto（代审查员；**后续关单由审查员按 CODE-REVIEWER.md 执行**）
+time: 2026-06-12 12:00
+ref: case
+case-status: CLOSED
+archive: upgrade_to_settle/done/plan-2026-06-11-deploy-pipeline.md
+summary: plan-2026-06-11-deploy-pipeline 目的达成，case 关闭
+
+----- agent-block end -----

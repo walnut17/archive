@@ -17,7 +17,7 @@
 | [`AGENT-RESEARCH.md`](AGENT-RESEARCH.md) | Agent 方案调研 |
 | [`ARCH-REUSE-AUDIT.md`](ARCH-REUSE-AUDIT.md) | 可复用模块审计 |
 | [`01-arch-overview.md`](01-arch-overview.md) ~ [`06-requirements-gap-analysis.md`](06-requirements-gap-analysis.md) | 分章架构 |
-| [`07-archive-fs-agent-tools.md`](07-archive-fs-agent-tools.md) | Agent 只读 archive 磁盘工具 (UP-0611-01) |
+| [`07-archive-fs-agent-tools.md`](07-archive-fs-agent-tools.md) | Agent 只读 archive 磁盘工具 (plan-2026-06-11-archive-local-fs-tools) |
 | [`history/`](history/) | 历史架构 v1 / v2-lite / v3-final |
 
 ---

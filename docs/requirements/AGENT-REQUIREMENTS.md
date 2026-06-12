@@ -164,7 +164,7 @@
 - 沿用:问答入口在 `Knowledge.vue`,不动菜单
 - 调整:答案下加"引用:"可点跳材料版本详情页;长答案默认展开前 3 段后折叠;推理过程默认折叠("查看思考过程");多轮对话输入框下加历史 chip,点击恢复上文
 
-### 4.6 本地 archive 只读工具 (v1.2 规划 · UP-0611-01)
+### 4.6 本地 archive 只读工具 (v1.2 规划 · plan-2026-06-11-archive-local-fs-tools)
 
 - **需求**: [`REQUIREMENTS.md`](REQUIREMENTS.md) §5.6.7
 - **Plan**: [`upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md`](../../upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md)

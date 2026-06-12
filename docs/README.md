@@ -35,7 +35,7 @@
 | 我要记… | 写哪里 |
 |---|---|
 | 在 125 上执行了哪些命令、步骤 | [`operations/deployment_log.md`](operations/deployment_log.md) |
-| 发现 bug、四轮次（记/析/改/审） | [`../test-to-settle/round-*.md`](../test-to-settle/round-2026-06-11-v1.1-deploy.md) · 或 `test_bug-*.md` 入口 |
+| 发现 bug、Case 闭环（§1 + Agent Blocks） | [`../test-to-settle/round-*.md`](../test-to-settle/round-2026-06-11-v1.1-deploy.md) · 或 `test_bug-*.md` 入口 |
 | 自动化案例 **通过** | [`../test_task/`](../test_task/README.md) 案例 §3 执行历史 |
 | 自动化案例 **失败** | [`../test-to-settle/test_bug-TEMPLATE.md`](../test-to-settle/test_bug-TEMPLATE.md) → round §1 |
 | 大改暂挂（不进 TASKS） | [`../test-to-settle/complexity.md`](../test-to-settle/complexity.md)（出站删行） |

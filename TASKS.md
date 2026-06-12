@@ -2,6 +2,7 @@
 
 > **Coder 与代码审查员共用本表** — 唯一入口。占一行 → 打开 **Case 路径** → 在 case 文件里按 [`CASE-FORMAT.md`](CASE-FORMAT.md) 写 **Agent Block**。  
 > **Case** = 一份文件（DEBUG：`test-to-settle/round-*.md` · UPGRADE：`upgrade_to_settle/plan-*.md`）。  
+> **路由 ID** = case **文件名（无 `.md`）**：DEBUG → `round-*` · UPGRADE → `plan-*`（勿用 `CASE-D-*` / `UP-MMDD-NN`）。  
 > **CLOSED 后**：case 移 `done/`，**本表删除该行**（不再路由）。
 
 > **占用**：改状态 + `最后 Agent` + `最后更新` → 10 秒内 push main。
@@ -31,12 +32,11 @@ TASKS.md
 
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
 |---|---|---|---|---|---|---|
-| **CASE-D-0611** | DEBUG | [`test-to-settle/round-2026-06-11-v1.1-deploy.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) | `开发中` | — | 2026-06-12 | v1.1 部署回归；T-0611-09/18 → VERIFY；其余已审或已转 UP |
-| **UP-0611-01** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) | `待审` | Sisyphus | 2026-06-12 | archive_fs；R1 已修，待复审 |
-| **UP-0611-02** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-agent-intent-classification.md`](upgrade_to_settle/plan-2026-06-11-agent-intent-classification.md) | `待审` | Sisyphus | 2026-06-12 | 离题拒答；R2-1 已修，待复审 |
-| **UP-0611-03** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-deploy-pipeline.md`](upgrade_to_settle/plan-2026-06-11-deploy-pipeline.md) | `审阅中` | 投委会档案项目PM | 2026-06-12 | 部署 SOP；§6 APPROVED，待 Closer |
-| **UP-0611-04** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-chat-ui.md`](upgrade_to_settle/plan-2026-06-11-chat-ui.md) | `待审` | Sisyphus | 2026-06-12 | 聊天 UI 已实现，§6 待审 |
-| **UP-0611-05** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-test-governance.md`](upgrade_to_settle/plan-2026-06-11-test-governance.md) | `待审` | Sisyphus | 2026-06-12 | 测试治理；R5-1 已修，待复审 |
+| **round-2026-06-11-v1.1-deploy** | DEBUG | [`test-to-settle/round-2026-06-11-v1.1-deploy.md`](test-to-settle/round-2026-06-11-v1.1-deploy.md) | `开发中` | — | 2026-06-12 | v1.1 部署回归；T-0611-09/18 OPEN；其余已审或已转 plan |
+| **plan-2026-06-11-archive-local-fs-tools** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) | `待审` | Sisyphus | 2026-06-12 | archive_fs；R1 已修，待复审 |
+| **plan-2026-06-11-agent-intent-classification** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-agent-intent-classification.md`](upgrade_to_settle/plan-2026-06-11-agent-intent-classification.md) | `待审` | Sisyphus | 2026-06-12 | 离题拒答；R2-1 已修，待复审 |
+| **plan-2026-06-11-chat-ui** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-chat-ui.md`](upgrade_to_settle/plan-2026-06-11-chat-ui.md) | `待审` | Sisyphus | 2026-06-12 | 聊天 UI 已实现，§6 待审 |
+| **plan-2026-06-11-test-governance** | UPGRADE | [`upgrade_to_settle/plan-2026-06-11-test-governance.md`](upgrade_to_settle/plan-2026-06-11-test-governance.md) | `待审` | Sisyphus | 2026-06-12 | 测试治理；R5-1 已修，待复审 |
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
 > **不在本表**：complexity 中转 · AT-* 自动化 · 已 CLOSED（见各 `done/`）
@@ -53,11 +53,14 @@ TASKS.md
 
 ### 何时新增一行
 
+> **命名规范**：[`CASE-FORMAT.md`](CASE-FORMAT.md) **「生成 case 的 Agent」** — 路由 ID = 文件名（无 `.md`）。
+
 | 事件 | 操作 |
 |---|---|
-| 新 DEBUG case | 新建 `round-*.md` + 本表 **DEBUG** 行 `未开发` |
-| complexity 升格 | 新建 `plan-*.md` + 本表 **UPGRADE** 行 `未开发` |
-| 大改暂不做 | 只写 complexity，**不加行** |
+| 新 DEBUG case | ① `round-YYYY-MM-DD-<简述>.md` ② §0 路由 ID 同文件名 ③ TASKS 加 **DEBUG** 行，首列 = 路由 ID，状态 `未开发` |
+| complexity 升格 | ① `plan-YYYY-MM-DD-<简述>.md` ② §0 路由 ID 同文件名 ③ TASKS 加 **UPGRADE** 行 ④ complexity 删行 |
+| 大改暂不做 | 只写 complexity，**不加** TASKS 行 |
+| 向已有 round 加 bug | **不**新建 case、**不**加 TASKS 行；只改该 round **§1** |
 
 ---
 
@@ -699,13 +702,13 @@ MOD-01 (DB 迁移, 1.7d)
 > **完整 plan**：`upgrade_to_settle/plan-*.md`（§0～§7）  
 > **流程**：改本节 `状态` → `占用-<名字>` → 读 plan 开工 → `已完成`
 
-| Plan ID | 文件 | 摘要 | 优先级 | 状态 |
+| 路由 ID | 文件 | 摘要 | 优先级 | 状态 |
 |---------|------|------|--------|------|
-| UP-0611-01 | [`plan-2026-06-11-archive-local-fs-tools.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) | Agent 只读 `D:/archive` 材料：ls/grep/read + 多模态 | P1 | `已完成(Sisyphus / 2026-06-11)` |
-| UP-0611-02 | [`plan-2026-06-11-agent-intent-classification.md`](upgrade_to_settle/plan-2026-06-11-agent-intent-classification.md) | Agent 离题拒答 + 业务域意图分类（C-0611-01） | P1 | `已完成(Sisyphus / 2026-06-11)` |
-| UP-0611-03 | [`plan-2026-06-11-deploy-pipeline.md`](upgrade_to_settle/plan-2026-06-11-deploy-pipeline.md) | 部署 SOP / I-RI-39 源文件修复 / `ddl-auto: validate`（C-0611-02/03/04/05/09） | P1 | `已完成(Sisyphus / 2026-06-11)` |
-| UP-0611-04 | [`plan-2026-06-11-chat-ui.md`](upgrade_to_settle/plan-2026-06-11-chat-ui.md) | 知识库聊天式 UI 重构（C-0611-08） | P2 | `已完成(Sisyphus / 2026-06-11)` |
-| UP-0611-05 | [`plan-2026-06-11-test-governance.md`](upgrade_to_settle/plan-2026-06-11-test-governance.md) | 测试治理：补测例 + H2/MySQL 策略文档（C-0611-10/11） | P2 | `已完成(Sisyphus / 2026-06-11)` |
+| plan-2026-06-11-archive-local-fs-tools | [`plan-2026-06-11-archive-local-fs-tools.md`](upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md) | Agent 只读 `D:/archive` 材料：ls/grep/read + 多模态 | P1 | `已完成(Sisyphus / 2026-06-11)` |
+| plan-2026-06-11-agent-intent-classification | [`plan-2026-06-11-agent-intent-classification.md`](upgrade_to_settle/plan-2026-06-11-agent-intent-classification.md) | Agent 离题拒答 + 业务域意图分类（C-0611-01） | P1 | `已完成(Sisyphus / 2026-06-11)` |
+| plan-2026-06-11-deploy-pipeline | [`plan-2026-06-11-deploy-pipeline.md`](upgrade_to_settle/done/plan-2026-06-11-deploy-pipeline.md) | 部署 SOP / I-RI-39 源文件修复 / `ddl-auto: validate`（C-0611-02/03/04/05/09） | P1 | `已完成(Sisyphus / 2026-06-11)` |
+| plan-2026-06-11-chat-ui | [`plan-2026-06-11-chat-ui.md`](upgrade_to_settle/plan-2026-06-11-chat-ui.md) | 知识库聊天式 UI 重构（C-0611-08） | P2 | `已完成(Sisyphus / 2026-06-11)` |
+| plan-2026-06-11-test-governance | [`plan-2026-06-11-test-governance.md`](upgrade_to_settle/plan-2026-06-11-test-governance.md) | 测试治理：补测例 + H2/MySQL 策略文档（C-0611-10/11） | P2 | `已完成(Sisyphus / 2026-06-11)` |
 
 ### 抢先 SOP
 

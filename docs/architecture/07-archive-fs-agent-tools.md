@@ -1,6 +1,6 @@
 # Archive 本地只读文件 Agent 工具 — 架构说明
 
-> **Plan**：[`upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md`](../../upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md)（UP-0611-01）  
+> **Plan**：[`upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md`](../../upgrade_to_settle/plan-2026-06-11-archive-local-fs-tools.md)（plan-2026-06-11-archive-local-fs-tools）  
 > **需求**：[`REQUIREMENTS.md`](../requirements/REQUIREMENTS.md) §5.6.7  
 > **RI**：[`ARCH-DECOMPOSITION.md`](../requirements/ARCH-DECOMPOSITION.md) RI-70  
 > **状态**：设计已定稿 · **实现未开始**
@@ -137,4 +137,4 @@ spring:
 
 ---
 
-*Sisyphus 架构风格 · 2026-06-11 · 随 UP-0611-01 实现同步更新 §3 实现细节*
+*Sisyphus 架构风格 · 2026-06-11 · 随 plan-2026-06-11-archive-local-fs-tools 实现同步更新 §3 实现细节*

@@ -820,7 +820,7 @@
 - **对应 §X.Y**: REQUIREMENTS §13.3.8
 - **对应 MOD**: MOD-04 + MOD-02
 
-### RI-70: Archive 本地只读文件 Agent 工具 (§5.6.7 · UP-0611-01)
+### RI-70: Archive 本地只读文件 Agent 工具 (§5.6.7 · plan-2026-06-11-archive-local-fs-tools)
 
 - **业务**: Agent 在 `D:/archive/files` 与 `D:/archive/parsed` 内只读 list/grep/read；路径 DB 绑定 + PathGuard
 - **影响**: `agent/tool/archive/*`、`ArchiveFsTool`、`AgentSystemPrompt`
