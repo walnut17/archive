@@ -363,6 +363,39 @@ summary: §1.2 G timeout 已接；§1.2 F 实现与 find_project 契约脱节，
 
 ----- agent-block end -----
 
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-12 18:15
+ref: plan-2026-06-12-qa-python-upload-first
+ref_commit: 6dfaaea
+verdict: REQUEST_CHANGES
+summary: 字段契约+切换骨架已通；无锁定场景规则/badge 映射仍偏 Java，缺 v1.1 单测
+
+**本轮已修 ✅**
+
+| 项 | commit |
+|---|---|
+| `projectCode` / `projectName` / `switchDecision` 产出 | `6dfaaea` |
+| 5 级切换骨架（有锁定时 locked==code / locked!=code） | `6dfaaea` |
+| `engine.py` sources 兼容 `code`/`name` fallback | `6dfaaea` |
+| `QaAgentClient` 去掉重复 import | `6dfaaea` |
+| pytest | **23 passed** |
+
+**仍阻塞 §1.2 F（P1，范围已很小）**
+
+1. **无锁定分支与 Java 不一致**（`find_project._fmt` else 分支）：Java `applyImplicitSwitchRule` 在 `currentLock==null` 时 conf∈[0.7,0.95) → `SAME_PROBABLY`、conf<0.7 → `UNCLEAR`；Python 现 conf≥0.7 直接 `SAME_CONFIRMED`，conf<0.7 仍落默认 `SAME_CONFIRMED`（首问低置信会误标）。
+2. **`confidence_badge` 应用 `switchDecision` 映射**（对齐 Java `populateV11Fields`）：`SAME_PROBABLY`/`DIFFERENT_PROBABLY` → `AI_INFERRED`，`UNCLEAR` → `PENDING_REVIEW`，`SAME_CONFIRMED` → null；现 engine 仍按 raw confidence 阈值，高置信 `SAME_CONFIRMED` 会误出 `CONFIRMED` 徽章。
+3. **缺单测**：`find_project._fmt` 各 decision 分支 + turn/ask 断言 `project_switch_hint`/`agent_sources` 非空（上轮已提，本 commit 未补）。
+
+**非阻塞（plan 仍 OPEN）**
+
+- §1.4 125 Co-test 8 条 · §1.2 I/J · `archive_fs` materialVersionId · `QaAgentClient.isHealthy()` timeout · 工作区 config 统一化未 push
+
+**修序**：修正无锁定 switch 规则 → engine badge 改读 decision → 补 1～2 个 v1.1 单测 → `待审`。
+
+----- agent-block end -----
+
 ---
 
 ## 4. 关单检查
