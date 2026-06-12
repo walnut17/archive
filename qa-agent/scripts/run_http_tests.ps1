@@ -14,7 +14,8 @@ Set-Location (Split-Path $PSScriptRoot -Parent)
 
 if (-not $BaseUrl) {
     $BaseUrl = "http://182.168.1.125:8001"
-}$env:QA_AGENT_BASE_URL = $BaseUrl
+}
+$env:QA_AGENT_BASE_URL = $BaseUrl
 
 $pytest = ".\.venv\Scripts\pytest.exe"
 if (-not (Test-Path $pytest)) {
@@ -40,4 +41,4 @@ if (-not $UnitOnly) {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
-Write-Host "`n全部通过。" -ForegroundColor Green
+Write-Host "`nAll tests passed." -ForegroundColor Green

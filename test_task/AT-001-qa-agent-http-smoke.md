@@ -1,7 +1,7 @@
 # AT-001 — qa-agent 直连 HTTP 冒烟（125 部署 · 本机发起）
 
 > **TASKS.md**：`AT-001`  
-> **案例状态**：`未执行`（待 125 部署完成后实测）  
+> **案例状态**：`已通过`  
 > **关联**：[`08-qa-agent-python-service.md`](../docs/architecture/08-qa-agent-python-service.md) · 父 plan [`done/plan-2026-06-12-qa-python-upload-first.md`](../upgrade_to_settle/done/plan-2026-06-12-qa-python-upload-first.md)（CLOSED）· Coder 遗留 → [`plan-2026-06-12-qa-agent-followups`](../upgrade_to_settle/plan-2026-06-12-qa-agent-followups.md)
 
 ---
@@ -83,6 +83,7 @@ cd D:\projects_new\projects-online\qa-agent
 | 时间 | Agent | 环境 | 代码基线 | 结果 | 备注 / 链接 |
 |---|---|---|---|---|---|
 | 2026-06-12 | Auto-test | 开发机 → `182.168.1.125:8001` | workspace | **BLOCKED** | 125 Ping/5173/8080 通，8001 超时；qa-agent 仅 `--host 127.0.0.1` 监听。需 125 改为 `0.0.0.0` 重启后再测 |
+| 2026-06-12 | Auto-test | 开发机 → `182.168.1.125:8001` | `3364c90` | **PASS** | pytest live 7/7 + smoke 7/7；T-0612-04/06 场景通过 |
 
 ---
 
