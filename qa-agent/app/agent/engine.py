@@ -275,7 +275,7 @@ def run_agent_stream(question: str, session_id: str | None = None) -> Iterator[s
         "interrupted": False,
     }
 
-    for i in range(1, settings.glm_max_iterations + 1):
+    for i in range(1, settings.agent_max_iterations + 1):
         user_prompt = build_user_prompt(question_resolved, session_id, steps)
 
         # === B 段: LLM 流式 token yield ===

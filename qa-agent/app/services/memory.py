@@ -23,6 +23,8 @@ _REFERENCE_PATTERNS = [
 
 def _detect_reference(question: str) -> bool:
     """检测问题是否含指代词/上下文词. 含任一即 True."""
+    if re.search(r"\bPRJ-\d{4}-\d+\b", question, re.IGNORECASE):
+        return False
     for p in _REFERENCE_PATTERNS:
         if p.search(question):
             return True

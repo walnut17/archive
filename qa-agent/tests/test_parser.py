@@ -1,3 +1,4 @@
+from app.agent.prompts import DEFAULT_REJECT_ANSWER
 from app.agent.parser import FINAL_ANSWER, parse_agent_step, final_answer_from_args
 
 
@@ -18,4 +19,4 @@ def test_parse_final_answer():
 def test_parse_invalid_returns_polite_reject():
     step = parse_agent_step("今天天气不错", 1)
     assert step["tool"] == FINAL_ANSWER
-    assert "档案" in final_answer_from_args(step["toolArgs"])
+    assert final_answer_from_args(step["toolArgs"]) == DEFAULT_REJECT_ANSWER

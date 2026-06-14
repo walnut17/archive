@@ -2,6 +2,8 @@ import json
 import re
 from typing import Any
 
+from app.agent.prompts import DEFAULT_REJECT_ANSWER
+
 
 FINAL_ANSWER = "FINAL_ANSWER"
 
@@ -30,7 +32,7 @@ def parse_agent_step(raw: str, iteration: int) -> dict[str, Any]:
         "tool": FINAL_ANSWER,
         "toolArgs": json.dumps(
             {
-                "answer": "我是投委会档案助手，只回答项目档案相关问题。请问您想查询哪个项目？"
+                "answer": DEFAULT_REJECT_ANSWER
             },
             ensure_ascii=False,
         ),

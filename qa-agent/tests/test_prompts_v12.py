@@ -12,7 +12,12 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from app.agent.prompts import SYSTEM_PROMPT, EXTRACT_SYSTEM, EXTRACT_USER_TEMPLATE
+from app.agent.prompts import (
+    DEFAULT_REJECT_ANSWER,
+    SYSTEM_PROMPT,
+    EXTRACT_SYSTEM,
+    EXTRACT_USER_TEMPLATE,
+)
 
 
 def test_prompt_has_8_tools():
@@ -32,12 +37,9 @@ def test_prompt_has_8_tools():
 
 
 def test_prompt_has_few_shot():
-    """5 个 Few-shot 示例齐."""
-    assert "示例 1" in SYSTEM_PROMPT
-    assert "示例 2" in SYSTEM_PROMPT
-    assert "示例 3" in SYSTEM_PROMPT
-    assert "示例 4" in SYSTEM_PROMPT
-    assert "示例 5" in SYSTEM_PROMPT
+    """9 个 Few-shot 示例齐."""
+    for i in range(1, 10):
+        assert f"示例 {i}" in SYSTEM_PROMPT
 
 
 def test_prompt_priority_order():
@@ -59,7 +61,32 @@ def test_prompt_out_of_scope_rejection():
     """范围外礼貌拒答."""
     assert "礼貌拒答" in SYSTEM_PROMPT
     assert "天气" in SYSTEM_PROMPT
-    assert "我是投委会档案助手" in SYSTEM_PROMPT
+    assert DEFAULT_REJECT_ANSWER in SYSTEM_PROMPT
+
+
+def test_prompt_has_scenario_routing():
+    """v1.3: 按场景路由, 避免所有问题都先 find_project."""
+    assert "场景路由" in SYSTEM_PROMPT
+    assert "不要把所有问题都强行当成单项目问答" in SYSTEM_PROMPT
+    assert "跨项目统计" in SYSTEM_PROMPT
+    assert "query_mysql" in SYSTEM_PROMPT
+    assert "问候 / 感谢" in SYSTEM_PROMPT
+    assert "业务术语" in SYSTEM_PROMPT
+
+
+def test_prompt_cross_project_does_not_force_find_project():
+    """跨项目统计/列表应直接 query_mysql, 不先锁项目."""
+    assert "跨项目统计 / 待办列表 / 系统能力说明 → **不要** 先 `find_project`" in SYSTEM_PROMPT
+    assert "列一下所有待审议项目" in SYSTEM_PROMPT
+    assert "不需要先锁定单个项目" in SYSTEM_PROMPT
+
+
+def test_prompt_material_and_term_routes():
+    """材料检索与术语解释有明确首选工具."""
+    assert "材料正文检索" in SYSTEM_PROMPT
+    assert "search_fulltext" in SYSTEM_PROMPT
+    assert "术语解释" in SYSTEM_PROMPT
+    assert "network_dict_lookup" in SYSTEM_PROMPT
 
 
 def test_prompt_degraded_rule():
@@ -72,6 +99,7 @@ def test_prompt_degraded_rule():
 def test_prompt_no_loop_rule():
     """死循环规则: 不同参数不算重复."""
     assert "不同参数" in SYSTEM_PROMPT or "多变体" in SYSTEM_PROMPT
+    assert "settings.agent_max_iterations" in SYSTEM_PROMPT
 
 
 def test_extract_template_has_max_chars():
@@ -90,7 +118,7 @@ def test_extract_system_5_fields():
 def test_prompt_size_reasonable():
     """prompt 不过长 (避免 token 浪费)."""
     size = len(SYSTEM_PROMPT)
-    # 经验值: 4K-8K 字符是合理范围
+    # 经验值: 4K-12K 字符是合理范围
     assert 4000 < size < 12000, f"SYSTEM_PROMPT 长度异常: {size}"
 
 
