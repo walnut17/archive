@@ -1,0 +1,134 @@
+# plan-2026-06-15-analysis-ownership-cutover — 分析职责迁至 qa-agent
+
+> **状态**：`OPEN` — **依赖** scaffold plan CLOSED 后再占行  
+> **来源**：complexity **C-0615-03** · T-0615-analysis-ownership-cutover · **P0**
+
+---
+
+## 0. Case 元信息
+
+| 字段 | 内容 |
+|---|---|
+| **路由 ID** | `plan-2026-06-15-analysis-ownership-cutover` |
+| **类型** | `UPGRADE` |
+| **Case 状态** | `OPEN` |
+| **标题** | Java 入库瘦身 + parse 后 enqueue + Worker 写 fact/timepoint |
+| **需求锚点** | [`09-analysis-ownership-python.md`](../docs/architecture/09-analysis-ownership-python.md) §3～§9 |
+| **前置** | [`plan-2026-06-15-analysis-framework-scaffold`](plan-2026-06-15-analysis-framework-scaffold.md) **CLOSED** |
+| **风险** | 生产须先备份；`analysisEnqueue` 可灰度开关 |
+
+---
+
+## 1. 任务描述（PM / 架构）
+
+### 做
+
+- Java **`triggerAfterParse` 瘦身**：默认不再调用 `ExtractionEngine` / `TimepointExtractor`
+- **`QaAgentClient.enqueueAnalysis()`**：parse 成功后 HTTP 调 qa-agent `/v1/analysis/enqueue`（受 `qaAgent.analysisEnqueue.enabled` 控制）
+- qa-agent Worker **补全 timepoint 写入**（从材料文本抽取 → `timepoint` 表，替代 Java 路径）
+- 立项 **extract-preview** 仍走 `/v1/extract/project-fields`（轻量，非 Worker）
+- 125 联调：上传新材料 → 队列 success → 问答能读到 snapshot/fact
+
+### 不做
+
+- `ComparisonEngine` / `TriggerEngine` 迁移
+- 删除 Java Engine 类（仅 ConditionalOff + 文档标记 deprecated）
+- 前台大改（仅确认预填/详情页读 snapshot 无 500 即可）
+
+### 验收
+
+| # | Given | When | Then |
+|---|---|---|---|
+| 1 | `analysisEnqueue.enabled=true` | 上传并 parse 完成 | Java 日志有 enqueue；`analysis_job` 新增 pending |
+| 2 | Worker 运行 | 5～30 min 内 | job success；`analysis_snapshot` 有行 |
+| 3 | 同上 | 查 `project_fact` / `timepoint` | 有关键字段（利率/结构/时点至少一类） |
+| 4 | `analysisEnqueue.enabled=false` | 上传 | 入库成功；**无** ExtractionEngine 调用；行为与开关文档一致 |
+| 5 | 125 TUI | 问项目利率/结构 | 优先 snapshot 答案，≤5 步 ReAct |
+| 6 | `mvn test` + `pytest` | CI | 通过 |
+
+---
+
+## 2. 开发说明（架构师 · Coder 只读）
+
+### 2.1 Java 改动
+
+| # | 任务 | 文件 |
+|---|---|---|
+| J1 | `QaAgentClient.enqueueAnalysis(projectId, materialVersionId, reason)` | `backend/.../qaagent/QaAgentClient.java` |
+| J2 | `QaAgentProperties` + `application.yml` 映射 `qaAgent.analysisEnqueue` | `QaAgentProperties.java` · `application.yml` |
+| J3 | `MaterialVersionService.triggerAfterParse` 按开关分支 | `MaterialVersionService.java` |
+| J4 | `@ConditionalOnProperty` 包裹 `ExtractionEngine`/`TimepointExtractor` 在 trigger 中的调用；默认 **false** | 同上 + `application.yml` |
+| J5 | 可选：`GET /api/projects/{id}/analysis-status` 代理 qa-agent | `ProjectController.java` |
+
+**triggerAfterParse 目标态**（[`09` §5.2](../docs/architecture/09-analysis-ownership-python.md)）:
+
+```java
+// 保留
+publishEvent(MaterialCategorizedEvent);
+updateRemainingAmount(...);
+// 新增
+if (analysisEnqueueEnabled) qaAgentClient.enqueueAnalysis(...);
+// 移除（默认）
+// extractionEngine.extract();
+// timepointExtractor.extractTimepoints();
+```
+
+### 2.2 Python 改动
+
+| # | 任务 | 文件 |
+|---|---|---|
+| P1 | Worker 增加 timepoint 模板或复用 extractor 写 `timepoint` | `qa-agent/app/analysis/` 新模块或 `mapper.py` |
+| P2 | enqueue API 支持 `material_version_id` 触发 reason（可选优化指纹） | `app/api/analysis.py` · `scheduler.py` |
+| P3 | `/v1/analysis/enqueue` 失败时 Java 只 log.warn，不抛到上传 API | 契约文档 |
+
+### 2.3 配置 rollout
+
+| 阶段 | `analysisWorker.enabled` | `analysisEnqueue.enabled` | Java extract |
+|---|---|---|---|
+| 脚手架 | true | false | true（旧） |
+| 灰度 | true | true（试点项目） | false |
+| 全量 | true | true | false |
+
+### 2.4 回滚
+
+1. `analysisEnqueue.enabled=false`
+2. `app.engine.extraction-on-parse=true`（Coder 新增开关，恢复旧行为）
+3. 队列 job 可 cancel；snapshot 保留不影响 CRUD
+
+---
+
+## 3. Agent Blocks
+
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-15
+ref: plan-2026-06-15-analysis-ownership-cutover
+ref_commit: cdec230
+verdict: REQUEST_CHANGES
+summary: Java enqueue 分支已落；Worker timepoint + config 示例 + 125 联调未过
+
+**已通过 ✅（J1～J4 骨架）**
+
+| 项 | 结论 |
+|---|---|
+| `QaAgentClient.enqueueAnalysis` | POST `/v1/analysis/enqueue`，失败 warn |
+| `MaterialVersionService.triggerAfterParse` | `analysisEnqueue.enabled` → enqueue；else 旧 Extraction/Timepoint |
+| `QaAgentProperties.analysisEnqueue` + yml | 已映射 |
+
+**阻塞关单**
+
+1. **P1 timepoint**：`qa-agent/app/analysis/` **无** timepoint 写入；plan §1 仍要求 Worker 替代 Java `TimepointExtractor`
+2. **config.example.json** 缺 `qaAgent.analysisEnqueue` 段（rollout 文档 §2.3）
+3. **§1 验收 1～5**：无 125 上传→enqueue→snapshot 留痕
+4. scaffold 已 CLOSED；本 plan 可继续但须先补 P1
+
+----- agent-block end -----
+
+---
+
+## 4. 关单检查
+
+- [ ] §1 验收 1～6
+- [ ] `09-analysis-ownership-python.md` 与 `02-backend-layer-architecture.md` trigger 链已更新
+- [ ] Reviewer **CLOSED** → `done/`

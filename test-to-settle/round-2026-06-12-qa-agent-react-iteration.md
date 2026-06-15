@@ -42,6 +42,7 @@
 |---|---|---|---|---|
 | **T-0612-07** | DEPLOY | **P0** | **lmz 材料数未答 + 同工具死循环**（见 §1.3）。**验收**：TUI `/time lmz项目下有多少份材料？` 或流式等价问句 → ① 答案含**具体材料份数**（数字） ② ReAct 步骤中 **不出现** 连续两步相同 `find_project`+相同 `query` ③ 第 1 步 `find_project` 命中后，第 2 步须为 **`get_project_business_data`**（或 `query_mysql` 统计），见 `prompts.py` 示例「lmz项目下有几份材料」 | **FIX 待 125 复测** |
 | **T-0612-08** | DEPLOY | P2 | TUI 流式模式答案区泄漏 ReAct **raw JSON**；`done.answer` 终稿未替换可见输出。**验收**：流式问 lmz 同上 → 答案区仅人类可读终稿，无 `` ```json `` 块 | **FIX 待 125 复测** |
+| **T-0615-proposal-semantics** | ESCALATED | P2 | 议案计数混淆维护性 proposal 与正式投委会议案 | **已转** [`plan-2026-06-15-proposal-semantics`](../upgrade_to_settle/plan-2026-06-15-proposal-semantics.md) |
 
 ### 1.3 复现细节（TUI · 2026-06-12 · Operator 已确认）
 
@@ -171,6 +172,31 @@ summary: 离线 64/65 pytest；125 live 工具链升级 OK 但 materialCount SQL
 ### 结论
 
 **REQUEST_CHANGES** — ReAct 递增与工具升级逻辑已生效，T-0612-08 流式展示 OK；**T-0612-07 主验收未过**（`get_project_business_data` SQL 与 125 库表不一致 → 材料数无法返回）。Coder 须修 SQL（去掉或兼容 `p.stage`）并补 `test_streaming` 的 `db_cursor` mock；修后 125 `start.ps1 -Force` 重验 lmz。
+
+----- agent-block end -----
+
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-15
+ref: round-2026-06-12-qa-agent-react-iteration
+ref_commit: 1124e0a..e9d4bfc,5fd29a8
+verdict: APPROVED
+summary: ReAct 递增+工具升级+流式终稿代码通过；T-0612-07 待 125 复测确认
+
+**已通过 ✅**
+
+| Bug | commit | 结论 |
+|---|---|---|
+| T-0612-07 逻辑 | `1124e0a` `08c897c` | `react_helpers` 升级 find→biz；无同参双 find |
+| T-0612-07 SQL | `e9d4bfc` | 去掉 `p.stage`；对齐 125 schema |
+| T-0612-08 | Coder 块 | 流式仅终稿；Recorder live 已 PASS |
+| 单测 | `test_react_helpers` 等 | 离线通过 |
+
+**未关单**
+
+- §1.2 仍标 **FIX 待 125 复测**：`e9d4bfc` 后无新 lmz live 留痕
+- `test_get_project_business_data` mock 未更新（见 proposal-semantics）
 
 ----- agent-block end -----
 
