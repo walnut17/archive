@@ -10,7 +10,8 @@
 | 版本 | 日期 | 服务器 | 指挥/执行 | 状态 |
 |---|---|---|---|---|
 | **v1.1 / 0611 续** | 2026-06-11 | `182.168.1.125` | Auto (Guide) + 用户 (Operator) | ✅ VERIFY 已记录（§9）；round-0611 已 CLOSED |
-| **v1.1 / 0612 新轮** | 2026-06-12 | `182.168.1.125` | Auto (Co-test Guide) + 用户 (Operator) | 🟡 qa-agent TUI 联调进行中 |
+| **v1.1 / 0612 新轮** | 2026-06-12 | `182.168.1.125` | Auto (Co-test Guide) + 用户 (Operator) | 🟡 qa-agent TUI + 立项验收进行中 |
+| **v1.1 / 0612 续** | 2026-06-12 | `182.168.1.125` | Auto (Co-test Guide) + 用户 (Operator) | 🟡 立项 Co-test §12（基线 `954054e`） |
 
 ---
 
@@ -412,6 +413,8 @@ A：healthcheck 无 token；浏览器带 token 会走 RBAC，DB 未迁移时在 
 | 2026-06-12 | Sisyphus | **§11 qa-agent 交付**：Python 8 工具 + 二期全量 · Java BFF QaAgentClient/health · WinSW qa-agent.xml · Java Agent @Deprecated |
 | 2026-06-12 | Auto (Co-test Guide) | §11.1 TUI B1：lmz 材料数 — find 命中但无材料数；流式答案区 JSON 泄漏 |
 | 2026-06-12 | Auto (Co-test Guide) | 开立 DEBUG [`round-2026-06-12-qa-agent-react-iteration`](../../test-to-settle/round-2026-06-12-qa-agent-react-iteration.md) · T-0612-07/08 + ReAct 递增规则 |
+| 2026-06-12 | Auto (Co-test Guide) | §12 立项 Co-test：`954054e` 基线 qa-agent 重启后；T-0612-09/10/11 → [`round-2026-06-12-project-create-co-test`](../../test-to-settle/round-2026-06-12-project-create-co-test.md) |
+| 2026-06-12 | Auto (Co-test Guide) | §12 Step 2：列表点「详情」dynamic import 失败 → **T-0612-12** |
 
 ---
 
@@ -492,6 +495,47 @@ A：healthcheck 无 token；浏览器带 token 会走 RBAC，DB 未迁移时在 
 |---|---|---|---|
 | **T-0612-07** | DEPLOY/QA P0 | lmz 材料数：find 命中后须换工具统计；ReAct 每轮上下文递增 | [`round-2026-06-12-qa-agent-react-iteration`](../../test-to-settle/round-2026-06-12-qa-agent-react-iteration.md) |
 | **T-0612-08** | DEPLOY/UX P2 | 流式/TUI：答案区泄漏 ReAct JSON | 同上 |
+
+---
+
+## 12. Co-test — 立项流程（2026-06-12 · 基线 `954054e`）
+
+| 字段 | 内容 |
+|---|---|
+| **Guide** | Auto |
+| **Operator** | 用户 |
+| **代码基线** | `954054e`（125 已与 `origin/main` 对齐；qa-agent 已 `stop` → `start.ps1 -Force`） |
+| **验收前端** | `:5173` dev |
+| **round** | [`round-2026-06-12-project-create-co-test`](../../test-to-settle/round-2026-06-12-project-create-co-test.md) |
+
+| Step | 操作 | 结果 | 时间 |
+|---|---|---|---|
+| 0 | 125 git = `954054e` · qa-agent 重启完成 | ✅ Operator 已确认 | 2026-06-12 |
+| 1 | 新建项目 → 上传 PDF → 进入预填表单 | 🔴 三项问题，见下 | 2026-06-12 |
+| 2 | 立项退出 → 列表 → 未完成项目点「详情」 | 🔴 T-0612-12 动态 import 失败 | 2026-06-12 |
+
+### 12.1 Operator 现象（原文归纳）
+
+| # | 现象 | 期望 |
+|---|---|---|
+| 1 | **项目编号**直接为 `DRAFT-…` 且 **不可编辑** | 按现有 **两个系列** 可选生成；允许 **手工填号**（校验占用） |
+| 2 | 上传 **PDF** 后 **金额未识别**（仍为 0） | AI 预填应带出文档内投资金额 |
+| 3 | **业务类别**下拉不对 | 应为：债权包投资、单笔债权投资、股权投资、债权池投资、组合投资 |
+
+### 12.2 路由
+
+| ID | 类型 | 摘要 | 去向 |
+|---|---|---|---|
+| **T-0612-09** | P0 · 编号 | DRAFT 锁死 + 非系列编号 | **ESCALATED** → [`plan-2026-06-12-project-create-upload-first`](../../upgrade_to_settle/plan-2026-06-12-project-create-upload-first.md) §1.3 |
+| **T-0612-10** | P0 · 抽取 | PDF 金额未预填 | round §1 **OPEN**（extract / parse 时序待查） |
+| **T-0612-11** | P1 · 枚举 | 类别非业务五类 | **ESCALATED** → 同上 plan §1.3 |
+| **T-0612-12** | P0 · 路由 | 列表「详情」→ `ProjectDetail.vue` dynamic import 失败 | round §1 **OPEN**（Vite dev `optimizeDeps` 假设） |
+
+### 12.3 T-0612-12 排查备忘（Operator / Coder）
+
+1. **Network**：点详情时看 `ProjectDetail.vue` 状态码 — **404/500** 则读 125 上 Vite 终端报错；**200** 仍失败则多为 optimize 重载竞态。
+2. **临时规避**：浏览器 **整页刷新** 后再点「详情」；或 125 上前端目录 `npm run dev` **重启** 后先随便打开一次详情预热。
+3. **Coder 方向**：`vite.config.ts` 增加 `optimizeDeps.include: ['jsondiffpatch', 'jsondiffpatch/formatters/html', 'dompurify']`；改后 125 重启 dev 复测。
 
 ---
 

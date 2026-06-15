@@ -1,7 +1,7 @@
 # plan-2026-06-12-project-create-upload-first — RI-16 立项「上传优先」
 
-> **状态**：`DRAFT`（complexity **C-0612-01** 待 PM/架构拍板后进 TASKS）
-> **触发**：Co-test 0612 Step 2e · T-0612-05 · [`deployment_log`](../docs/operations/deployment_log.md) §10
+> **状态**：`DRAFT`（Co-test §12 增补 T-0612-09/10/11 · 待 PM/架构拍板后进 TASKS）
+> **触发**：Co-test 0612 Step 2e · T-0612-05 · [`deployment_log`](../docs/operations/deployment_log.md) §10 / §12
 
 ---
 
@@ -25,7 +25,8 @@
 - **主路径**：「+ 新建项目」→ **先上传材料**（单文件即可 MVP）→ 解析/抽取 → **预填**项目表单 → 用户核对 → 提交
 - 复用已有后端：`POST /api/projects/extract-preview`、`POST /api/projects` + `materialVersionId`
 - 失败兜底：抽取失败仍展示表单 + 明确 banner（已有 `ProjectForm` failureType 模式）
-- 项目编号：与 RI-17 对齐策略（MVP 可仍手工填编号，或接 series 生成器 — **待 PM 拍板**）
+- 项目编号：与 RI-17 对齐（见 §1.3 Co-test 0612 增补 — **不再接受 DRAFT 占位锁死**）
+- 业务类别：立项默认五类（见 §1.3）
 
 ### 不做（本 plan）
 
@@ -42,6 +43,19 @@
 | 3 | 预填表单 | 改字段 → 保存 | 创建成功；列表可见新项目 |
 | 4 | 抽取失败（无 GLM key 或坏文件） | 仍保存手工填写 | 有 failure banner；必填校验仍生效 |
 | 5 | 旧链 `/projects/new?materialVersionId=` | 直接打开 | 仍可用（兼容 MOD-06 深链） |
+| 6 | 上传 PDF 立项材料 | 进入预填表单 | **投资金额**有预填或明确 failure banner（T-0612-10） |
+| 7 | 新建项目表单 | 打开编号区 | **非** `DRAFT-*` 锁死；可选 **两个系列** 自动生成 **或** 手工填号 + 占用校验（T-0612-09） |
+| 8 | 业务类别下拉 | 新建/编辑 | 含 **债权包投资、单笔债权投资、股权投资、债权池投资、组合投资**（T-0612-11） |
+
+### 1.3 Co-test 0612 §12 增补（`954054e` 基线）
+
+| 源 Bug | 现象 | PM/架构拍板要点 |
+|---|---|---|
+| **T-0612-09** | `ProjectCreateStagingService` 创建 `DRAFT-{uuid}`；`ProjectForm` 加载 draft 后编号 **disabled** | ① staging **不再**把 DRAFT 当正式编号展示；② UI：**系列选择器**（现有两个系列，具体 code/prefix 以 125 库 `proposal_series` / 业务口径为准）→ 调生成器取下一号；③ **手工模式**：可编辑 + `GET/POST` 校验 `project.code` 唯一；④ 保存时把 DRAFT 替换为正式编号或更新同一记录 |
+| **T-0612-10** | PDF 上传后金额 **0** | ① 确认 `material_version.parsed_text` 在 extract 前是否已就绪（必要时前端 poll / 后端同步 parse）；② extract 返回 `amount` 字段映射到 `amountWan`；③ 失败时 banner 勿静默 0 |
+| **T-0612-11** | `projectCategoryOptions` = 股权类/固收类/混合类/其他 | FE 默认五类；staging 勿写死 `其他`；长期仍走字典表（SUPPLEMENTARY） |
+
+**关联 round**：[`round-2026-06-12-project-create-co-test`](../test-to-settle/round-2026-06-12-project-create-co-test.md)
 
 ---
 
