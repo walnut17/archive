@@ -13,6 +13,8 @@
 | [`plan-2026-06-11-test-governance.md`](plan-2026-06-11-test-governance.md) | plan-2026-06-11-test-governance | 2026-06-12 | 第 45 测例 + test-strategy（1 P0 guard 已加） |
 | [`plan-2026-06-12-agent-source-display.md`](plan-2026-06-12-agent-source-display.md) | plan-2026-06-12-agent-source-display | 2026-06-12 | Agent 模式来源区 Source DTO + extractSources + 前端分组 |
 | [`plan-2026-06-12-frontend-error-standard.md`](plan-2026-06-12-frontend-error-standard.md) | plan-2026-06-12-frontend-error-standard | 2026-06-12 | errorHandler toast + /api/client-error 上报 + DEV-STANDARDS §12 |
+| [`plan-2026-06-15-proposal-semantics.md`](plan-2026-06-15-proposal-semantics.md) | plan-2026-06-15-proposal-semantics | 2026-06-15 | 议案 vs 维护计数：committeeProposalCount + maintenanceBundleCount |
+| [`plan-2026-06-15-analysis-ownership-cutover.md`](plan-2026-06-15-analysis-ownership-cutover.md) | plan-2026-06-15-analysis-ownership-cutover | 2026-06-15 | Java enqueue 瘦身 + Python Worker timepoint |
 
 ---
 

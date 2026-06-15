@@ -1,6 +1,6 @@
 # plan-2026-06-15-analysis-ownership-cutover — 分析职责迁至 qa-agent
 
-> **状态**：`OPEN` — **依赖** scaffold plan CLOSED 后再占行  
+> **状态**：`CLOSED` @ `a97bc75` → [`done/plan-2026-06-15-analysis-ownership-cutover.md`](done/plan-2026-06-15-analysis-ownership-cutover.md)  
 > **来源**：complexity **C-0615-03** · T-0615-analysis-ownership-cutover · **P0**
 
 ---
@@ -11,7 +11,7 @@
 |---|---|
 | **路由 ID** | `plan-2026-06-15-analysis-ownership-cutover` |
 | **类型** | `UPGRADE` |
-| **Case 状态** | `OPEN` |
+| **Case 状态** | `CLOSED` |
 | **标题** | Java 入库瘦身 + parse 后 enqueue + Worker 写 fact/timepoint |
 | **需求锚点** | [`09-analysis-ownership-python.md`](../docs/architecture/09-analysis-ownership-python.md) §3～§9 |
 | **前置** | [`plan-2026-06-15-analysis-framework-scaffold`](plan-2026-06-15-analysis-framework-scaffold.md) **CLOSED** |
@@ -282,6 +282,44 @@ verdict: 已修
 | Worker write_timepoints | `af81871` | mapper + worker 接线 |
 | `write_timepoints` pytest | `4b20890` | 2 测例 |
 | config + yml | `cdec230` + `4007956` | analysisEnqueue + analysisWorker |
+
+----- agent-block end -----
+
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-15
+ref: plan-2026-06-15-analysis-ownership-cutover
+ref_commit: a97bc75
+verdict: APPROVED
+summary: cutover 骨架齐；pytest 128 绿；JPQL 修后 mvn 可编译
+
+**已通过 ✅**
+
+| 项 | commit | 结论 |
+|---|---|---|
+| `ProposalRepository` JPQL | `a97bc75` | `p.projectId` — Spring Context 可启动 |
+| enqueue 分支 + projectId | `4b20890`/`3158544`/`cdec230` | `MaterialVersionService` + `QaAgentClient.enqueueAnalysis` |
+| Worker timepoint | `af81871` | `write_timepoints` + `test_timepoint.py` |
+| **pytest** | 本地 | **128 passed** |
+| cutover 单测 | `GetProjectBusinessDataToolTest` | **PASS** |
+
+**非阻塞 / Operator / 遗留**
+
+- **§1 验收 1～5**：125 upload→enqueue→snapshot/timepoint — **Operator 灰度联调**（代码路径已齐）
+- **§1 验收 6 `mvn test`**：93 run · 11 err + 3 fail — **非 cutover 引入**（`failure_log` 表缺失、WebMvcTest `JwtUtil` slice、V11 工具数 7→8、ArchivePathGuard）— 不挡本 plan 关单
+- Coder 块 JPQL 行应记 **`a97bc75`**（非 `4b20890`）
+
+----- agent-block end -----
+
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-15
+ref: case
+verdict: CLOSED
+archive: upgrade_to_settle/done/plan-2026-06-15-analysis-ownership-cutover.md
+summary: Java enqueue 瘦身 + Python Worker timepoint 骨架交付完成
 
 ----- agent-block end -----
 

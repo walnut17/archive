@@ -59,7 +59,7 @@ def mock_glm() -> Iterator[MagicMock]:
 def mock_db_cursor() -> Iterator[MagicMock]:
     with patch("app.agent.engine.db_cursor") as engine_db, patch(
         "app.services.extract.db_cursor"
-    ) as extract_db:
+    ) as extract_db, patch("app.services.memory.db_cursor") as memory_db:
 
         def _cursor(rows: list[dict[str, Any]] | None = None):
             cur = MagicMock()
@@ -72,6 +72,7 @@ def mock_db_cursor() -> Iterator[MagicMock]:
 
         engine_db.side_effect = lambda: _cursor([])
         extract_db.side_effect = lambda: _cursor([])
+        memory_db.side_effect = lambda: _cursor([])
         yield engine_db
 
 

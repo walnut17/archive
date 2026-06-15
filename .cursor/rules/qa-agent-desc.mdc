@@ -1,0 +1,29 @@
+---
+description: qa-agent 升级时须将业务/分析逻辑经验写入 desc/
+globs: qa-agent/**
+alwaysApply: false
+---
+
+# qa-agent 经验沉淀
+
+专职维护 qa-agent 时，**代码与 `qa-agent/desc/` 同批交付**。
+
+## 何时必须写 desc
+
+- 新增/变更：**问句路由**、**ReAct 引擎兜底**、**工具行为**
+- 新增/变更：**提示词 / Few-shot / 会话记忆**
+- 新增/变更：**后台分析**（Worker、模板、快照、extractor）
+- 新增/变更：**API、迁移 SQL、安全/脱敏**
+- 125 验收过的 **Case**（问句 → 期望 → 曾出问题 → 修复）
+
+## 写到哪里
+
+以 `qa-agent/desc/README.md` 索引为准；新业务域新建 `NN-主题.md` 并更新索引。
+
+## 最小交付
+
+1. 改代码 + 补/改 `tests/`
+2. 更新对应 `desc/*.md`（路由表、案例、验收问句、测试索引）
+3. 较大特性在 `react_helpers.FEATURE_*` 或 `/health` features 打日期
+
+不要只改 Python 不留经验；不要只写聊天总结不落盘。

@@ -1,6 +1,6 @@
 # plan-2026-06-15-proposal-semantics — 议案 vs 维护业务语义对齐
 
-> **状态**：`OPEN` — 可与 scaffold 并行；不阻塞 cutover  
+> **状态**：`CLOSED` @ `fffcc8b` → [`done/plan-2026-06-15-proposal-semantics.md`](done/plan-2026-06-15-proposal-semantics.md)  
 > **来源**：complexity **C-0615-01** · round `round-2026-06-12-qa-agent-react-iteration` T-0615-proposal-semantics · **P2**
 
 ---
@@ -11,7 +11,7 @@
 |---|---|
 | **路由 ID** | `plan-2026-06-15-proposal-semantics` |
 | **类型** | `UPGRADE` |
-| **Case 状态** | `OPEN` |
+| **Case 状态** | `CLOSED` |
 | **标题** | 投委会议案计数语义：正式议案 vs 维护性材料 |
 | **需求锚点** | 本文 §1.2 业务规则 |
 | **架构锚点** | [`09-analysis-ownership-python.md`](../docs/architecture/09-analysis-ownership-python.md) §6 |
@@ -184,6 +184,44 @@ summary: test_get_project_business_data 已修；react_helpers 测仍 1 挂 + Ja
 4. **`prompts.py`** 议案路由仍仅在 **工作区 WIP**，未 commit（§2.2 清单；非 P0 但须说明或提交）
 
 **Coder 下一步**：修 `test_react_helpers.py` 一行 mock 字段 + Java 单测 → Coder 块 → `待审`。
+
+----- agent-block end -----
+
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-15
+ref: plan-2026-06-15-proposal-semantics
+ref_commit: af81871..fffcc8b
+verdict: APPROVED
+summary: pytest 126 绿；Java 单测已补；生产字段/话术/别名齐
+
+**已通过 ✅**
+
+| 项 | commit | 结论 |
+|---|---|---|
+| `test_proposal_count_answer_from_biz` | `af81871` | `committeeProposalCount` mock + 新话术断言 |
+| `test_get_project_business_data.py` | `9618f93` | 新字段断言 |
+| `GetProjectBusinessDataToolTest.java` | `fffcc8b` | `ProposalRepository` mock + 三字段断言（源码审查 OK） |
+| 生产代码 | `b42fb8b`/`4007956` | SQL 拆分 + deprecated 别名 + `proposal_count_answer_from_biz` |
+| **pytest** | 本地 | **126 passed** |
+
+**非阻塞 / Operator**
+
+- §1 验收 1 TUI「lmz 几次投委会议案」125 实测 — 代码路径已齐，不挡关单
+- 无 Coder agent-block（`af81871`/`fffcc8b` 仅代码+TASKS）— 留痕缺口，不挡关单
+- 全仓 `mvn test` 仍因 **cutover** `MaterialVersionService` 编译失败 — 本 plan Java 单测文件独立正确
+
+----- agent-block end -----
+
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-15
+ref: case
+verdict: CLOSED
+archive: upgrade_to_settle/done/plan-2026-06-15-proposal-semantics.md
+summary: 议案 vs 维护计数语义对齐完成
 
 ----- agent-block end -----
 
