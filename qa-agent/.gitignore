@@ -4,3 +4,5 @@ __pycache__/
 .pytest_cache/
 .env
 *.log
+dist/
+.update_backup/

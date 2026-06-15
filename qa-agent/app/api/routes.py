@@ -12,6 +12,7 @@ from app.api.schemas import (
 )
 from app.config import settings
 from app.services.extract import extract_project_fields
+from app.services.self_update import read_version
 
 router = APIRouter()
 
@@ -21,7 +22,9 @@ def health() -> dict:
     return {
         "status": "ok",
         "service": "qa-agent",
+        "version": read_version(),
         "config_json": settings.config_json_path or None,
+        "deploy_enabled": bool(settings.qa_agent_deploy_token.strip()),
     }
 
 

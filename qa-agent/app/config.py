@@ -51,6 +51,9 @@ class Settings:
     qa_agent_host: str = "127.0.0.1"
     qa_agent_port: int = 8001
     agent_max_iterations: int = 5
+    qa_agent_deploy_token: str = ""
+    qa_agent_root: str = ""
+    qa_agent_log_dir: str = "D:/archive/logs/qa-agent"
 
     # archive.networkDict.*
     network_dict_enabled_sources: list[str] = field(default_factory=lambda: ["baidu_baike", "wiki"])
@@ -81,6 +84,8 @@ class Settings:
         else:
             enabled_sources = ["baidu_baike", "wiki"]
 
+        log_root = get_str(flat, "storage.logRoot", "D:/archive/logs").rstrip("/")
+
         s = cls(
             config_json_path=str(path.resolve()) if path else "",
             glm_api_key=get_str(flat, "glm.apiKey"),
@@ -100,6 +105,8 @@ class Settings:
             qa_agent_host=get_str(flat, "qaAgent.host", "127.0.0.1"),
             qa_agent_port=get_int(flat, "qaAgent.port", 8001),
             agent_max_iterations=get_int(flat, "qaAgent.maxIterations", 5),
+            qa_agent_deploy_token=get_str(flat, "qaAgent.deployToken"),
+            qa_agent_log_dir=f"{log_root}/qa-agent",
             network_dict_enabled_sources=enabled_sources,
             network_dict_timeout_ms=get_int(flat, "archive.networkDict.timeout", 5000),
             network_dict_cache_ttl=get_int(flat, "archive.networkDict.cacheTtl", 3600),
@@ -135,6 +142,14 @@ class Settings:
             s.qa_agent_port = _env_int("QA_AGENT_PORT", s.qa_agent_port)
         if _env("AGENT_MAX_ITERATIONS"):
             s.agent_max_iterations = _env_int("AGENT_MAX_ITERATIONS", s.agent_max_iterations)
+        if _env("QA_AGENT_DEPLOY_TOKEN"):
+            s.qa_agent_deploy_token = _env("QA_AGENT_DEPLOY_TOKEN")
+        if _env("QA_AGENT_LOG_DIR"):
+            s.qa_agent_log_dir = _env("QA_AGENT_LOG_DIR")
+
+        from pathlib import Path
+
+        s.qa_agent_root = str(Path(__file__).resolve().parents[1])
 
         return s
 

@@ -77,6 +77,27 @@ spring:
 | POST | `/v1/ask` | 单轮问答 |
 | POST | `/v1/turn/{session_id}` | 多轮问答 |
 | POST | `/v1/extract/project-fields` | 立项字段抽取 |
+| GET | `/v1/deploy/status` | 部署状态 / 版本（无需 token） |
+| POST | `/v1/deploy/update` | 上传 zip 热更新 + 自动重启（`X-Deploy-Token`） |
+| POST | `/v1/deploy/restart` | 仅重启（`X-Deploy-Token`） |
+
+## 热更新（开发机 → 125）
+
+125 上在 `config.json` 的 `qaAgent.deployToken` 设强随机串（或 env `QA_AGENT_DEPLOY_TOKEN`）。
+
+```powershell
+# 开发机：打包并推送（替代 ssh + git pull + start.ps1）
+cd qa-agent
+.\.venv\Scripts\python scripts\push_update.py --url http://182.168.1.125:8001 --token <deployToken>
+```
+
+zip 仅允许覆盖 `app/`、`tools/`、`scripts/`；更新前自动备份到 `qa-agent/.update_backup/`。重启由 `scripts/apply_update_and_restart.ps1` 调用 `deploy/scripts/start-qa-agent.ps1 -Force`。
+
+仅打包：
+
+```powershell
+.\.venv\Scripts\python scripts\pack_update.py
+```
 
 ## 测试
 
