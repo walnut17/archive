@@ -105,7 +105,8 @@ class Settings:
             qa_agent_host=get_str(flat, "qaAgent.host", "127.0.0.1"),
             qa_agent_port=get_int(flat, "qaAgent.port", 8001),
             agent_max_iterations=get_int(flat, "qaAgent.maxIterations", 5),
-            qa_agent_deploy_token=get_str(flat, "qaAgent.deployToken"),
+            qa_agent_deploy_token=get_str(flat, "qaAgent.deployToken")
+            or get_str(flat, "qaAgent.deploy_token"),
             qa_agent_log_dir=f"{log_root}/qa-agent",
             network_dict_enabled_sources=enabled_sources,
             network_dict_timeout_ms=get_int(flat, "archive.networkDict.timeout", 5000),

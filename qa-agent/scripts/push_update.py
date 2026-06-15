@@ -31,8 +31,8 @@ def main() -> int:
         return rc
 
     base = args.url.rstrip("/")
-    params = {"restart": "false"} if args.no_restart else {"restart": "true"}
-    headers = {"X-Deploy-Token": args.token}
+    headers = {"X-Deploy-Token": args.token.strip()}
+    params = {"restart": "false" if args.no_restart else "true", "token": args.token.strip()}
 
     print(f"[INFO] POST {base}/v1/deploy/update")
     with httpx.Client(timeout=300.0) as client:
