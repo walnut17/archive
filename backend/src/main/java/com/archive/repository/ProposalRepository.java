@@ -39,12 +39,12 @@ public interface ProposalRepository extends JpaRepository<Proposal, Long> {
     long countByProjectId(Long projectId);
 
     /** 正式议案数：非草稿、非维护类型. */
-    @Query("SELECT COUNT(p) FROM Proposal p WHERE p.project.id = :projectId AND p.deletedAt IS NULL "
+    @Query("SELECT COUNT(p) FROM Proposal p WHERE p.projectId = :projectId AND p.deletedAt IS NULL "
             + "AND p.status <> '草稿' AND (p.type IS NULL OR p.type NOT IN ('维护', '材料维护'))")
     long countCommitteeByProjectId(@Param("projectId") Long projectId);
 
     /** 维护性材料容器数：type IN（维护, 材料维护）. */
-    @Query("SELECT COUNT(p) FROM Proposal p WHERE p.project.id = :projectId AND p.deletedAt IS NULL "
+    @Query("SELECT COUNT(p) FROM Proposal p WHERE p.projectId = :projectId AND p.deletedAt IS NULL "
             + "AND p.type IN ('维护', '材料维护')")
     long countMaintenanceByProjectId(@Param("projectId") Long projectId);
 
