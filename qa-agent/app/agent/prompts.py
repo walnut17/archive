@@ -179,6 +179,20 @@ MySQL FULLTEXT 检索材料.
 {"thought": "已有数据, 直接终止", "tool": "FINAL_ANSWER", "args": {"answer": "项目 PRJ-2026-001 (新能源 A) 剩余金额 500 万元。\\n\\n关键信息:\\n- 状态: 贷后中\\n- 待办: 3 项, 最近 2026-07-01\\n- 最近活动: 2026-06-10 委员审议\\n\\n引用来源: [1] get_project_business_data 汇总"}}
 ```
 
+## 示例 2b: 简称 → 材料正文查利率
+
+用户: "lmz项目的利率是多少?"
+
+```json
+{"thought": "简称'lmz', 先 find_project 锁定项目", "tool": "find_project", "args": {"query": "lmz项目", "topN": 3}}
+```
+```json
+{"thought": "利率在材料正文, 用 search_fulltext 在项目材料里搜固定收益/利率", "tool": "search_fulltext", "args": {"query": "利率 固定收益", "projectCode": "shtx26007", "topN": 5}}
+```
+```json
+{"thought": "根据摘录作答", "tool": "FINAL_ANSWER", "args": {"answer": "项目 lmz授信 (shtx26007) 材料显示固定收益 15%。\\n\\n引用来源: [1] 投资申请报告"}}
+```
+
 ## 示例 2: 简称 → find_project 多变体命中
 
 用户: "lmz项目下有几份材料?"

@@ -425,8 +425,32 @@ class TuiRepl(cmd.Cmd):
         except Exception as e:
             self.stdout.write(colorize(f"错误: {e}\n", C.RED))
 
+    def _print_step_live(self, step: dict, *, first: bool = False) -> None:
+        """流式过程中即时打印单步."""
+        if self.quiet:
+            return
+        if first:
+            self.stdout.write(colorize("\n── ReAct 步骤 (实时) ──\n", C.CYAN))
+        if step.get("tool") == "_resolve_reference":
+            self.stdout.write(
+                colorize(f"  步 {step['iteration']} 🔗 锁定: ", C.MAGENTA)
+                + colorize(step.get("observation", ""), C.CYAN)
+                + "\n"
+            )
+        elif step.get("tool") == "FINAL_ANSWER":
+            self.stdout.write(colorize(f"  步 {step['iteration']} ✅ FINAL_ANSWER\n", C.GREEN))
+        else:
+            thought = (step.get("thought") or "")[:60]
+            tool = step.get("tool", "?")
+            self.stdout.write(f"  步 {step['iteration']} 💭 {thought}\n")
+            self.stdout.write(f"      🔧 {tool}\n")
+            obs = step.get("observation", "")
+            if obs and len(obs) < 200:
+                self.stdout.write(colorize(f"      👁 {obs}\n", C.DIM))
+        self.stdout.flush()
+
     def _ask_pretty(self, question: str):
-        """漂亮模式: 流式逐字渲染答案, 然后显示步骤 + 来源."""
+        """漂亮模式: 步骤实时打印，结束后醒目显示最终答案."""
         start = time.time()
         self.stdout.write(colorize(f"\n→ ", C.BOLD) + colorize(question, C.CYAN) + "\n")
         self.stdout.write(colorize("─" * 60 + "\n", C.DIM))
@@ -438,6 +462,7 @@ class TuiRepl(cmd.Cmd):
         degraded = False
         tool_calls = 0
         err_msg: str | None = None
+        steps_header_printed = False
 
         try:
             for ev in self.client.ask_stream(question, self.session_id):
@@ -455,8 +480,18 @@ class TuiRepl(cmd.Cmd):
                     }
                     steps.append(step)
                     tool_calls += 1
+                    self._print_step_live(step, first=not steps_header_printed)
+                    steps_header_printed = True
                 elif et == "source":
                     sources.append(data)
+                    if not self.quiet:
+                        t = data.get("type", "?")
+                        title = data.get("title", data.get("id", "?"))
+                        self.stdout.write(
+                            colorize(f"  📎 来源: ", C.MAGENTA)
+                            + f"{t} · {title}\n"
+                        )
+                        self.stdout.flush()
                 elif et == "done":
                     acc_answer = data.get("answer", acc_answer)
                     badge = data.get("confidence_badge")
@@ -476,9 +511,9 @@ class TuiRepl(cmd.Cmd):
             return
 
         final_answer = acc_answer.strip()
+        # done 后仍以框显示终稿（覆盖流式 token 可能的不完整显示）
         print_answer_box(self.stdout.write, final_answer, no_color=self.no_color)
 
-        # 元信息（时间/步数/徽章，不与答案混在一行）
         meta = f"⏱ {elapsed:.0f}ms  🔧 {tool_calls} 步"
         if badge:
             meta += f"  🏷 {badge}"
@@ -486,31 +521,6 @@ class TuiRepl(cmd.Cmd):
             meta += "  ⚠️ 降级"
         self.stdout.write(colorize(meta + "\n", C.DIM))
 
-        if not self.quiet and steps:
-            self.stdout.write(colorize("\n── ReAct 步骤 ──\n", C.CYAN))
-            for s in steps:
-                if s.get("tool") == "_resolve_reference":
-                    self.stdout.write(colorize(f"  步 {s['iteration']} 🔗 锁定: ", C.MAGENTA) + colorize(s.get("observation", ""), C.CYAN) + "\n")
-                    continue
-                if s.get("tool") == "FINAL_ANSWER":
-                    self.stdout.write(colorize(f"  步 {s['iteration']} ✅ FINAL_ANSWER\n", C.GREEN))
-                    continue
-                thought = s.get("thought", "")[:60]
-                tool = s.get("tool", "?")
-                self.stdout.write(f"  步 {s['iteration']} 💭 {thought}\n")
-                self.stdout.write(f"      🔧 {tool}\n")
-                obs = s.get("observation", "")
-                if obs and len(obs) < 200:
-                    self.stdout.write(colorize(f"      👁 {obs}\n", C.DIM))
-
-        if not self.quiet and sources:
-            self.stdout.write(colorize(f"\n── 来源 ({len(sources)}) ──\n", C.MAGENTA))
-            for i, s in enumerate(sources, 1):
-                t = s.get("type", "?")
-                title = s.get("title", s.get("id", "?"))
-                self.stdout.write(f"  [{i}] {colorize(t, C.MAGENTA)} · {title}\n")
-
-        # 保存
         self.last_answer = final_answer
         self.last_steps = steps
         self.last_sources = sources

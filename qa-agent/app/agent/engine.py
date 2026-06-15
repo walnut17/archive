@@ -9,6 +9,7 @@ from app.agent.prompts import SYSTEM_PROMPT
 from app.agent.react_helpers import (
     append_step_hints,
     maybe_upgrade_step,
+    try_recover_evidence_loop,
     try_recover_material_count_loop,
 )
 from app.agent.tools.registry import dispatch_tool
@@ -186,9 +187,13 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
         if len(steps) >= 2:
             a, b = steps[-2], steps[-1]
             if a["tool"] == b["tool"] and a.get("toolArgs") == b.get("toolArgs"):
-                recovered, extra = try_recover_material_count_loop(
+                recovered, extra = try_recover_evidence_loop(
                     steps, question, i, ctx, dispatch_tool, _truncate
                 )
+                if not recovered:
+                    recovered, extra = try_recover_material_count_loop(
+                        steps, question, i, ctx, dispatch_tool, _truncate
+                    )
                 if recovered:
                     final_answer = recovered
                     steps.extend(extra)
@@ -398,9 +403,13 @@ def run_agent_stream(question: str, session_id: str | None = None) -> Iterator[s
         if len(steps) >= 2:
             a, b = steps[-2], steps[-1]
             if a["tool"] == b["tool"] and a.get("toolArgs") == b.get("toolArgs"):
-                recovered, extra = try_recover_material_count_loop(
+                recovered, extra = try_recover_evidence_loop(
                     steps, question_resolved, i, ctx, dispatch_tool, _truncate
                 )
+                if not recovered:
+                    recovered, extra = try_recover_material_count_loop(
+                        steps, question_resolved, i, ctx, dispatch_tool, _truncate
+                    )
                 if recovered:
                     final_answer = recovered
                     steps.extend(extra)
