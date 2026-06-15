@@ -110,6 +110,9 @@ def apply_zip_update(zip_bytes: bytes) -> dict[str, Any]:
             else:
                 shutil.copy2(staged, live)
 
+        for cache_dir in QA_AGENT_ROOT.rglob("__pycache__"):
+            shutil.rmtree(cache_dir, ignore_errors=True)
+
         return {
             "files_updated": len(written),
             "paths": written[:20],

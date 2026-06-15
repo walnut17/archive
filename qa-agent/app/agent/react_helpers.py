@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+FEATURE_EVIDENCE_ROUTING = "2026-06-15"
+
 import json
 import re
 from typing import Any
