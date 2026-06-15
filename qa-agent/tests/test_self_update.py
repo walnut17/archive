@@ -42,6 +42,10 @@ def test_normalize_accepts_qa_agent_prefix():
     assert su._normalize_zip_member("qa-agent/app/main.py") == "app/main.py"
 
 
+def test_normalize_accepts_version_file():
+    assert su._normalize_zip_member("VERSION") == "VERSION"
+
+
 def test_apply_zip_update_writes_files(qa_root: Path):
     payload = _make_zip(
         {

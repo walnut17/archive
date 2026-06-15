@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 QA_AGENT_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = QA_AGENT_ROOT.parent
 ALLOWED_TOP_DIRS = frozenset({"app", "tools", "scripts"})
+ALLOWED_ROOT_FILES = frozenset({"VERSION"})
 MAX_ZIP_BYTES = 50 * 1024 * 1024
 MAX_ZIP_FILES = 500
 VERSION_FILE = QA_AGENT_ROOT / "VERSION"
@@ -53,6 +54,8 @@ def _normalize_zip_member(name: str) -> str | None:
         parts = parts[1:]
     if not parts:
         return None
+    if len(parts) == 1 and parts[0] in ALLOWED_ROOT_FILES:
+        return parts[0]
     if parts[0] not in ALLOWED_TOP_DIRS:
         return None
     return "/".join(parts)
