@@ -132,6 +132,10 @@
       "enabled": true,
       "pollSeconds": 30,
       "discoverBatch": 3
+    },
+    "analysisEnqueue": {
+      "enabled": true,
+      "reason": "parse_complete"
     }
   }
 }

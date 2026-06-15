@@ -6,6 +6,7 @@ FEATURE_EVIDENCE_ROUTING = "2026-06-15"
 FEATURE_PROPOSAL_COUNT_ROUTING = "2026-06-15"
 FEATURE_DEBT_TARGET_ROUTING = "2026-06-15"
 FEATURE_COLLATERAL_ROUTING = "2026-06-15"
+FEATURE_COLLATERAL_DETAIL_ROUTING = "2026-06-15"
 
 import json
 import re
@@ -17,10 +18,13 @@ _MATERIAL_STAT_RE = re.compile(r"材料|份数|几份|多少个|多少份|几个
 _PROPOSAL_STAT_RE = re.compile(r"议案|投委会|议事案")
 _MATERIAL_EVIDENCE_RE = re.compile(
     r"利率|收益率|息率|费率|条款|合同|抵押|固定收益|回购价|回购利率|投资回报率|"
-    r"债权标的|目标债权|远期回购|什么债权|哪.*债权"
+    r"债权标的|目标债权|远期回购|什么债权|哪.*债权|估值|评估"
 )
 _RATE_QUESTION_RE = re.compile(r"利率|收益率|息率|费率|回报率|固定收益|多少%|百分之")
-_COLLATERAL_QUESTION_RE = re.compile(r"抵押物|抵押品|质押物")
+_COLLATERAL_QUESTION_RE = re.compile(r"抵押物|抵押品|质押物|质押财产")
+_COLLATERAL_DETAIL_RE = re.compile(
+    r"还剩哪些|剩余哪些|还剩|剩余|估值|评估价|评估价值|抵押金额|初始价值|价值多少|分别"
+)
 _DEBT_TARGET_QUESTION_RE = re.compile(r"债权标的|目标债权|什么债权|哪.*债权|标的[是为]")
 _DEBT_TARGET_EXTRACT_RE = re.compile(
     r"(南安市岭兜建材二厂债权)|"
@@ -40,6 +44,11 @@ _COLLATERAL_SECTION_RE = re.compile(
     r"债权抵押物基本情况[。.]?\s*(.+?)(?:\n[二三四五六七八九十]、|\Z)",
     re.DOTALL,
 )
+_LOAN_COLLATERAL_RE = re.compile(
+    r"第[一二三四\d]+笔贷款本金\s*(\d+(?:\.\d+)?)\s*万元[，,]\s*以([^；;。\n]+)"
+)
+_MORTGAGE_CERT_AMOUNT_RE = re.compile(r"抵押金额[为是]?\s*(\d+(?:\.\d+)?)\s*万元")
+_LAND_LOAN_REPAID_RE = re.compile(r"偿还了土地抵押贷款本金\s*(\d+(?:\.\d+)?)\s*万元")
 
 
 def question_needs_material_stats(question: str) -> bool:
@@ -70,6 +79,14 @@ def question_needs_collateral_evidence(question: str) -> bool:
     return bool(_COLLATERAL_QUESTION_RE.search(question or ""))
 
 
+def question_needs_collateral_detail(question: str) -> bool:
+    """抵押物清单 + 估值/还剩哪些类细问."""
+    q = question or ""
+    if not question_needs_collateral_evidence(q):
+        return False
+    return bool(_COLLATERAL_DETAIL_RE.search(q))
+
+
 def evidence_search_query(question: str, debt_target: str | None = None) -> str:
     terms: list[str] = []
     q = question or ""
@@ -77,6 +94,10 @@ def evidence_search_query(question: str, debt_target: str | None = None) -> str:
         for kw in ("抵押物", "抵押", "土地", "厂房", "设备"):
             if kw not in terms:
                 terms.append(kw)
+        if question_needs_collateral_detail(q):
+            for kw in ("估值", "评估", "抵押金额", "他项权证", "贷款本金"):
+                if kw not in terms:
+                    terms.append(kw)
         for anchor in ("岭兜", "建材二厂", "南安"):
             if anchor in q and anchor not in terms:
                 terms.append(anchor)
@@ -119,12 +140,19 @@ def material_count_answer_from_biz(biz: dict[str, Any]) -> str:
 def proposal_count_answer_from_biz(biz: dict[str, Any]) -> str:
     code = biz.get("projectCode", "")
     name = biz.get("projectName") or code
-    count = biz.get("proposalCount", 0)
-    lines = [f"项目 {name} ({code}) 下共 {count} 个投委会议案。"]
+    committee = biz.get("committeeProposalCount", 0)
+    maintenance = biz.get("maintenanceBundleCount", 0)
+    lines = []
+    if committee > 0:
+        lines.append(f"项目 {name} ({code}) 下共 {committee} 次投委会议案（正式审议）。")
+    else:
+        lines.append(f"项目 {name} ({code}) 无正式议案记录。")
+    if maintenance > 0:
+        lines.append(f"另有 {maintenance} 组维护性材料归档。")
     proposals = biz.get("proposals") or []
     if proposals:
         lines.append("")
-        lines.append("议案列表:")
+        lines.append("正式议案列表:")
         for i, p in enumerate(proposals[:10], 1):
             p_code = p.get("code") or ""
             p_title = p.get("title") or ""
@@ -152,6 +180,28 @@ def _normalize_debt_target(raw: str) -> str:
     return text
 
 
+_DEBT_IN_QUESTION_RE = re.compile(
+    r"([\u4e00-\u9fff]{2,40}债权)(?:下|的|中|项下)"
+)
+_DEMONSTRATIVE_DEBT_LABEL_RE = re.compile(
+    r"^(?:这个|该|上述|此|这笔|该笔|什么|哪个|哪笔)债权$"
+)
+
+
+def extract_debt_anchor_from_question(question: str) -> str | None:
+    """从问句内嵌债权名解析锚点，如「岭兜建材二厂债权下的抵押物」."""
+    q = question or ""
+    m = _DEBT_IN_QUESTION_RE.search(q)
+    if m:
+        label = _normalize_debt_target(m.group(1))
+        if _DEMONSTRATIVE_DEBT_LABEL_RE.match(label) or len(label) < 7:
+            return None
+        return label
+    if "岭兜建材二厂" in q and ("债权" in q or "抵押" in q):
+        return "南安市岭兜建材二厂债权"
+    return None
+
+
 def extract_debt_target_from_texts(texts: list[str]) -> str | None:
     for text in texts:
         if not text:
@@ -163,38 +213,107 @@ def extract_debt_target_from_texts(texts: list[str]) -> str | None:
 
 
 def extract_collateral_from_texts(texts: list[str]) -> str | None:
+    items = extract_collateral_items_from_texts(texts)
+    if not items:
+        return None
+    return "；".join(_format_collateral_item_brief(it) for it in items)
+
+
+def extract_collateral_items_from_texts(texts: list[str]) -> list[dict[str, str]]:
     combined = "\n".join(t for t in texts if t)
     if not combined:
-        return None
+        return []
     m = _COLLATERAL_SECTION_RE.search(combined)
     body = (m.group(1) if m else combined).strip()
-    parts: list[str] = []
-    land = re.search(
-        r"(\d+(?:\.\d+)?亩[^，。；\n]{0,24}土地[^，。；\n]{0,40}抵押)",
-        body,
-    )
-    if land:
-        parts.append(land.group(1))
-    factory = re.search(r"(?:上盖)?无证厂房\s*(\d+(?:\.\d+)?)\s*平米", body)
-    if factory:
-        label = f"上盖无证厂房{factory.group(1)}平米"
-        if label not in " ".join(parts):
-            parts.append(label)
-    equip = re.search(r"(设备抵押)", body)
-    if equip and equip.group(1) not in " ".join(parts):
-        parts.append(equip.group(1))
-    summary = re.search(
-        r"该债权除了抵押的([^，。；\n]{6,80})",
-        body,
-    )
-    if summary and not parts:
-        parts.append(summary.group(1).strip())
-    if parts:
-        return "；".join(parts)
-    if "抵押" in body:
-        snippet = re.sub(r"\s+", " ", body[:240]).strip()
-        return snippet + ("…" if len(body) > 240 else "")
-    return None
+    items: list[dict[str, str]] = []
+
+    for loan_m in _LOAN_COLLATERAL_RE.finditer(body):
+        principal = loan_m.group(1)
+        collateral_desc = loan_m.group(2).strip().rstrip("。")
+        name = collateral_desc
+        if "土地" in collateral_desc:
+            fac = re.search(r"无证厂房\s*(\d+(?:\.\d+)?)\s*平米", body)
+            if fac:
+                name = f"{collateral_desc}，上盖无证厂房{fac.group(1)}平米"
+        items.append(
+            {
+                "name": name,
+                "initialValue": f"{principal}万元（贷款本金）",
+                "statusNote": "",
+            }
+        )
+
+    cert = _MORTGAGE_CERT_AMOUNT_RE.search(body)
+    if cert and items and "土地" in items[0].get("name", ""):
+        items[0]["initialValue"] = (
+            f"{cert.group(1)}万元（他项权证记载抵押金额；"
+            f"贷款本金{items[0]['initialValue'].split('（')[0]}）"
+        )
+
+    repaid = _LAND_LOAN_REPAID_RE.search(body)
+    if repaid and items:
+        for it in items:
+            if "土地" in it.get("name", ""):
+                it["statusNote"] = (
+                    f"对应贷款本金{repaid.group(1)}万元已清偿，"
+                    "土地及上盖房产仍列为债权附属抵押物"
+                )
+                break
+
+    if not items:
+        parts: list[str] = []
+        land = re.search(
+            r"(\d+(?:\.\d+)?亩[^，。；\n]{0,24}土地[^，。；\n]{0,40}抵押)",
+            body,
+        )
+        if land:
+            parts.append(land.group(1))
+        factory = re.search(r"(?:上盖)?无证厂房\s*(\d+(?:\.\d+)?)\s*平米", body)
+        if factory:
+            parts.append(f"上盖无证厂房{factory.group(1)}平米")
+        equip = re.search(r"(设备抵押)", body)
+        if equip:
+            parts.append(equip.group(1))
+        if parts:
+            return [{"name": "；".join(parts), "initialValue": "", "statusNote": ""}]
+    return items
+
+
+def _format_collateral_item_brief(item: dict[str, str]) -> str:
+    name = item.get("name") or ""
+    val = item.get("initialValue") or ""
+    if val:
+        return f"{name}（{val}）"
+    return name
+
+
+def format_collateral_inventory_answer(
+    items: list[dict[str, str]],
+    *,
+    project_name: str,
+    project_code: str,
+    debt_label: str,
+    sources: list[str],
+    question: str,
+) -> str:
+    header = "剩余抵押物及初始估值" if question_needs_collateral_detail(question) else "抵押物"
+    lines = [f"项目 {project_name} ({project_code}) {debt_label}{header}："]
+    for i, item in enumerate(items, 1):
+        line = f"- [{i}] {item.get('name') or '（未命名抵押物）'}"
+        if item.get("initialValue"):
+            line += f"：{item['initialValue']}"
+        if item.get("statusNote"):
+            line += f"；{item['statusNote']}"
+        lines.append(line)
+    src = "、".join(sources[:3]) if sources else "材料全文检索"
+    lines.append("")
+    lines.append(f"引用来源: {src}")
+    return "\n".join(lines)
+
+
+def extract_collateral_items_from_hits(hits: list[dict[str, Any]]) -> list[dict[str, str]]:
+    texts = [(h.get("parsedExcerpt") or h.get("snippet") or "") for h in hits[:5]]
+    return extract_collateral_items_from_texts(texts)
 
 
 def extract_collateral_from_hits(hits: list[dict[str, Any]]) -> str | None:
@@ -234,7 +353,11 @@ def synthesize_evidence_answer(
         title = hit.get("materialTitle") or hit.get("originalFilename") or f"材料{i}"
         sources.append(f"[{i}] {title}")
 
-    resolved_debt = debt_target or extract_debt_target_from_hits(search_hits)
+    resolved_debt = (
+        debt_target
+        or extract_debt_anchor_from_question(question)
+        or extract_debt_target_from_hits(search_hits)
+    )
     if resolved_debt and question_needs_debt_target_evidence(question):
         src = "、".join(sources[:3]) if sources else "材料全文检索"
         label = "远期回购的债权标的" if "回购" in (question or "") else "债权标的"
@@ -243,14 +366,25 @@ def synthesize_evidence_answer(
             f"\n\n引用来源: {src}"
         )
 
-    collateral = extract_collateral_from_hits(search_hits)
-    if collateral and question_needs_collateral_evidence(question):
+    collateral_items = extract_collateral_items_from_hits(search_hits)
+    if collateral_items and question_needs_collateral_evidence(question):
         src = "、".join(sources[:3]) if sources else "材料全文检索"
         debt_label = resolved_debt or "该债权"
-        return (
-            f"项目 {project_name} ({project_code}) {debt_label}的抵押物包括：{collateral}。"
-            f"\n\n引用来源: {src}"
-        )
+        if question_needs_collateral_detail(question):
+            return format_collateral_inventory_answer(
+                collateral_items,
+                project_name=project_name,
+                project_code=project_code,
+                debt_label=debt_label,
+                sources=sources,
+                question=question,
+            )
+        collateral = extract_collateral_from_hits(search_hits)
+        if collateral:
+            return (
+                f"项目 {project_name} ({project_code}) {debt_label}的抵押物包括：{collateral}。"
+                f"\n\n引用来源: {src}"
+            )
 
     rate = extract_rate_from_texts(texts)
     if rate and question_needs_rate_evidence(question):
@@ -319,7 +453,10 @@ def try_finalize_evidence_from_search(
         (h.get("parsedExcerpt") or h.get("snippet") or "")
         for h in hits[:5]
     ]
-    debt_target = ctx.get("last_debt_target")
+    debt_target = (
+        ctx.get("last_debt_target")
+        or extract_debt_anchor_from_question(question)
+    )
     answer = synthesize_evidence_answer(
         question, str(name), str(code), hits, debt_target=debt_target
     )
@@ -329,8 +466,12 @@ def try_finalize_evidence_from_search(
         return None
     if question_needs_debt_target_evidence(question) and extract_debt_target_from_hits(hits) is None:
         return None
-    if question_needs_collateral_evidence(question) and extract_collateral_from_hits(hits) is None:
-        return None
+    if question_needs_collateral_evidence(question):
+        if question_needs_collateral_detail(question):
+            if not extract_collateral_items_from_hits(hits):
+                return None
+        elif extract_collateral_from_hits(hits) is None:
+            return None
     return answer
 
 
@@ -396,7 +537,10 @@ def append_step_hints(parts: list[str], question: str, steps: list[dict]) -> Non
             "get_project_business_data 只有汇总字段、不含材料正文。"
         )
         if question_needs_collateral_evidence(question):
-            hint += " 若用户追问「这个债权」的抵押物，query 须含岭兜/建材二厂等债权锚点，勿只搜「抵押物」。"
+            hint += (
+                " 债权抵押物问题 query 须含债权锚点（如岭兜/建材二厂）+ 抵押物；"
+                "若问「还剩哪些/初始估值」须加 估值 抵押金额 他项权证 贷款本金。"
+            )
         parts.append(hint)
         return
 

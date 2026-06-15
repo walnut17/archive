@@ -1,4 +1,4 @@
-"""分析结果映射到 project_fact / project_asset."""
+"""分析结果映射到 project_fact / project_asset / timepoint."""
 
 from __future__ import annotations
 
@@ -144,4 +144,32 @@ def sync_facts_from_snapshots(project_id: int) -> int:
                     count += 1
     except Exception as e:
         logger.warning("sync_facts_from_snapshots 失败: %s", e)
+    return count
+
+
+def write_timepoints(project_id: int, snapshots: list[dict]) -> int:
+    """从 analysis snapshot 提取时点写入 timepoint 表 (替代 Java TimepointExtractor)."""
+    count = 0
+    with db_cursor() as cur:
+        for snap in snapshots:
+            raw = snap.get("summary") or ""
+            for line in raw.split("\n"):
+                line = line.strip()
+                if not line or len(line) < 12:
+                    continue
+                # 匹配 "YYYY-MM-DD: 描述"
+                if line[4] == "-" and line[7] == "-":
+                    parts = line.split(":", 1)
+                    if len(parts) != 2:
+                        continue
+                    event_date = parts[0].strip()
+                    title = parts[1].strip()
+                    cur.execute(
+                        """INSERT IGNORE INTO timepoint
+                           (project_id, title, event_date, source, status)
+                           VALUES (%s, %s, %s, 'ANALYSIS', 'CONFIRMED')""",
+                        (project_id, title[:255], event_date),
+                    )
+                    count += cur.rowcount
+    logger.info("write_timepoints: project=%d, written=%d", project_id, count)
     return count

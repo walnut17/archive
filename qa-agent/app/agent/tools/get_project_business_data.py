@@ -75,7 +75,7 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
             "category": row["category"],
             "todoCount": row["todo_count"],
             "materialCount": int(row["material_count"] or 0),
-            "proposalCount": committee_count + maintenance_count,
+            "proposalCount": committee_count,  # deprecated alias = committeeProposalCount
             "committeeProposalCount": committee_count,
             "maintenanceBundleCount": maintenance_count,
             "proposals": proposals,

@@ -61,7 +61,7 @@ public class GetProjectBusinessDataTool implements AgentTool {
         data.put("materialCount", materialRepo.countByProjectId(project.getId()));
         long committee = proposalRepo.countCommitteeByProjectId(project.getId());
         long maintenance = proposalRepo.countMaintenanceByProjectId(project.getId());
-        data.put("proposalCount", committee + maintenance);
+        data.put("proposalCount", committee);  // deprecated alias = committeeProposalCount
         data.put("committeeProposalCount", committee);
         data.put("maintenanceBundleCount", maintenance);
         return ToolResult.ok(data);
