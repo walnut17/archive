@@ -32,7 +32,6 @@ def pack(out_path: Path) -> int:
 
     count = 0
     with zipfile.ZipFile(out_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("VERSION", version + "\n")
         for top in INCLUDE_DIRS:
             base = ROOT / top
             if not base.is_dir():
