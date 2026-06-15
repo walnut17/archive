@@ -20,7 +20,8 @@ def test_get_project_business_data_includes_proposal_fields():
             "category": None,
             "todo_count": 0,
             "material_count": 2,
-            "proposal_count": 1,
+            "committee_count": 1,
+            "maintenance_count": 0,
         }
         cur.fetchall.return_value = [
             {
@@ -37,6 +38,9 @@ def test_get_project_business_data_includes_proposal_fields():
 
         out = get_project_business_data.run({"projectCode": "shtx26007"}, {})
 
-    assert out["proposalCount"] == 1
+    assert out["proposalCount"] == 1  # deprecated alias
+    assert out["committeeProposalCount"] == 1
+    assert out["maintenanceBundleCount"] == 0
+    assert out["proposals"] is not None
     assert out["materialCount"] == 2
     assert out["proposals"][0]["code"] == "shtx26007"
