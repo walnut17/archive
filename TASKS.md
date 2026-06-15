@@ -31,9 +31,8 @@ TASKS.md
 ### 路由表
 
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
-| **plan-2026-06-12-qa-agent-streaming-multiturn** | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-agent-streaming-multiturn.md`](upgrade_to_settle/plan-2026-06-12-qa-agent-streaming-multiturn.md) | `已完成(PM / 2026-06-12)` | PM | 2026-06-12 | qa-agent 流式 SSE + 多轮项目锁 + TUI 测试工具 |
-| **plan-2026-06-12-qa-agent-tool-recovery** | UPGRADE | [`upgrade_to_settle/plan-2026-06-12-qa-agent-tool-recovery.md`](upgrade_to_settle/plan-2026-06-12-qa-agent-tool-recovery.md) | `已完成(PM / 2026-06-12)` | PM | 2026-06-12 | qa-agent 3 级降级 + 死循环自愈 + find_project 4 级链 + prompts v1.2 优化 |
 |---|---|---|---|---|---|---|
+| `round-2026-06-12-qa-agent-react-iteration` | DEBUG | [`test-to-settle/round-2026-06-12-qa-agent-react-iteration.md`](test-to-settle/round-2026-06-12-qa-agent-react-iteration.md) | `待审` | Coder (Auto) | 2026-06-12 | qa-agent ReAct 递增 + lmz 材料数工具链（T-0612-07/08） |
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
 > **不在本表**：complexity 中转 · AT-* 自动化 · 已 CLOSED（见各 `done/`）

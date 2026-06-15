@@ -6,6 +6,11 @@ from typing import Any
 
 from app.agent.parser import FINAL_ANSWER, final_answer_from_args, parse_agent_step
 from app.agent.prompts import SYSTEM_PROMPT
+from app.agent.react_helpers import (
+    append_step_hints,
+    maybe_upgrade_step,
+    try_recover_material_count_loop,
+)
 from app.agent.tools.registry import dispatch_tool
 from app.config import settings
 from app.db.connection import db_cursor
@@ -66,8 +71,11 @@ def build_user_prompt(question: str, session_id: str | None, steps: list[dict]) 
         parts.append("\n本轮已执行步骤:")
         for s in steps:
             parts.append(
-                f"步骤{s['iteration']}: tool={s['tool']} obs={_truncate(s.get('observation') or '', 300)}"
+                f"步骤{s['iteration']}: tool={s['tool']} "
+                f"args={_truncate(s.get('toolArgs') or '', 120)} "
+                f"obs={_truncate(s.get('observation') or '', 300)}"
             )
+        append_step_hints(parts, question, steps)
     parts.append("\n请输出下一步 JSON（tool 或 FINAL_ANSWER）:")
     return "\n".join(parts)
 
@@ -118,6 +126,7 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
             break
 
         step = parse_agent_step(llm_raw, i)
+        step = maybe_upgrade_step(step, steps, question)
         tool = step["tool"]
 
         if tool == FINAL_ANSWER:
@@ -137,6 +146,9 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
         if tool == "find_project" and isinstance(obs, list):
             for item in obs[:1]:
                 if isinstance(item, dict):
+                    code = item.get("projectCode") or item.get("code")
+                    if code:
+                        ctx["project_code"] = code
                     sd = item.get("switchDecision")
                     if sd:
                         # 非 SAME_CONFIRMED 才设 hint
@@ -174,6 +186,13 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
         if len(steps) >= 2:
             a, b = steps[-2], steps[-1]
             if a["tool"] == b["tool"] and a.get("toolArgs") == b.get("toolArgs"):
+                recovered, extra = try_recover_material_count_loop(
+                    steps, question, i, ctx, dispatch_tool, _truncate
+                )
+                if recovered:
+                    final_answer = recovered
+                    steps.extend(extra)
+                    break
                 final_answer = "抱歉，多次尝试未找到匹配结果。请换更具体的关键词或联系档案管理员。"
                 steps.append(
                     {
@@ -236,8 +255,7 @@ def run_agent_stream(question: str, session_id: str | None = None) -> Iterator[s
     project_switch_hint: str | None = None
     confidence_badge: str | None = None
     final_answer: str | None = None
-
-    # v1.2: 项目锁读取 (chat_session_context)
+    answer_tokens_streamed = False
     project_code: str | None = None
     project_name: str | None = None
     if session_id:
@@ -278,12 +296,11 @@ def run_agent_stream(question: str, session_id: str | None = None) -> Iterator[s
     for i in range(1, settings.agent_max_iterations + 1):
         user_prompt = build_user_prompt(question_resolved, session_id, steps)
 
-        # === B 段: LLM 流式 token yield ===
+        # ReAct 中间步不向客户端泄漏 LLM 原始 JSON token
         llm_raw_chunks: list[str] = []
         try:
             for token in glm_client.chat_stream(SYSTEM_PROMPT, user_prompt):
                 llm_raw_chunks.append(token)
-                yield _sse_event("token", {"iteration": i, "delta": token})
         except Exception as e:
             logger.exception("GLM 流式调用失败")
             yield _sse_event("step", {
@@ -298,6 +315,7 @@ def run_agent_stream(question: str, session_id: str | None = None) -> Iterator[s
 
         llm_raw = "".join(llm_raw_chunks)
         step = parse_agent_step(llm_raw, i)
+        step = maybe_upgrade_step(step, steps, question_resolved)
         tool = step["tool"]
 
         if tool == FINAL_ANSWER:
@@ -310,6 +328,9 @@ def run_agent_stream(question: str, session_id: str | None = None) -> Iterator[s
                 "toolArgs": step["toolArgs"],
                 "observation": "",
             })
+            for ch in final_answer:
+                yield _sse_event("token", {"iteration": i, "delta": ch})
+            answer_tokens_streamed = True
             break
 
         # 调工具
@@ -326,6 +347,9 @@ def run_agent_stream(question: str, session_id: str | None = None) -> Iterator[s
         if tool == "find_project" and isinstance(obs, list):
             for item in obs[:1]:
                 if isinstance(item, dict):
+                    code = item.get("projectCode") or item.get("code")
+                    if code:
+                        ctx["project_code"] = code
                     sd = item.get("switchDecision")
                     if sd:
                         if sd != "SAME_CONFIRMED":
@@ -374,6 +398,24 @@ def run_agent_stream(question: str, session_id: str | None = None) -> Iterator[s
         if len(steps) >= 2:
             a, b = steps[-2], steps[-1]
             if a["tool"] == b["tool"] and a.get("toolArgs") == b.get("toolArgs"):
+                recovered, extra = try_recover_material_count_loop(
+                    steps, question_resolved, i, ctx, dispatch_tool, _truncate
+                )
+                if recovered:
+                    final_answer = recovered
+                    steps.extend(extra)
+                    for s in extra:
+                        yield _sse_event("step", {
+                            "iteration": s["iteration"],
+                            "thought": s["thought"],
+                            "tool": s["tool"],
+                            "toolArgs": s["toolArgs"],
+                            "observation": s.get("observation", ""),
+                        })
+                    for ch in final_answer:
+                        yield _sse_event("token", {"iteration": i, "delta": ch})
+                    answer_tokens_streamed = True
+                    break
                 final_answer = "抱歉，多次尝试未找到匹配结果。请换更具体的关键词或联系档案管理员。"
                 yield _sse_event("step", {
                     "iteration": i + 1,
@@ -382,10 +424,17 @@ def run_agent_stream(question: str, session_id: str | None = None) -> Iterator[s
                     "toolArgs": _json.dumps({"answer": final_answer}, ensure_ascii=False),
                     "observation": "",
                 })
+                for ch in final_answer:
+                    yield _sse_event("token", {"iteration": i + 1, "delta": ch})
+                answer_tokens_streamed = True
                 break
 
     if final_answer is None:
         final_answer = "抱歉，我无法在限定步数内找到答案。请尝试更具体的提问。"
+
+    if final_answer and not answer_tokens_streamed:
+        for ch in final_answer:
+            yield _sse_event("token", {"iteration": settings.agent_max_iterations, "delta": ch})
 
     if session_id:
         append_memory(session_id, "assistant", final_answer)

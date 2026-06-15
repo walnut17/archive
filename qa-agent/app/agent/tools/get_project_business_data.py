@@ -15,10 +15,13 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
 
     with db_cursor() as cur:
         cur.execute(
-            """SELECT p.code, p.name, p.status, p.stage, p.amount_wan,
+            """SELECT p.id, p.code, p.name, p.status, p.stage, p.amount_wan,
                       p.customer_name, p.category,
-                      (SELECT COUNT(*) FROM todo t WHERE t.project_id = p.id AND t.status = 'pending') AS todo_count
-               FROM project p WHERE p.code = %s""",
+                      (SELECT COUNT(*) FROM todo t WHERE t.project_id = p.id AND t.status = 'pending') AS todo_count,
+                      (SELECT COUNT(m.id) FROM material m
+                       JOIN proposal pr ON pr.id = m.proposal_id
+                       WHERE pr.project_id = p.id AND m.deleted_at IS NULL) AS material_count
+               FROM project p WHERE p.code = %s AND p.deleted_at IS NULL""",
             (project_code,),
         )
         row = cur.fetchone()
@@ -34,5 +37,5 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
             "customerName": row["customer_name"],
             "category": row["category"],
             "todoCount": row["todo_count"],
-            "materialCount": 0,
+            "materialCount": int(row["material_count"] or 0),
         }

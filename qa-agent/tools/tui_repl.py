@@ -394,21 +394,13 @@ class TuiRepl(cmd.Cmd):
         degraded = False
         tool_calls = 0
         err_msg: str | None = None
-        first_token = True
 
         try:
             for ev in self.client.ask_stream(question, self.session_id):
                 et = ev["event"]
                 data = ev["data"]
                 if et == "token":
-                    delta = data.get("delta", "")
-                    if first_token and not self.quiet:
-                        elapsed = (time.time() - start) * 1000
-                        self.stdout.write(colorize(f"[{elapsed:.0f}ms] ", C.DIM))
-                        first_token = False
-                    acc_answer += delta
-                    self.stdout.write(delta)
-                    self.stdout.flush()
+                    acc_answer += data.get("delta", "")
                 elif et == "step":
                     step = {
                         "iteration": data.get("iteration", 0),
@@ -438,6 +430,10 @@ class TuiRepl(cmd.Cmd):
         if err_msg:
             self.stdout.write(colorize(f"❌ 失败: {err_msg}\n", C.RED))
             return
+
+        if not self.quiet and acc_answer.strip():
+            self.stdout.write(colorize(f"[{elapsed:.0f}ms] ", C.DIM))
+            self.stdout.write(colorize(acc_answer.strip() + "\n", C.GREEN))
 
         # 元信息
         meta = f"⏱ {elapsed:.0f}ms  🔧 {tool_calls} 步"

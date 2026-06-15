@@ -10,7 +10,7 @@
 | 版本 | 日期 | 服务器 | 指挥/执行 | 状态 |
 |---|---|---|---|---|
 | **v1.1 / 0611 续** | 2026-06-11 | `182.168.1.125` | Auto (Guide) + 用户 (Operator) | ✅ VERIFY 已记录（§9）；round-0611 已 CLOSED |
-| **v1.1 / 0612 新轮** | 2026-06-12 | `182.168.1.125` | Auto (Co-test Guide) + 用户 (Operator) | 🟡 Step 2e 新建项目流程 🔴 与 RI-16 不符 |
+| **v1.1 / 0612 新轮** | 2026-06-12 | `182.168.1.125` | Auto (Co-test Guide) + 用户 (Operator) | 🟡 qa-agent TUI 联调进行中 |
 
 ---
 
@@ -410,6 +410,8 @@ A：healthcheck 无 token；浏览器带 token 会走 RBAC，DB 未迁移时在 
 | 2026-06-12 | Auto (Co-test Guide) | §10 Step 2e：新建项目仍手工表单入口 — T-0612-05 vs RI-16 上传优先 |
 | 2026-06-12 | Auto (Co-test Guide) | 任务分流：DEBUG [`round-2026-06-12-qa-regression`](../../test-to-settle/round-2026-06-12-qa-regression.md) + UPGRADE plan + complexity C-0612-01 |
 | 2026-06-12 | Sisyphus | **§11 qa-agent 交付**：Python 8 工具 + 二期全量 · Java BFF QaAgentClient/health · WinSW qa-agent.xml · Java Agent @Deprecated |
+| 2026-06-12 | Auto (Co-test Guide) | §11.1 TUI B1：lmz 材料数 — find 命中但无材料数；流式答案区 JSON 泄漏 |
+| 2026-06-12 | Auto (Co-test Guide) | 开立 DEBUG [`round-2026-06-12-qa-agent-react-iteration`](../../test-to-settle/round-2026-06-12-qa-agent-react-iteration.md) · T-0612-07/08 + ReAct 递增规则 |
 
 ---
 
@@ -448,9 +450,48 @@ A：healthcheck 无 token；浏览器带 token 会走 RBAC，DB 未迁移时在 
 
 ### 待 125 验证
 
-- §1.4 验收 8 条
-- 手工启动 qa-agent + `/health` 返回 `config_json`
-- 7 大端到端场景
+- [x] 手工启动 qa-agent + `/health`（Operator 已确认服务已起）
+- [ ] TUI 全场景（见下 §11.1）
+- §1.4 验收 8 条（AT-001 开发机已 PASS；125 TUI 补测）
+- 7 大端到端场景（经 Java BFF，后置）
+
+### 11.1 Co-test — qa-agent TUI（2026-06-12）
+
+| 字段 | 内容 |
+|---|---|
+| **Guide** | Auto |
+| **Operator** | 用户 |
+| **工具** | `python qa-agent/tools/tui_repl.py --url http://127.0.0.1:8001` |
+| **代码基线** | `5fd29a8`（预期） |
+
+| Step | 操作 | 结果 | 时间 |
+|---|---|---|---|
+| A | qa-agent 启动（`start.ps1`） | ✅ Operator 已确认 | 2026-06-12 |
+| B1 | TUI 问「lmz项目下有多少份材料？」 | 🟡 **部分通过 / 多问题**（见下） | 2026-06-12 |
+
+#### B1 现象摘要（Operator 原文）
+
+- 耗时 **13578ms**，**3 步**，徽章 **`PENDING_REVIEW`**
+- 答案区显示 **两段 raw LLM JSON**（`find_project` ×2），非人类可读材料数
+- 步骤：步 1/2 均 `find_project(query=lmz项目)` → 步 3「检测到重复工具调用，强制结束」`FINAL_ANSWER`
+- 来源：2× `PROJECT · lmz授信`（find 命中，但 **未** 调 `get_project_business_data`）
+
+#### B1 判定
+
+| 维度 | 结果 | 说明 |
+|---|---|---|
+| find_project 检索 | ✅ | 命中 `lmz授信`（T-0611-20 类问题有进展） |
+| 材料数回答 | ❌ | 未走 prompt 示例链 `find_project → get_project_business_data → FINAL_ANSWER` |
+| 死循环自愈 | 🟡 | 第 3 步强制结束，应用文案应为「多次尝试未找到…」 |
+| 流式/TUI 展示 | ❌ | SSE `token` 把 ReAct JSON 当答案逐字渲染；`done.answer` 未替换可见答案区 |
+| 置信度 | 🟡 | `PENDING_REVIEW` = `switchDecision=UNCLEAR`，LLM 重复同参而非换工具 |
+
+#### 待记 round / plan（Co-test 暂不落代码）
+
+| ID | 类型 | 摘要 | 路由 |
+|---|---|---|---|
+| **T-0612-07** | DEPLOY/QA P0 | lmz 材料数：find 命中后须换工具统计；ReAct 每轮上下文递增 | [`round-2026-06-12-qa-agent-react-iteration`](../../test-to-settle/round-2026-06-12-qa-agent-react-iteration.md) |
+| **T-0612-08** | DEPLOY/UX P2 | 流式/TUI：答案区泄漏 ReAct JSON | 同上 |
 
 ---
 

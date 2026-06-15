@@ -4,6 +4,6 @@
 
 | Case 文件 | Case 状态 | 摘要 | 最后更新 |
 |---|---|---|---|
-| [`round-2026-06-12-qa-regression.md`](round-2026-06-12-qa-regression.md) | OPEN | T-0612-04 多轮 500 · T-0612-06 思考链 · 编译 fix 留痕 | 2026-06-12 |
+| [`round-2026-06-12-qa-agent-react-iteration.md`](round-2026-06-12-qa-agent-react-iteration.md) | OPEN | T-0612-07 ReAct 递增/换工具 · T-0612-08 TUI 流式展示 | 2026-06-12 |
 
 **CLOSED** → 移 [`done/`](done/README.md)，并从本表删除。
