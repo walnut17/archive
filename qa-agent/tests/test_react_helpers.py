@@ -55,6 +55,56 @@ def test_append_step_hints_includes_material_guidance():
     assert "禁止再次 find_project" in text
 
 
+def test_maybe_upgrade_step_after_biz_data():
+    steps = [
+        {
+            "iteration": 1,
+            "tool": "get_project_business_data",
+            "toolArgs": json.dumps({"projectCode": "PRJ-1"}),
+            "observation": json.dumps(
+                {"projectCode": "PRJ-1", "projectName": "lmz授信", "materialCount": 2}
+            ),
+        }
+    ]
+    next_step = {
+        "iteration": 2,
+        "thought": "再查一次",
+        "tool": "get_project_business_data",
+        "toolArgs": json.dumps({"projectCode": "PRJ-1"}),
+    }
+    upgraded = maybe_upgrade_step(next_step, steps, "lmz项目下有多少份材料？")
+    assert upgraded["tool"] == "FINAL_ANSWER"
+    assert "2 份材料" in upgraded["toolArgs"]
+
+
+def test_try_recover_duplicate_business_data():
+    steps = [
+        {
+            "iteration": 2,
+            "tool": "get_project_business_data",
+            "toolArgs": json.dumps({"projectCode": "PRJ-1"}),
+            "observation": json.dumps(
+                {"projectCode": "PRJ-1", "projectName": "lmz授信", "materialCount": 2}
+            ),
+        },
+        {
+            "iteration": 3,
+            "tool": "get_project_business_data",
+            "toolArgs": json.dumps({"projectCode": "PRJ-1"}),
+            "observation": json.dumps(
+                {"projectCode": "PRJ-1", "projectName": "lmz授信", "materialCount": 2}
+            ),
+        },
+    ]
+
+    answer, extra = try_recover_material_count_loop(
+        steps, "lmz项目下有多少份材料？", 3, {}, lambda *a: None, lambda s, n=2000: s
+    )
+    assert answer is not None
+    assert "2 份材料" in answer
+    assert extra[-1]["tool"] == "FINAL_ANSWER"
+
+
 def test_try_recover_material_count_loop():
     steps = [
         {
