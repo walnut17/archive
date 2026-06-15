@@ -33,8 +33,8 @@ TASKS.md
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
 |---|---|---|---|---|---|---|
 | `round-2026-06-12-qa-agent-react-iteration` | DEBUG | [`test-to-settle/round-2026-06-12-qa-agent-react-iteration.md`](test-to-settle/round-2026-06-12-qa-agent-react-iteration.md) | `开发中` | Auto (Reviewer) | 2026-06-15 | 代码 APPROVED；T-0612-07 待 125 复测 lmz |
-| `plan-2026-06-15-analysis-ownership-cutover` | UPGRADE | [`upgrade_to_settle/plan-2026-06-15-analysis-ownership-cutover.md`](upgrade_to_settle/plan-2026-06-15-analysis-ownership-cutover.md) | `开发中` | Auto (Reviewer) | 2026-06-15 | J1-J4 骨架 OK；P1 timepoint + config 缺 |
-| `plan-2026-06-15-proposal-semantics` | UPGRADE | [`upgrade_to_settle/plan-2026-06-15-proposal-semantics.md`](upgrade_to_settle/plan-2026-06-15-proposal-semantics.md) | `开发中` | Auto (Reviewer) | 2026-06-15 | 计数 SQL OK；别名/话术/单测未对齐 |
+| `plan-2026-06-15-analysis-ownership-cutover` | UPGRADE | [`upgrade_to_settle/plan-2026-06-15-analysis-ownership-cutover.md`](upgrade_to_settle/plan-2026-06-15-analysis-ownership-cutover.md) | `待审` | Sisyphus | 2026-06-15 | P1 timepoint + config 已补 |
+| `plan-2026-06-15-proposal-semantics` | UPGRADE | [`upgrade_to_settle/plan-2026-06-15-proposal-semantics.md`](upgrade_to_settle/plan-2026-06-15-proposal-semantics.md) | `待审` | Sisyphus | 2026-06-15 | 别名/话术/单测已对齐 |
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
 > **不在本表**：complexity 中转 · AT-* 自动化 · 已 CLOSED（见各 `done/`）
