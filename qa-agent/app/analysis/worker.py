@@ -9,7 +9,7 @@ from typing import Any
 
 from app.analysis.context import load_project_context
 from app.analysis.extractor import run_template_extract, summarize_result
-from app.analysis.mapper import sync_facts_from_snapshots, upsert_project_assets_from_inventory
+from app.analysis.mapper import sync_facts_from_snapshots, upsert_project_assets_from_inventory, write_timepoints
 from app.analysis.models import AnalysisScope, JobStatus, JobType
 from app.analysis.repository import (
     claim_next_job,
@@ -214,6 +214,7 @@ class AnalysisWorker:
                 )
 
         sync_facts_from_snapshots(project_id)
+        write_timepoints(project_id)
         upsert_analysis_state(
             project_id,
             material_fingerprint=ctx.material_fingerprint,

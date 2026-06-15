@@ -261,10 +261,13 @@ def test_proposal_count_answer_from_biz():
             "projectCode": "shtx26007",
             "projectName": "lmz授信",
             "proposalCount": 1,
+            "committeeProposalCount": 1,
+            "maintenanceBundleCount": 0,
             "proposals": [{"code": "shtx26007", "title": "投资申请", "type": "申请", "status": "通过"}],
         }
     )
-    assert "1 个投委会议案" in ans
+    assert "1 次投委会议案" in ans
+    assert "正式审议" in ans
     assert "shtx26007" in ans
 
 

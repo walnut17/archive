@@ -147,17 +147,21 @@ def sync_facts_from_snapshots(project_id: int) -> int:
     return count
 
 
-def write_timepoints(project_id: int, snapshots: list[dict]) -> int:
-    """从 analysis snapshot 提取时点写入 timepoint 表 (替代 Java TimepointExtractor)."""
+def write_timepoints(project_id: int) -> int:
+    """从 analysis_snapshot 提取时点写入 timepoint 表 (替代 Java TimepointExtractor)."""
     count = 0
     with db_cursor() as cur:
-        for snap in snapshots:
-            raw = snap.get("summary") or ""
+        cur.execute(
+            "SELECT summary FROM analysis_snapshot WHERE project_id = %s AND summary IS NOT NULL",
+            (project_id,),
+        )
+        rows = cur.fetchall() or []
+        for row in rows:
+            raw = row["summary"] or ""
             for line in raw.split("\n"):
                 line = line.strip()
                 if not line or len(line) < 12:
                     continue
-                # 匹配 "YYYY-MM-DD: 描述"
                 if line[4] == "-" and line[7] == "-":
                     parts = line.split(":", 1)
                     if len(parts) != 2:
