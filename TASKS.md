@@ -32,9 +32,8 @@ TASKS.md
 
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
 |---|---|---|---|---|---|---|
-| `round-2026-06-12-qa-agent-react-iteration` | DEBUG | [`test-to-settle/round-2026-06-12-qa-agent-react-iteration.md`](test-to-settle/round-2026-06-12-qa-agent-react-iteration.md) | `开发中` | Auto (qa-agent) | 2026-06-15 | T-0612-07/08 125 PASS；细问估值待 push 6f78143 |
-| `plan-2026-06-15-analysis-ownership-cutover` | UPGRADE | [`upgrade_to_settle/plan-2026-06-15-analysis-ownership-cutover.md`](upgrade_to_settle/plan-2026-06-15-analysis-ownership-cutover.md) | `待审` | Sisyphus | 2026-06-15 | write_timepoints wired into worker |
-| `plan-2026-06-15-proposal-semantics` | UPGRADE | [`upgrade_to_settle/plan-2026-06-15-proposal-semantics.md`](upgrade_to_settle/plan-2026-06-15-proposal-semantics.md) | `待审` | Sisyphus | 2026-06-15 | react_helpers 测通过 |
+| `round-2026-06-12-qa-agent-react-iteration` | DEBUG | [`test-to-settle/round-2026-06-12-qa-agent-react-iteration.md`](test-to-settle/round-2026-06-12-qa-agent-react-iteration.md) | `开发中` | Auto (Reviewer) | 2026-06-15 | 07/08 125 PASS；细问待 push |
+| `plan-2026-06-15-analysis-ownership-cutover` | UPGRADE | [`upgrade_to_settle/plan-2026-06-15-analysis-ownership-cutover.md`](upgrade_to_settle/plan-2026-06-15-analysis-ownership-cutover.md) | `开发中` | Auto (Reviewer) | 2026-06-15 | Worker OK；MaterialVersionService 编译挂 |
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
 > **不在本表**：complexity 中转 · AT-* 自动化 · 已 CLOSED（见各 `done/`）

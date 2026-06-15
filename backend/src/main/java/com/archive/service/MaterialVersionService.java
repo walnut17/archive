@@ -13,6 +13,7 @@ import com.archive.repository.ProposalRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -59,6 +60,9 @@ public class MaterialVersionService {
     private ProjectService projectService;
     @Autowired(required = false)
     private com.archive.qaagent.QaAgentClient qaAgentClient;
+
+    @Value("${app.qa-agent.analysis-enqueue.enabled:false}")
+    private boolean analysisEnqueueEnabled;
 
     /**
      * 上传新版本(自动算 version_no:同 material 已有最大 + 1).
