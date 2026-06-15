@@ -89,7 +89,10 @@ def test_deploy_update_requires_token(deploy_client: TestClient, qa_root: Path):
 
 def test_deploy_update_applies_zip(deploy_client: TestClient, qa_root: Path, monkeypatch):
     z = _make_zip({"app/patched.py": b"ok"})
-    monkeypatch.setattr("app.api.deploy.schedule_restart", lambda *a, **k: None)
+    monkeypatch.setattr(
+        "app.api.deploy.schedule_restart",
+        lambda *a, **k: {"ok": True, "spawn_pid": 12345},
+    )
     resp = deploy_client.post(
         "/v1/deploy/update",
         files={"file": ("u.zip", z, "application/zip")},

@@ -14,6 +14,19 @@ ROOT = Path(__file__).resolve().parents[1]
 PACK = ROOT / "scripts" / "pack_update.py"
 
 
+def local_git_sha() -> str:
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=ROOT.parent,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        return out.strip() or "unknown"
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return "unknown"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="推送 qa-agent 热更新到远端")
     parser.add_argument("--url", default="http://182.168.1.125:8001", help="qa-agent 基址")
@@ -33,6 +46,8 @@ def main() -> int:
     base = args.url.rstrip("/")
     headers = {"X-Deploy-Token": args.token.strip()}
     params = {"restart": "false" if args.no_restart else "true", "token": args.token.strip()}
+    local_sha = local_git_sha()
+    print(f"[INFO] 本地 git: {local_sha}")
 
     print(f"[INFO] POST {base}/v1/deploy/update")
     with httpx.Client(timeout=300.0) as client:
@@ -48,6 +63,15 @@ def main() -> int:
             return 1
 
         if args.no_restart:
+            try:
+                v = client.get(f"{base}/v1/deploy/version", timeout=5.0).json()
+                remote_sha = v.get("git_sha", "unknown")
+                print(f"[INFO] 远端版本(未重启): {remote_sha}")
+                pending = v.get("pending_restart", False)
+                if pending or local_sha != remote_sha:
+                    print("[WARN] 已写盘但未重启，进程仍跑旧代码 — 请 /v1/deploy/restart 或手工 restart")
+            except httpx.HTTPError:
+                pass
             return 0
 
         print(f"[INFO] 等待重启 ({args.wait}s) ...")
@@ -56,7 +80,13 @@ def main() -> int:
             try:
                 h = client.get(f"{base}/health", timeout=5.0)
                 if h.status_code == 200:
-                    print("[OK] health:", h.json())
+                    payload = h.json()
+                    remote_sha = payload.get("git_sha") or payload.get("version") or "unknown"
+                    print("[OK] health:", payload)
+                    if local_sha == remote_sha:
+                        print(f"[OK] 版本一致: {local_sha}")
+                    else:
+                        print(f"[WARN] 版本不一致 本地={local_sha} 远端={remote_sha}")
                     return 0
             except httpx.HTTPError:
                 pass

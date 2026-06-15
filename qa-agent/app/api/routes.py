@@ -12,21 +12,19 @@ from app.api.schemas import (
 )
 from app.config import settings
 from app.services.extract import extract_project_fields
-from app.services.self_update import read_version
-from app.agent.react_helpers import FEATURE_EVIDENCE_ROUTING
+from app.services.version_info import get_runtime_version
 
 router = APIRouter()
 
 
 @router.get("/health")
 def health() -> dict:
+    runtime = get_runtime_version()
     return {
         "status": "ok",
-        "service": "qa-agent",
-        "version": read_version(),
+        **runtime,
         "config_json": settings.config_json_path or None,
         "deploy_enabled": bool(settings.qa_agent_deploy_token.strip()),
-        "evidence_routing": FEATURE_EVIDENCE_ROUTING,
     }
 
 

@@ -79,3 +79,38 @@ def test_dispatch_find_project_sets_context():
         )
     assert result == payload
     assert ctx["project_code"] == "PRJ-2026-001"
+
+
+def test_query_mysql_maps_project_code_on_proposal():
+    with patch("app.agent.tools.query_mysql.db_cursor") as db_mock:
+        cur = MagicMock()
+        cur.fetchone.return_value = {"id": 7}
+        cur.fetchall.return_value = [{"code": "PROP-1", "title": "t"}]
+        cm = MagicMock()
+        cm.__enter__.return_value = cur
+        cm.__exit__.return_value = False
+        db_mock.return_value = cm
+
+        rows = query_mysql.run(
+            {
+                "table": "proposal",
+                "columns": ["code", "title"],
+                "where": [{"column": "project_code", "operator": "=", "value": "shtx26007"}],
+            },
+            {},
+        )
+
+    assert rows == [{"code": "PROP-1", "title": "t"}]
+    sql = cur.execute.call_args_list[-1][0][0]
+    assert "`project_id` = %s" in sql
+
+
+def test_query_mysql_rejects_bad_order_column():
+    with pytest.raises(ValueError, match="ORDER BY"):
+        query_mysql.run(
+            {
+                "table": "proposal",
+                "order_by": [{"column": "meeting_date", "direction": "DESC"}],
+            },
+            {},
+        )

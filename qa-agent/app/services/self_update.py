@@ -20,6 +20,7 @@ QA_AGENT_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = QA_AGENT_ROOT.parent
 ALLOWED_TOP_DIRS = frozenset({"app", "tools", "scripts"})
 ALLOWED_ROOT_FILES = frozenset({"VERSION"})
+ALLOWED_SCRIPT_FILES = frozenset({"run_apply_restart.cmd"})
 MAX_ZIP_BYTES = 50 * 1024 * 1024
 MAX_ZIP_FILES = 500
 VERSION_FILE = QA_AGENT_ROOT / "VERSION"
@@ -123,42 +124,59 @@ def apply_zip_update(zip_bytes: bytes) -> dict[str, Any]:
         shutil.rmtree(staging, ignore_errors=True)
 
 
-def schedule_restart(config_json: str | None = None, log_dir: str | None = None) -> None:
-    """后台拉起 PowerShell 脚本：stop + start（仅 Windows 生产路径）."""
+def schedule_restart(config_json: str | None = None, log_dir: str | None = None) -> dict[str, Any]:
+    """拉起独立 PowerShell 执行 stop+start（勿在 BackgroundTasks 里依赖本进程存活）."""
     script = QA_AGENT_ROOT / "scripts" / "apply_update_and_restart.ps1"
+    log_path = Path(log_dir or "D:/archive/logs/qa-agent")
+    log_path.mkdir(parents=True, exist_ok=True)
+    spawn_log = log_path / "schedule_restart_spawn.log"
+
     if not script.is_file():
         logger.error("缺少重启脚本: %s", script)
-        return
+        return {"ok": False, "error": f"missing script: {script}"}
 
     if sys.platform != "win32":
         logger.warning("非 Windows 环境，跳过自动重启；请手工重启 qa-agent")
-        return
+        return {"ok": False, "error": "non-windows"}
 
+    cmd_wrapper = QA_AGENT_ROOT / "scripts" / "run_apply_restart.cmd"
+    if not cmd_wrapper.is_file():
+        logger.error("缺少重启 cmd 包装: %s", cmd_wrapper)
+        return {"ok": False, "error": f"missing cmd wrapper: {cmd_wrapper}"}
+
+    config_arg = config_json or "D:/archive/config/config.json"
     args = [
-        "powershell.exe",
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        str(script),
-        "-RepoRoot",
+        "cmd.exe",
+        "/c",
+        str(cmd_wrapper),
+        str(log_path),
         str(REPO_ROOT),
+        config_arg,
     ]
-    if config_json:
-        args.extend(["-ConfigJson", config_json])
-    if log_dir:
-        args.extend(["-LogDir", log_dir])
 
     creationflags = 0
     if hasattr(subprocess, "CREATE_NEW_PROCESS_GROUP"):
         creationflags |= subprocess.CREATE_NEW_PROCESS_GROUP
-    if hasattr(subprocess, "DETACHED_PROCESS"):
-        creationflags |= subprocess.DETACHED_PROCESS
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        creationflags |= subprocess.CREATE_NO_WINDOW
 
-    subprocess.Popen(
-        args,
-        cwd=str(QA_AGENT_ROOT),
-        creationflags=creationflags,
-        close_fds=True,
-    )
-    logger.info("已调度重启脚本: %s", script)
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        with open(spawn_log, "a", encoding="utf-8") as logf:
+            logf.write(f"{stamp} spawn args={args!r}\n")
+            proc = subprocess.Popen(
+                args,
+                cwd=str(QA_AGENT_ROOT),
+                creationflags=creationflags,
+                stdin=subprocess.DEVNULL,
+                stdout=logf,
+                stderr=subprocess.STDOUT,
+                close_fds=False,
+            )
+            logf.write(f"{stamp} spawned pid={proc.pid}\n")
+    except OSError as e:
+        logger.exception("调度重启脚本失败")
+        return {"ok": False, "error": str(e)}
+
+    logger.info("已调度重启脚本 pid=%s log=%s", proc.pid, spawn_log)
+    return {"ok": True, "spawn_pid": proc.pid, "spawn_log": str(spawn_log)}

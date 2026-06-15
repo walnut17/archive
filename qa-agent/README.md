@@ -73,7 +73,8 @@ spring:
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/health` | 健康检查 + config 路径 |
+| GET | `/health` | 健康检查 + `git_sha` / `features` / config 路径 |
+| GET | `/v1/deploy/version` | 运行版本对账（无需 token） |
 | POST | `/v1/ask` | 单轮问答 |
 | POST | `/v1/turn/{session_id}` | 多轮问答 |
 | POST | `/v1/extract/project-fields` | 立项字段抽取 |
@@ -106,3 +107,7 @@ zip 仅允许覆盖 `app/`、`tools/`、`scripts/`；更新前自动备份到 `q
 ```
 
 架构说明：[`docs/architecture/08-qa-agent-python-service.md`](../docs/architecture/08-qa-agent-python-service.md) · 库表：[`docs/architecture/DATABASE.md`](../docs/architecture/DATABASE.md)
+
+## 经验沉淀（LLM 档案管理）
+
+投委会 / 不良资产场景下的提示词、工具链路由、部署验收经验见 **[`desc/`](./desc/README.md)**。

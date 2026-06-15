@@ -89,10 +89,12 @@ SYSTEM_PROMPT = """\
 - topN: 默认 3
 
 ## 2. get_project_business_data
-已知 projectCode 时, 拿项目汇总 (金额/待办/最近活动).
+已知 projectCode 时, 拿项目汇总 (金额/待办/材料份数/议案数与议案列表).
 ```json
 {"thought": "已知 PRJ-2026-001, 直接拿汇总", "tool": "get_project_business_data", "args": {"projectCode": "PRJ-2026-001"}}
 ```
+- 返回 materialCount、proposalCount、proposals[{code,title,type,status}] 等
+- **议案几次/投委会议案数量** → 用本工具, 不要 query_mysql(project_code)
 
 ## 3. search_fulltext
 MySQL FULLTEXT 检索材料.
@@ -191,6 +193,47 @@ MySQL FULLTEXT 检索材料.
 ```
 ```json
 {"thought": "根据摘录作答", "tool": "FINAL_ANSWER", "args": {"answer": "项目 lmz授信 (shtx26007) 材料显示固定收益 15%。\\n\\n引用来源: [1] 投资申请报告"}}
+```
+
+## 示例 2d: 简称 → 材料正文查债权标的
+
+用户: "lmz项目远期回购的债权标的是什么?"
+
+```json
+{"thought": "简称'lmz', 先 find_project 锁定项目", "tool": "find_project", "args": {"query": "lmz项目", "topN": 3}}
+```
+```json
+{"thought": "债权标的在材料正文, search_fulltext 搜目标债权/岭兜", "tool": "search_fulltext", "args": {"query": "债权标的 目标债权 岭兜", "projectCode": "shtx26007", "topN": 5}}
+```
+```json
+{"thought": "根据摘录作答", "tool": "FINAL_ANSWER", "args": {"answer": "项目 lmz授信 (shtx26007) 远期回购的债权标的是南安市岭兜建材二厂债权。\\n\\n引用来源: [1] 债权转让暨远期回购协议书"}}
+```
+
+## 示例 2e: 多轮追问 → 这个债权的抵押物
+
+上一轮已确认债权标的为「南安市岭兜建材二厂债权」, session 已锁 shtx26007.
+
+用户: "这个债权的抵押物是什么?"
+
+```json
+{"thought": "session 已锁项目且指代「这个债权」, 直接在该项目材料搜岭兜+抵押物", "tool": "search_fulltext", "args": {"query": "岭兜 建材二厂 抵押物 土地 厂房 设备", "projectCode": "shtx26007", "topN": 5}}
+```
+```json
+{"thought": "根据材料「债权抵押物基本情况」提炼作答", "tool": "FINAL_ANSWER", "args": {"answer": "项目 lmz授信 (shtx26007) 南安市岭兜建材二厂债权的抵押物包括：11.8亩工业土地抵押；上盖无证厂房8617平米；设备抵押。\\n\\n引用来源: [1] 投资申请报告"}}
+```
+
+## 示例 2c: 简称 → 议案数量
+
+用户: "lmz项目下面对应几次投委会议案?"
+
+```json
+{"thought": "简称'lmz', 先 find_project 锁定项目", "tool": "find_project", "args": {"query": "lmz项目", "topN": 3}}
+```
+```json
+{"thought": "议案数在汇总里, get_project_business_data 读 proposalCount", "tool": "get_project_business_data", "args": {"projectCode": "shtx26007"}}
+```
+```json
+{"thought": "根据 proposalCount 与 proposals 列表作答", "tool": "FINAL_ANSWER", "args": {"answer": "项目 lmz授信 (shtx26007) 下共 1 个投委会议案。\\n\\n议案列表:\\n- [1] shtx26007 关于…投资申请报告（申请，通过）"}}
 ```
 
 ## 示例 2: 简称 → find_project 多变体命中

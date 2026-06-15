@@ -7,6 +7,8 @@ from app.db.connection import db_cursor
 
 logger = logging.getLogger(__name__)
 
+_MAX_PROPOSALS = 10
+
 
 def run(args: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
     project_code = args.get("projectCode", "")
@@ -17,16 +19,38 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
         cur.execute(
             """SELECT p.id, p.code, p.name, p.status, p.amount_wan,
                       p.customer_name, p.category,
-                      (SELECT COUNT(*) FROM todo t WHERE t.project_id = p.id AND t.status = 'pending') AS todo_count,
+                      (SELECT COUNT(*) FROM todo t
+                       WHERE t.project_id = p.id AND t.status = 'pending') AS todo_count,
                       (SELECT COUNT(m.id) FROM material m
                        JOIN proposal pr ON pr.id = m.proposal_id
-                       WHERE pr.project_id = p.id AND m.deleted_at IS NULL) AS material_count
+                       WHERE pr.project_id = p.id AND m.deleted_at IS NULL) AS material_count,
+                      (SELECT COUNT(*) FROM proposal pr
+                       WHERE pr.project_id = p.id AND pr.deleted_at IS NULL) AS proposal_count
                FROM project p WHERE p.code = %s AND p.deleted_at IS NULL""",
             (project_code,),
         )
         row = cur.fetchone()
         if not row:
             return {"error": f"项目 {project_code} 不存在"}
+
+        project_id = row["id"]
+        cur.execute(
+            """SELECT code, title, type, status
+               FROM proposal
+               WHERE project_id = %s AND deleted_at IS NULL
+               ORDER BY id ASC
+               LIMIT %s""",
+            (project_id, _MAX_PROPOSALS),
+        )
+        proposals = [
+            {
+                "code": r["code"],
+                "title": r["title"],
+                "type": r.get("type"),
+                "status": r.get("status"),
+            }
+            for r in (cur.fetchall() or [])
+        ]
 
         return {
             "projectCode": row["code"],
@@ -37,4 +61,6 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
             "category": row["category"],
             "todoCount": row["todo_count"],
             "materialCount": int(row["material_count"] or 0),
+            "proposalCount": int(row["proposal_count"] or 0),
+            "proposals": proposals,
         }

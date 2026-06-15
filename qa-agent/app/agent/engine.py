@@ -8,9 +8,12 @@ from app.agent.parser import FINAL_ANSWER, final_answer_from_args, parse_agent_s
 from app.agent.prompts import SYSTEM_PROMPT
 from app.agent.react_helpers import (
     append_step_hints,
+    compact_search_hits_for_obs,
     maybe_upgrade_step,
+    try_finalize_evidence_from_search,
     try_recover_evidence_loop,
     try_recover_material_count_loop,
+    try_recover_proposal_count_loop,
 )
 from app.agent.tools.registry import dispatch_tool
 from app.config import settings
@@ -27,6 +30,139 @@ def _truncate(s: str, n: int = MAX_OBS_CHARS) -> str:
     if len(s) <= n:
         return s
     return s[: n - 3] + "..."
+
+
+def _store_tool_observation(tool: str, obs: Any) -> str:
+    if isinstance(obs, str):
+        return _truncate(obs)
+    if tool == "search_fulltext" and isinstance(obs, list):
+        return _truncate(json.dumps(compact_search_hits_for_obs(obs), ensure_ascii=False))
+    return _truncate(json.dumps(obs, ensure_ascii=False))
+
+
+def _append_final_step(steps: list[dict], iteration: int, thought: str, answer: str) -> None:
+    steps.append(
+        {
+            "iteration": iteration,
+            "thought": thought,
+            "tool": FINAL_ANSWER,
+            "toolArgs": json.dumps({"answer": answer}, ensure_ascii=False),
+            "observation": "",
+        }
+    )
+
+
+def _prepare_session_context(
+    session_id: str | None, question: str
+) -> tuple[str, dict[str, Any], list[dict] | None]:
+    """加载项目锁/债权主题，解析指代词，返回 (resolved_question, ctx, pre_steps)."""
+    project_code: str | None = None
+    project_name: str | None = None
+    last_debt_target: str | None = None
+    pre_steps: list[dict] | None = None
+
+    if session_id:
+        try:
+            from app.services.memory import (
+                load_context,
+                load_debt_target_from_history,
+                resolve_session_references,
+            )
+
+            ctx_row = load_context(session_id)
+            if ctx_row:
+                project_code = ctx_row.get("project_code")
+                project_name = ctx_row.get("project_name")
+                last_debt_target = ctx_row.get("last_debt_target")
+            if not last_debt_target:
+                last_debt_target = load_debt_target_from_history(session_id)
+            question_resolved = resolve_session_references(
+                question, project_code, last_debt_target
+            )
+            if question_resolved != question:
+                logger.info("会话指代解析: %r → %r", question, question_resolved)
+                pre_steps = [
+                    {
+                        "iteration": 0,
+                        "thought": (
+                            f"识别到上下文指代, 锁定项目 {project_code} ({project_name})"
+                            + (
+                                f", 债权主题 {last_debt_target}"
+                                if last_debt_target
+                                else ""
+                            )
+                        ),
+                        "tool": "_resolve_reference",
+                        "toolArgs": json.dumps(
+                            {
+                                "original": question,
+                                "resolved": question_resolved,
+                                "lastDebtTarget": last_debt_target,
+                            },
+                            ensure_ascii=False,
+                        ),
+                        "observation": project_code or "",
+                    }
+                ]
+            else:
+                question_resolved = question
+        except Exception as e:
+            logger.debug("_prepare_session_context 失败: %s", e)
+            question_resolved = question
+    else:
+        question_resolved = question
+
+    ctx: dict[str, Any] = {
+        "project_code": project_code,
+        "project_name": project_name,
+        "last_debt_target": last_debt_target,
+        "interrupted": False,
+    }
+    return question_resolved, ctx, pre_steps
+
+
+def _topic_debt_target_from_answer(answer: str) -> str | None:
+    from app.agent.react_helpers import extract_debt_target_from_texts
+
+    return extract_debt_target_from_texts([answer or ""])
+
+
+def _persist_session_lock(
+    session_id: str | None,
+    final_answer: str | None,
+    ctx: dict[str, Any],
+    agent_sources: list[dict[str, Any]],
+) -> None:
+    if not session_id or not final_answer or ctx.get("interrupted"):
+        return
+    try:
+        from app.services.memory import save_context
+
+        project_code = None
+        project_name = ""
+        for src in reversed(agent_sources):
+            if src.get("type") == "PROJECT" and src.get("id"):
+                project_code = src["id"]
+                project_name = src.get("title") or ""
+                break
+        if not project_code:
+            project_code = ctx.get("project_code")
+            project_name = ctx.get("project_name") or ""
+        if not project_code:
+            return
+        debt = (
+            ctx.get("resolved_debt_target")
+            or _topic_debt_target_from_answer(final_answer)
+            or ctx.get("last_debt_target")
+        )
+        save_context(
+            session_id,
+            project_code,
+            project_name,
+            last_debt_target=debt,
+        )
+    except Exception as e:
+        logger.debug("_persist_session_lock 失败: %s", e)
 
 
 def load_memory(session_id: str, limit: int = 10) -> list[dict[str, str]]:
@@ -95,7 +231,9 @@ def _log_llm_call(scenario: str, status: str, duration_ms: int, model: str = set
 
 def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
     steps: list[dict[str, Any]] = []
-    ctx: dict[str, Any] = {"project_code": None}
+    question_resolved, ctx, pre_steps = _prepare_session_context(session_id, question)
+    if pre_steps:
+        steps.extend(pre_steps)
     final_answer: str | None = None
     project_switch_hint: str | None = None
     confidence_badge: str | None = None
@@ -105,7 +243,7 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
         append_memory(session_id, "user", question)
 
     for i in range(1, settings.agent_max_iterations + 1):
-        user_prompt = build_user_prompt(question, session_id, steps)
+        user_prompt = build_user_prompt(question_resolved, session_id, steps)
         try:
             t0 = time.time()
             llm_raw = glm_client.chat(SYSTEM_PROMPT, user_prompt)
@@ -127,7 +265,12 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
             break
 
         step = parse_agent_step(llm_raw, i)
-        step = maybe_upgrade_step(step, steps, question)
+        step = maybe_upgrade_step(
+            step,
+            steps,
+            question_resolved,
+            debt_target=ctx.get("last_debt_target"),
+        )
         tool = step["tool"]
 
         if tool == FINAL_ANSWER:
@@ -138,7 +281,7 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
         obs: Any = None
         try:
             obs = dispatch_tool(tool, step["toolArgs"], ctx)
-            step["observation"] = _truncate(obs if isinstance(obs, str) else json.dumps(obs, ensure_ascii=False))
+            step["observation"] = _store_tool_observation(tool, obs)
         except Exception as e:
             logger.exception("Tool %s failed", tool)
             step["observation"] = _truncate(f"ERROR: {e}")
@@ -178,6 +321,25 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
 
         steps.append(step)
 
+        if tool == "search_fulltext" and isinstance(obs, list) and obs:
+            evidence_answer = try_finalize_evidence_from_search(
+                question_resolved, steps[:-1], obs, ctx
+            )
+            if evidence_answer:
+                from app.agent.react_helpers import extract_debt_target_from_texts
+
+                debt = extract_debt_target_from_texts([evidence_answer])
+                if debt:
+                    ctx["resolved_debt_target"] = debt
+                _append_final_step(
+                    steps,
+                    i + 1,
+                    "search_fulltext 已命中材料，引擎根据摘录合成答案",
+                    evidence_answer,
+                )
+                final_answer = evidence_answer
+                break
+
         # ask_clarification 中断 ReAct 循环
         if ctx.get("interrupted") and isinstance(obs, dict):
             final_answer = json.dumps({"clarification": True, "question": obs.get("question", "")}, ensure_ascii=False)
@@ -188,11 +350,15 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
             a, b = steps[-2], steps[-1]
             if a["tool"] == b["tool"] and a.get("toolArgs") == b.get("toolArgs"):
                 recovered, extra = try_recover_evidence_loop(
-                    steps, question, i, ctx, dispatch_tool, _truncate
+                    steps, question_resolved, i, ctx, dispatch_tool, _truncate
                 )
                 if not recovered:
+                    recovered, extra = try_recover_proposal_count_loop(
+                        steps, question_resolved, i, ctx, dispatch_tool, _truncate
+                    )
+                if not recovered:
                     recovered, extra = try_recover_material_count_loop(
-                        steps, question, i, ctx, dispatch_tool, _truncate
+                        steps, question_resolved, i, ctx, dispatch_tool, _truncate
                     )
                 if recovered:
                     final_answer = recovered
@@ -215,6 +381,8 @@ def run_agent(question: str, session_id: str | None = None) -> dict[str, Any]:
 
     if session_id:
         append_memory(session_id, "assistant", final_answer)
+
+    _persist_session_lock(session_id, final_answer, ctx, agent_sources)
 
     return {
         "answer": final_answer,
@@ -261,42 +429,17 @@ def run_agent_stream(question: str, session_id: str | None = None) -> Iterator[s
     confidence_badge: str | None = None
     final_answer: str | None = None
     answer_tokens_streamed = False
-    project_code: str | None = None
-    project_name: str | None = None
-    if session_id:
-        try:
-            from app.services.memory import load_context
-            ctx_row = load_context(session_id)
-            if ctx_row:
-                project_code = ctx_row.get("project_code")
-                project_name = ctx_row.get("project_name")
-        except Exception as e:
-            logger.debug("load_context 失败: %s", e)
-
-    # v1.2: 指代词解析
-    question_resolved = question
-    if session_id and project_code:
-        try:
-            from app.services.memory import resolve_project_reference
-            question_resolved = resolve_project_reference(question, project_code)
-            if question_resolved != question:
-                logger.info("指代词解析: %r → %r", question, question_resolved)
-                # step 事件前置: 让前端看到指代词解析过程
-                yield _sse_event("step", {
-                    "iteration": 0,
-                    "thought": f"识别到指代词, 自动锁定项目 {project_code} ({project_name})",
-                    "tool": "_resolve_reference",
-                    "toolArgs": _json.dumps({"original": question, "resolved": question_resolved}, ensure_ascii=False),
-                    "observation": project_code,
-                })
-        except Exception as e:
-            logger.debug("resolve_project_reference 失败: %s", e)
-
-    ctx: dict[str, Any] = {
-        "project_code": project_code,
-        "project_name": project_name,
-        "interrupted": False,
-    }
+    question_resolved, ctx, pre_steps = _prepare_session_context(session_id, question)
+    if pre_steps:
+        steps.extend(pre_steps)
+        for s in pre_steps:
+            yield _sse_event("step", {
+                "iteration": s["iteration"],
+                "thought": s["thought"],
+                "tool": s["tool"],
+                "toolArgs": s["toolArgs"],
+                "observation": s.get("observation", ""),
+            })
 
     for i in range(1, settings.agent_max_iterations + 1):
         user_prompt = build_user_prompt(question_resolved, session_id, steps)
@@ -320,7 +463,12 @@ def run_agent_stream(question: str, session_id: str | None = None) -> Iterator[s
 
         llm_raw = "".join(llm_raw_chunks)
         step = parse_agent_step(llm_raw, i)
-        step = maybe_upgrade_step(step, steps, question_resolved)
+        step = maybe_upgrade_step(
+            step,
+            steps,
+            question_resolved,
+            debt_target=ctx.get("last_debt_target"),
+        )
         tool = step["tool"]
 
         if tool == FINAL_ANSWER:
@@ -342,7 +490,7 @@ def run_agent_stream(question: str, session_id: str | None = None) -> Iterator[s
         obs: Any = None
         try:
             obs = dispatch_tool(tool, step["toolArgs"], ctx)
-            step["observation"] = _truncate(obs if isinstance(obs, str) else _json.dumps(obs, ensure_ascii=False))
+            step["observation"] = _store_tool_observation(tool, obs)
         except Exception as e:
             logger.exception("Tool %s failed", tool)
             step["observation"] = _truncate(f"ERROR: {e}")
@@ -394,6 +542,31 @@ def run_agent_stream(question: str, session_id: str | None = None) -> Iterator[s
         for src in new_sources:
             yield _sse_event("source", src)
 
+        if tool == "search_fulltext" and isinstance(obs, list) and obs:
+            evidence_answer = try_finalize_evidence_from_search(
+                question_resolved, steps, obs, ctx
+            )
+            if evidence_answer:
+                from app.agent.react_helpers import extract_debt_target_from_texts
+
+                debt = extract_debt_target_from_texts([evidence_answer])
+                if debt:
+                    ctx["resolved_debt_target"] = debt
+                final_step = {
+                    "iteration": i + 1,
+                    "thought": "search_fulltext 已命中材料，引擎根据摘录合成答案",
+                    "tool": FINAL_ANSWER,
+                    "toolArgs": _json.dumps({"answer": evidence_answer}, ensure_ascii=False),
+                    "observation": "",
+                }
+                steps.append(final_step)
+                yield _sse_event("step", final_step)
+                final_answer = evidence_answer
+                for ch in evidence_answer:
+                    yield _sse_event("token", {"iteration": i + 1, "delta": ch})
+                answer_tokens_streamed = True
+                break
+
         # ask_clarification 中断
         if ctx.get("interrupted") and isinstance(obs, dict):
             final_answer = _json.dumps({"clarification": True, "question": obs.get("question", "")}, ensure_ascii=False)
@@ -406,6 +579,10 @@ def run_agent_stream(question: str, session_id: str | None = None) -> Iterator[s
                 recovered, extra = try_recover_evidence_loop(
                     steps, question_resolved, i, ctx, dispatch_tool, _truncate
                 )
+                if not recovered:
+                    recovered, extra = try_recover_proposal_count_loop(
+                        steps, question_resolved, i, ctx, dispatch_tool, _truncate
+                    )
                 if not recovered:
                     recovered, extra = try_recover_material_count_loop(
                         steps, question_resolved, i, ctx, dispatch_tool, _truncate
@@ -448,17 +625,7 @@ def run_agent_stream(question: str, session_id: str | None = None) -> Iterator[s
     if session_id:
         append_memory(session_id, "assistant", final_answer)
 
-    # v1.2: 项目锁写回
-    if session_id and final_answer and not ctx.get("interrupted"):
-        try:
-            from app.services.memory import save_context
-            # 找最后一次 find_project 命中的 PROJECT
-            for src in reversed(agent_sources):
-                if src.get("type") == "PROJECT" and src.get("id"):
-                    save_context(session_id, src["id"], src.get("title", ""))
-                    break
-        except Exception as e:
-            logger.debug("save_context 失败: %s", e)
+    _persist_session_lock(session_id, final_answer, ctx, agent_sources)
 
     # yield done 事件
     yield _sse_event("done", {

@@ -10,16 +10,35 @@ ALLOWED_OPS = frozenset({"=", "!=", ">", "<", ">=", "<=", "LIKE", "IN"})
 ALLOWED_ORDER_DIRS = frozenset({"ASC", "DESC"})
 MAX_LIMIT = 1000
 
-# v1.2: ORDER BY 列名白名单 (与 columns 共享, 防 SQL 注入)
-# key=表名, value=允许 ORDER BY 的列名集合
-_ORDER_COLUMNS_WHITELIST: dict[str, set[str]] = {
+_COLUMNS_WHITELIST: dict[str, set[str]] = {
     "project": {"id", "code", "name", "status", "amount_wan", "created_at", "updated_at"},
-    "proposal": {"id", "code", "title", "status", "decided_at", "created_at"},
-    "material": {"id", "name", "type", "created_at"},
+    "proposal": {
+        "id",
+        "code",
+        "title",
+        "status",
+        "type",
+        "project_id",
+        "reviewed_at",
+        "created_at",
+    },
+    "material": {"id", "name", "type", "proposal_id", "created_at"},
     "material_version": {"id", "material_id", "version_no", "created_at"},
-    "todo": {"id", "title", "status", "due_date", "created_at"},
+    "todo": {"id", "title", "status", "due_date", "project_id", "created_at"},
     "project_fact": {"id", "project_id", "fact_type", "occurred_at"},
 }
+
+_ORDER_COLUMNS_WHITELIST = _COLUMNS_WHITELIST
+
+
+def _resolve_project_id(project_code: str) -> int | None:
+    with db_cursor() as cur:
+        cur.execute(
+            "SELECT id FROM project WHERE code = %s AND deleted_at IS NULL LIMIT 1",
+            (project_code,),
+        )
+        row = cur.fetchone()
+        return int(row["id"]) if row else None
 
 
 def run(args: dict[str, Any], ctx: dict[str, Any]) -> list[dict[str, Any]]:
@@ -30,10 +49,16 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> list[dict[str, Any]]:
     columns = args.get("columns") or ["*"]
     if not isinstance(columns, list) or not columns:
         columns = ["*"]
-    col_sql = ", ".join(columns) if columns != ["*"] else "*"
+    if columns != ["*"]:
+        allowed = _COLUMNS_WHITELIST.get(table, set())
+        bad = [c for c in columns if c not in allowed]
+        if bad:
+            raise ValueError(f"SELECT 列不在白名单: table={table}, cols={bad}")
+    col_sql = ", ".join(f"`{c}`" for c in columns) if columns != ["*"] else "*"
 
     limit = min(int(args.get("limit") or 50), settings.query_mysql_max_rows)
     where = args.get("where") or []
+    allowed_where = _COLUMNS_WHITELIST.get(table, set())
     clauses: list[str] = []
     params: list[Any] = []
     for w in where:
@@ -42,6 +67,15 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> list[dict[str, Any]]:
         value = w.get("value")
         if not field or op not in ALLOWED_OPS:
             continue
+        if field == "project_code" and table == "proposal":
+            pid = _resolve_project_id(str(value))
+            if pid is None:
+                raise ValueError(f"项目不存在: {value}")
+            clauses.append("`project_id` = %s")
+            params.append(pid)
+            continue
+        if field not in allowed_where:
+            raise ValueError(f"WHERE 列不在白名单: table={table}, col={field}")
         if op == "IN" and isinstance(value, list):
             placeholders = ", ".join(["%s"] * len(value))
             clauses.append(f"`{field}` IN ({placeholders})")
@@ -51,10 +85,11 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> list[dict[str, Any]]:
             params.append(value)
 
     sql = f"SELECT {col_sql} FROM `{table}`"
+    if table in ("project", "proposal", "material") and "deleted_at" not in " ".join(clauses):
+        clauses.append("`deleted_at` IS NULL")
     if clauses:
         sql += " WHERE " + " AND ".join(clauses)
 
-    # v1.2: ORDER BY 子句 (列名走白名单)
     order_by = args.get("order_by") or []
     if order_by:
         if not isinstance(order_by, list):
@@ -71,9 +106,7 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> list[dict[str, Any]]:
             order_clauses.append(f"`{col}` {direction}")
         sql += " ORDER BY " + ", ".join(order_clauses)
     else:
-        # 默认按主键倒序 (避全表扫)
-        default_pk = "id"
-        sql += f" ORDER BY `{default_pk}` DESC"
+        sql += " ORDER BY `id` DESC"
 
     sql += f" LIMIT {limit}"
 

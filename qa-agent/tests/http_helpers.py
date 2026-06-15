@@ -31,6 +31,8 @@ class SmokeResult:
 def assert_health_payload(data: dict[str, Any]) -> None:
     assert data.get("status") == "ok"
     assert data.get("service") == "qa-agent"
+    assert "git_sha" in data
+    assert isinstance(data.get("features"), dict)
 
 
 def assert_ask_response(data: dict[str, Any]) -> None:

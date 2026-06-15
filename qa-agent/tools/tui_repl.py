@@ -7,7 +7,7 @@
 - 0 依赖 (Python stdlib: cmd + urllib + json)
 - 支持流式 SSE (逐字渲染答案)
 - 多轮会话 (--session-id 或自动生成)
-- 快捷命令: /help /exit /clear /session /raw /quiet /config /tools
+- 快捷命令: /help /exit /clear /session /raw /quiet /config /tools /version
 
 环境变量:
 - QA_AGENT_URL  默认 http://127.0.0.1:8001
@@ -16,11 +16,13 @@ import argparse
 import cmd
 import json
 import os
+import subprocess
 import sys
 import time
 import urllib.error
 import urllib.request
 import uuid
+from pathlib import Path
 from typing import Any
 
 # ANSI 颜色
@@ -40,6 +42,20 @@ class C:
         for attr in dir(cls):
             if attr.isupper() and not attr.startswith("_"):
                 setattr(cls, attr, "")
+
+
+def local_git_sha() -> str:
+    root = Path(__file__).resolve().parents[1]
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=root.parent,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        return out.strip() or "unknown"
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+        return "unknown"
 
 
 def colorize(text: str, color: str) -> str:
@@ -80,6 +96,11 @@ class QaAgentClient:
 
     def health(self) -> dict:
         url = f"{self.base_url}/health"
+        with urllib.request.urlopen(url, timeout=5) as r:
+            return json.loads(r.read())
+
+    def version(self) -> dict:
+        url = f"{self.base_url}/v1/deploy/version"
         with urllib.request.urlopen(url, timeout=5) as r:
             return json.loads(r.read())
 
@@ -205,6 +226,7 @@ class TuiRepl(cmd.Cmd):
   /raw                 → 切换 raw 模式 (输出原始 SSE 事件 JSON)
   /quiet               → 切换 quiet 模式 (只显示答案, 不显示步骤)
   /health              → 调 /health 端点
+  /version             → 对比本地 git 与远端运行版本
   /tools               → 列出可用工具 (静态, 来自 prompts)
   /last                → 显示上一次完整响应 (步骤+来源+答案)
   /ask <q>             → 显式提问 (同直接输入, 但显式触发)
@@ -301,6 +323,40 @@ class TuiRepl(cmd.Cmd):
             self.stdout.write(colorize(json.dumps(h, indent=2, ensure_ascii=False) + "\n", C.GREEN))
         except Exception as e:
             self.stdout.write(colorize(f"health 失败: {e}\n", C.RED))
+
+    def do_version(self, arg):
+        """对比本地 git 与远端 /v1/deploy/version."""
+        local = local_git_sha()
+        try:
+            remote = self.client.version()
+        except Exception as e:
+            self.stdout.write(colorize(f"version 失败: {e}\n", C.RED))
+            return
+        remote_sha = remote.get("git_sha") or remote.get("version") or "unknown"
+        lines = [
+            f"目标:      {self.base_url}",
+            f"本地 git:  {local}",
+            f"远端运行:  {remote_sha}",
+        ]
+        if remote.get("process_started_at"):
+            lines.append(f"远端启动:  {remote['process_started_at']}")
+        if remote.get("pending_restart"):
+            lines.append("磁盘版本:  已更新，进程待重启")
+        if remote.get("features"):
+            lines.append(f"特性:      {json.dumps(remote['features'], ensure_ascii=False)}")
+        if local == remote_sha and not remote.get("pending_restart"):
+            lines.append("状态:      ✅ 一致")
+            color = C.GREEN
+        elif remote.get("pending_restart"):
+            lines.append("状态:      ❌ 磁盘已更新但进程未重启")
+            color = C.RED
+        elif local in ("unknown",) or remote_sha in ("dev", "unknown"):
+            lines.append("状态:      ⚠️ 无法可靠对比")
+            color = C.YELLOW
+        else:
+            lines.append("状态:      ❌ 不一致 — 需 push_update 或远端重启")
+            color = C.RED
+        self.stdout.write(colorize("\n".join(lines) + "\n", color))
 
     def do_tools(self, arg):
         """列出可用工具 (来自 prompts)."""

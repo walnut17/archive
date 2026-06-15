@@ -54,36 +54,40 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> list[dict[str, Any]]:
         cur.execute(sql, params)
         rows = cur.fetchall() or []
 
-    if not rows and project_code:
-        like_sql = """
-            SELECT mv.id AS versionId, mv.material_id AS materialId, m.title AS materialTitle,
-                   mv.version_no AS versionNo, mv.original_filename AS originalFilename,
-                   p.code AS projectCode, p.name AS projectName,
-                   pr.code AS proposalCode, pr.title AS proposalTitle,
-                   SUBSTRING(mv.parsed_text, 1, 8000) AS parsedExcerpt,
-                   1.0 AS score
-            FROM material_version mv
-            JOIN material m ON m.id = mv.material_id
-            JOIN proposal pr ON pr.id = m.proposal_id
-            JOIN project p ON p.id = pr.project_id
-            WHERE mv.parsed_text IS NOT NULL
-              AND p.code = %s
-              AND (
-        """
-        like_parts = []
-        like_params: list[Any] = [project_code]
-        for kw in keywords[:3]:
-            like_parts.append("mv.parsed_text LIKE %s")
-            like_params.append(f"%{kw}%")
-        like_sql += " OR ".join(like_parts) + ") ORDER BY mv.id DESC LIMIT %s"
-        like_params.append(top_n)
-        cur.execute(like_sql, like_params)
-        rows = cur.fetchall() or []
+        if not rows and project_code:
+            like_sql = """
+                SELECT mv.id AS versionId, mv.material_id AS materialId, m.title AS materialTitle,
+                       mv.version_no AS versionNo, mv.original_filename AS originalFilename,
+                       p.code AS projectCode, p.name AS projectName,
+                       pr.code AS proposalCode, pr.title AS proposalTitle,
+                       SUBSTRING(mv.parsed_text, 1, 8000) AS parsedExcerpt,
+                       1.0 AS score
+                FROM material_version mv
+                JOIN material m ON m.id = mv.material_id
+                JOIN proposal pr ON pr.id = m.proposal_id
+                JOIN project p ON p.id = pr.project_id
+                WHERE mv.parsed_text IS NOT NULL
+                  AND p.code = %s
+                  AND (
+            """
+            like_parts = []
+            like_params: list[Any] = [project_code]
+            for kw in keywords[:3]:
+                like_parts.append("mv.parsed_text LIKE %s")
+                like_params.append(f"%{kw}%")
+            like_sql += " OR ".join(like_parts) + ") ORDER BY mv.id DESC LIMIT %s"
+            like_params.append(top_n)
+            cur.execute(like_sql, like_params)
+            rows = cur.fetchall() or []
 
     out: list[dict[str, Any]] = []
     for r in rows:
         item = dict(r)
         excerpt = item.get("parsedExcerpt") or ""
-        item["snippet"] = _snippet_around_keywords(excerpt, keywords)
+        snippet_kws = list(keywords)
+        for extra in ("目标债权", "债权标的", "岭兜", "建材二厂", "目标债权"):
+            if extra not in snippet_kws:
+                snippet_kws.append(extra)
+        item["snippet"] = _snippet_around_keywords(excerpt, snippet_kws)
         out.append(item)
     return out
