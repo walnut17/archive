@@ -15,8 +15,14 @@ if (-not $RepoRoot) {
 Start-Sleep -Seconds $DelaySeconds
 
 $StartScript = Join-Path $RepoRoot "deploy\scripts\start-qa-agent.ps1"
+$StopScript = Join-Path $RepoRoot "deploy\scripts\stop-qa-agent.ps1"
 if (-not (Test-Path $StartScript)) {
     Write-Error "Missing start script: $StartScript"
+}
+
+if (Test-Path $StopScript) {
+    & $StopScript -LogDir $LogDir
+    Start-Sleep -Seconds 2
 }
 
 & $StartScript -RepoRoot $RepoRoot -ConfigJson $ConfigJson -LogDir $LogDir -Force
