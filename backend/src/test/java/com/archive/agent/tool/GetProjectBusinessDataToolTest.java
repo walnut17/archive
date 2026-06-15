@@ -4,6 +4,7 @@ import com.archive.agent.AgentContext;
 import com.archive.entity.Project;
 import com.archive.repository.MaterialRepository;
 import com.archive.repository.ProjectRepository;
+import com.archive.repository.ProposalRepository;
 import com.archive.repository.TodoRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +31,9 @@ class GetProjectBusinessDataToolTest {
     private MaterialRepository materialRepo;
 
     @Mock
+    private ProposalRepository proposalRepo;
+
+    @Mock
     private AgentContext ctx;
 
     @InjectMocks
@@ -49,6 +53,8 @@ class GetProjectBusinessDataToolTest {
         when(projectRepo.findByCode("PRJ-2026-001")).thenReturn(Optional.of(project));
         when(todoRepo.countByProjectIdAndStatus(1L, "pending")).thenReturn(3L);
         when(materialRepo.countByProjectId(1L)).thenReturn(12L);
+        when(proposalRepo.countCommitteeByProjectId(1L)).thenReturn(2L);
+        when(proposalRepo.countMaintenanceByProjectId(1L)).thenReturn(1L);
 
         var args = new GetProjectBusinessDataTool.GetBusinessDataArgs();
         args.projectCode = "PRJ-2026-001";
@@ -65,5 +71,8 @@ class GetProjectBusinessDataToolTest {
         assertEquals("宁德时代", data.get("customerName"));
         assertEquals(3L, data.get("todoCount"));
         assertEquals(12L, data.get("materialCount"));
+        assertEquals(2L, data.get("committeeProposalCount"));
+        assertEquals(1L, data.get("maintenanceBundleCount"));
+        assertEquals(2L, data.get("proposalCount"));
     }
 }
