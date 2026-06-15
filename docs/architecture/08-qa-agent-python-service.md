@@ -121,6 +121,8 @@ Java：`application.yml` → `app.qa-agent.base-url: http://${app.qa-agent.host}
 - **字段抽取**: Python `/v1/extract/project-fields`（读 `material_version.parsed_text`）
 - **staging-upload**: Java 创建 `DRAFT-*` 项目链，前端带 `draftProjectId` 最终 update
 
+**深度分析（2026-06-15 起）**: 见 [`09-analysis-ownership-python.md`](09-analysis-ownership-python.md) — 入库后 Worker 异步写 `analysis_snapshot` / `project_fact`；Java `ExtractionEngine` 逐步退役。
+
 ---
 
 ## 7. 迁移与降级

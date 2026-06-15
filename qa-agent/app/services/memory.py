@@ -191,13 +191,26 @@ def resolve_project_reference(question: str, project_code: str) -> str:
 
 
 def resolve_debt_reference(question: str, debt_target: str | None) -> str:
-    """追问「这个债权」时注入债权检索锚点."""
-    if not debt_target or not detect_debt_reference(question):
+    """追问「这个债权」或抵押物细问时注入债权检索锚点."""
+    if not debt_target:
         return question
     anchor = _debt_search_anchor(debt_target)
     if not anchor or anchor in question or debt_target in question:
         return question
-    return f"{anchor} {question}"
+    from app.agent.react_helpers import (
+        extract_debt_anchor_from_question,
+        question_needs_collateral_evidence,
+    )
+
+    q = question or ""
+    needs_debt_ctx = (
+        detect_debt_reference(q)
+        or extract_debt_anchor_from_question(q)
+        or question_needs_collateral_evidence(q)
+    )
+    if needs_debt_ctx:
+        return f"{anchor} {question}"
+    return question
 
 
 def resolve_session_references(
@@ -205,12 +218,15 @@ def resolve_session_references(
     project_code: str | None = None,
     last_debt_target: str | None = None,
 ) -> str:
-    """组合项目锁 + 债权主题解析."""
+    """组合项目锁 + 债权主题解析（含问句内嵌债权名）."""
+    from app.agent.react_helpers import extract_debt_anchor_from_question
+
     q = question or ""
+    debt = last_debt_target or extract_debt_anchor_from_question(q)
     if project_code:
         q = resolve_project_reference(q, project_code)
-    if last_debt_target:
-        q = resolve_debt_reference(q, last_debt_target)
+    if debt:
+        q = resolve_debt_reference(q, debt)
     return q
 
 

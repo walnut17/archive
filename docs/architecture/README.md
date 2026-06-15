@@ -20,6 +20,7 @@
 | [`01-arch-overview.md`](01-arch-overview.md) ~ [`06-requirements-gap-analysis.md`](06-requirements-gap-analysis.md) | 分章架构 |
 | [`07-archive-fs-agent-tools.md`](07-archive-fs-agent-tools.md) | Agent 只读 archive 磁盘工具 (plan-2026-06-11-archive-local-fs-tools) |
 | [`08-qa-agent-python-service.md`](08-qa-agent-python-service.md) | Python FastAPI qa-agent 微服务 (plan-2026-06-12-qa-python-upload-first) |
+| [`09-analysis-ownership-python.md`](09-analysis-ownership-python.md) | 深度分析职责迁移：Java 入库 vs qa-agent Worker (plan-2026-06-15-*) |
 | [`history/`](history/) | 历史架构 v1 / v2-lite / v3-final |
 
 ---

@@ -86,6 +86,93 @@ def test_evidence_search_query_collateral_with_debt():
     assert "建材二厂" in q
 
 
+def test_extract_collateral_items_with_valuation():
+    from app.agent.react_helpers import extract_collateral_items_from_texts
+
+    text = (
+        "一、债权抵押物基本情况。\n"
+        "第一笔贷款本金145万元，以债务人名下南安市11.8亩工业土地抵押，"
+        "土地上有上盖无证厂房8617平米；他项权证记载抵押金额为354.18万元；"
+        "债务人已偿还了土地抵押贷款本金145万元。\n"
+        "第二笔贷款本金400万元，以设备抵押。"
+    )
+    items = extract_collateral_items_from_texts([text])
+    assert len(items) == 2
+    assert "11.8亩" in items[0]["name"]
+    assert "8617" in items[0]["name"]
+    assert "354.18" in items[0]["initialValue"]
+    assert "145" in items[0]["statusNote"]
+    assert items[1]["name"] == "设备抵押"
+    assert "400" in items[1]["initialValue"]
+
+
+def test_question_needs_collateral_detail():
+    from app.agent.react_helpers import question_needs_collateral_detail
+
+    assert question_needs_collateral_detail(
+        "岭兜建材二厂债权下的抵押物还剩哪些，初始估值分别是多少？"
+    )
+    assert not question_needs_collateral_detail("这个债权的抵押物是什么？")
+
+
+def test_extract_debt_anchor_from_question():
+    from app.agent.react_helpers import extract_debt_anchor_from_question
+
+    assert (
+        extract_debt_anchor_from_question("岭兜建材二厂债权下的抵押物还剩哪些？")
+        == "南安市岭兜建材二厂债权"
+    )
+    assert extract_debt_anchor_from_question("lmz项目利率多少？") is None
+    assert extract_debt_anchor_from_question("这个债权的抵押物是什么？") is None
+    assert extract_debt_anchor_from_question("这个债权的抵押物是什么？") is None
+
+
+def test_balance_question_not_material_evidence():
+    assert not question_needs_material_evidence("剩余金额多少?")
+    assert not question_needs_material_evidence("它的剩余金额多少?")
+
+
+def test_evidence_search_query_collateral_detail():
+    from app.agent.react_helpers import evidence_search_query
+
+    q = evidence_search_query(
+        "岭兜建材二厂债权下的抵押物还剩哪些，初始估值分别是多少？",
+        debt_target="南安市岭兜建材二厂债权",
+    )
+    assert "抵押物" in q
+    assert "估值" in q
+    assert "抵押金额" in q
+
+
+def test_synthesize_collateral_detail_answer():
+    from app.agent.react_helpers import synthesize_evidence_answer
+
+    hits = [
+        {
+            "materialTitle": "投资申请报告",
+            "parsedExcerpt": (
+                "一、债权抵押物基本情况。\n"
+                "第一笔贷款本金145万元，以债务人名下南安市11.8亩工业土地抵押，"
+                "土地上有上盖无证厂房8617平米；他项权证记载抵押金额为354.18万元；"
+                "债务人已偿还了土地抵押贷款本金145万元。\n"
+                "第二笔贷款本金400万元，以设备抵押。"
+            ),
+        }
+    ]
+    ans = synthesize_evidence_answer(
+        "岭兜建材二厂债权下的抵押物还剩哪些，初始估值分别是多少？",
+        "lmz授信",
+        "shtx26007",
+        hits,
+        debt_target="南安市岭兜建材二厂债权",
+    )
+    assert ans is not None
+    assert "剩余抵押物及初始估值" in ans
+    assert "354.18" in ans
+    assert "400" in ans
+    assert "设备抵押" in ans
+
+
 def test_extract_collateral_from_texts():
     from app.agent.react_helpers import extract_collateral_from_texts
 

@@ -46,6 +46,22 @@ def test_detect_debt_reference():
     assert not detect_debt_reference("lmz项目的利率是多少？")
 
 
+def test_resolve_debt_reference_embedded_debt_skips_duplicate():
+    q = "岭兜建材二厂债权下的抵押物还剩哪些？"
+    resolved = resolve_debt_reference(q, "南安市岭兜建材二厂债权")
+    assert resolved == q
+
+
+def test_resolve_session_references_debt_from_question():
+    resolved = resolve_session_references(
+        "岭兜建材二厂债权下的抵押物还剩哪些，初始估值分别是多少？",
+        project_code="shtx26007",
+        last_debt_target=None,
+    )
+    assert "shtx26007" in resolved
+    assert "岭兜建材二厂" in resolved
+
+
 def test_resolve_debt_reference():
     q = "这个债权的抵押物是什么？"
     resolved = resolve_debt_reference(q, "南安市岭兜建材二厂债权")

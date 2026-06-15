@@ -200,6 +200,46 @@ summary: ReAct 递增+工具升级+流式终稿代码通过；T-0612-07 待 125 
 
 ----- agent-block end -----
 
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-15
+ref: round-2026-06-12-qa-agent-react-iteration
+ref_commit: 4007956 + 工作区 WIP（未 push）
+verdict: APPROVED
+summary: 抵押物细问路由（4007956 + 本地 WIP）代码通过；须 commit 一体交付 + 125 live
+
+**说明**：上轮只审了 T-0612-07/08 与两个 plan，**未单独回应** Coder 在 `4007956` 中 bundled 的债权抵押物细问能力 — 本条补审。
+
+**已通过 ✅（`4007956` 已 commit）**
+
+| 模块 | 内容 |
+|---|---|
+| `react_helpers.py` | `FEATURE_COLLATERAL_DETAIL_ROUTING` · `question_needs_collateral_detail` · `extract_collateral_items_from_texts` · `format_collateral_inventory_answer` · `extract_debt_anchor_from_question` · 剩余金额不误走 material evidence |
+| 合成路径 | `synthesize_evidence_answer` / `try_finalize_evidence_from_search` 细问走清单式答案 |
+| 提示 | `append_step_hints` 抵押物 query 须含锚点+估值关键词 |
+
+**已通过 ✅（工作区 WIP · 尚未 commit）**
+
+| 文件 | 内容 |
+|---|---|
+| `prompts.py` | 场景路由表 + 示例 2f（还剩哪些/初始估值） |
+| `engine.py` | `_prepare_session_context` 从问句解析 `last_debt_target` |
+| `memory.py` | `resolve_session_references` 支持问句内嵌债权名 |
+| `tests/test_react_helpers.py` | +6 测（估值清单/锚点/细问合成等）— **本地全绿** |
+| `tests/test_memory.py` | +2 测（内嵌债权不重复注入） |
+| `desc/08-债权抵押物问答.md` 等 | 经验文档 |
+
+**Coder 须做（非打回代码逻辑）**
+
+1. 将上述 WIP **与 proposal 单测修复一并 commit push**（当前 Reviewer 只审到工作区，不算已交付）
+2. **125 live**：细问「岭兜建材二厂债权下的抵押物还剩哪些，初始估值分别是多少？」— 清单式答案 + 来源
+3. T-0612-07 lmz 材料数复测仍缺（与抵押物独立）
+
+**与 plan 边界**：抵押物路由 **不属于** `plan-proposal-semantics` / `plan-cutover`；留在本 round 或后续 complexity，不阻塞 proposal plan 关单（proposal 只关心议案计数字段）。
+
+----- agent-block end -----
+
 ---
 
 ## 3. 关单检查

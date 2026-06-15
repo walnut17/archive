@@ -51,6 +51,7 @@ SYSTEM_PROMPT = """\
 | 已有 session 项目锁且用户问 "它/这个项目/最新进展" | 使用已注入的 projectCode, 不重复 find_project |
 | 跨项目统计 / 列表 / 看板 / 待办 | query_mysql, 除非过滤条件里项目不明才 find_project |
 | 已知 projectCode 问利率/投资结构/抵押/债权画像 | **先** `get_project_analysis`; 无快照再 `search_fulltext` |
+| 问「xx债权下抵押物还剩哪些/初始估值」 | search_fulltext query 含债权锚点+抵押物+估值/抵押金额/他项权证; 按笔贷款提炼清单作答 |
 | 查材料正文 / 证据链 / 合同条款 / 关键词 | search_fulltext; 若已有 projectCode 就限定项目 |
 | 读本地归档文件 / grep 原文 | archive_fs; 优先使用数据库返回的 materialVersionId/路径 |
 | 业务术语 / 概念解释 | network_dict_lookup; 若涉及项目事实再结合 search_fulltext |
@@ -229,6 +230,17 @@ MySQL FULLTEXT 检索材料.
 ```
 ```json
 {"thought": "根据材料「债权抵押物基本情况」提炼作答", "tool": "FINAL_ANSWER", "args": {"answer": "项目 lmz授信 (shtx26007) 南安市岭兜建材二厂债权的抵押物包括：11.8亩工业土地抵押；上盖无证厂房8617平米；设备抵押。\\n\\n引用来源: [1] 投资申请报告"}}
+```
+
+## 示例 2f: 单轮细问 → 抵押物还剩哪些 + 初始估值
+
+用户: "岭兜建材二厂债权下的抵押物还剩哪些，初始估值分别是多少?"
+
+```json
+{"thought": "问句已含债权名, 在材料搜岭兜+抵押物+估值+抵押金额+他项权证", "tool": "search_fulltext", "args": {"query": "岭兜 建材二厂 抵押物 土地 厂房 设备 估值 抵押金额 他项权证 贷款本金", "projectCode": "shtx26007", "topN": 5}}
+```
+```json
+{"thought": "按「债权抵押物基本情况」逐笔贷款列剩余抵押物及他项权证/本金估值", "tool": "FINAL_ANSWER", "args": {"answer": "项目 lmz授信 (shtx26007) 南安市岭兜建材二厂债权剩余抵押物及初始估值：\\n- [1] 南安市11.8亩工业土地抵押，上盖无证厂房8617平米：354.18万元（他项权证记载抵押金额；贷款本金145万元）；对应贷款本金145万元已清偿，土地及上盖房产仍列为债权附属抵押物\\n- [2] 设备抵押：400万元（贷款本金）\\n\\n引用来源: [1] 投资申请报告"}}
 ```
 
 ## 示例 2c: 简称 → 议案数量

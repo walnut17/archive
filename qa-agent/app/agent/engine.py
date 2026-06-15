@@ -76,6 +76,10 @@ def _prepare_session_context(
                 last_debt_target = ctx_row.get("last_debt_target")
             if not last_debt_target:
                 last_debt_target = load_debt_target_from_history(session_id)
+            from app.agent.react_helpers import extract_debt_anchor_from_question
+
+            if not last_debt_target:
+                last_debt_target = extract_debt_anchor_from_question(question)
             question_resolved = resolve_session_references(
                 question, project_code, last_debt_target
             )

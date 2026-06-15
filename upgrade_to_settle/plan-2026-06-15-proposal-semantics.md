@@ -125,6 +125,68 @@ summary: 计数 SQL/字段已加；别名、话术、单测未对齐 plan
 
 ----- agent-block end -----
 
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-15
+ref: plan-2026-06-15-proposal-semantics
+ref_commit: 4007956
+verdict: REQUEST_CHANGES
+summary: 别名与话术已对齐；pytest 仍 2 挂、Java 单测未补、无 Coder 块
+
+**已通过 ✅（相对 b42fb8b 打回项）**
+
+| 项 | 结论 |
+|---|---|
+| `proposalCount` deprecated 别名 | Python/Java 均 = `committeeProposalCount`（`4007956`） |
+| `proposal_count_answer_from_biz` | 读 `committeeProposalCount` + `maintenanceBundleCount`，区分正式/维护话术 |
+
+**仍阻塞关单**
+
+1. **`pytest`**：`4007956` 后 **124 passed, 2 failed**
+   - `test_get_project_business_data.py` mock 仍 `proposal_count`，缺 `committee_count`/`maintenance_count` → **KeyError**
+   - `test_proposal_count_answer_from_biz` 仍只传 `proposalCount: 1`，未传 `committeeProposalCount` → 断言「1 个投委会议案」失败
+2. **`GetProjectBusinessDataToolTest.java`** 未 mock `ProposalRepository`，无 `committeeProposalCount`/`maintenanceBundleCount` 断言（plan §1 验收 3）
+3. **无 Coder agent-block**（`9c86b6b` 仅改 TASKS）
+4. plan §1.3 `prompts.py` 未在本 ref 留痕（若已改须补块或说明 N/A）
+
+**Coder 下一步**：修上述 2 测 + Java 单测 → 追加 Coder 块 → `待审`。
+
+**补注（Coder 反馈「还有内容没回复」）**
+
+- `4007956` 中 **抵押物细问** 大段 `react_helpers` 改动 → 已另审，见 round **`4007956 + WIP` Reviewer 块**，**APPROVED**（代码），待 commit + 125 live
+- **`prompts.py`**：plan §1.3 要求项在 **工作区 WIP 已改**（示例 2f + 路由表），但 **未进 commit**；proposal 单测 2 挂仍阻塞本 plan
+- 抵押物能力与 proposal 计数 **无关**，勿混在同一 plan 关单条件里
+
+----- agent-block end -----
+
+----- agent-block begin -----
+role: Reviewer
+agent: Auto
+time: 2026-06-15
+ref: plan-2026-06-15-proposal-semantics
+ref_commit: 9618f93
+verdict: REQUEST_CHANGES
+summary: test_get_project_business_data 已修；react_helpers 测仍 1 挂 + Java 单测未动
+
+**已通过 ✅（相对 4007956 打回）**
+
+| 项 | 结论 |
+|---|---|
+| `test_get_project_business_data.py` | mock 已改 `committee_count`/`maintenance_count`；断言新字段 — **pytest PASS** |
+| 生产代码 | `4007956`/`b42fb8b` 别名+话术+SQL 维持 |
+
+**仍阻塞关单**
+
+1. **`test_proposal_count_answer_from_biz`** 仍只传 `proposalCount: 1`，未传 `committeeProposalCount` → **125 passed, 1 failed**
+2. **`GetProjectBusinessDataToolTest.java`** 仍无 `ProposalRepository` mock / 新字段断言（§1 验收 3）
+3. **无 Coder agent-block**（`9618f93` 仅改 1 个 pytest 文件）
+4. **`prompts.py`** 议案路由仍仅在 **工作区 WIP**，未 commit（§2.2 清单；非 P0 但须说明或提交）
+
+**Coder 下一步**：修 `test_react_helpers.py` 一行 mock 字段 + Java 单测 → Coder 块 → `待审`。
+
+----- agent-block end -----
+
 ---
 
 ## 4. 关单检查

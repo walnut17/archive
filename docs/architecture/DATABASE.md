@@ -16,7 +16,7 @@
 
 ## 1. 总览
 
-**表数量：28 张**（不含 `flyway_schema_history`）
+**表数量：28 张基线 + 5 张分析框架**（2026-06-15，见 [`migrate_260615_analysis_framework.sql`](../../deploy/sql/migrate_260615_analysis_framework.sql)）
 
 | 分组 | 表 | Agent 常见场景 |
 |---|---|---|
@@ -24,6 +24,7 @@
 | 档案链 | `project` → `proposal` → `material` → `material_version` | CRUD、上传、全文检索 |
 | 项目协作 | `project_member` | 项目成员 |
 | 智能问答 | `spring_ai_chat_memory`, `llm_call_log` | 多轮 QA、LLM 埋点 |
+| **后台分析** | `analysis_template`, `analysis_job`, `analysis_snapshot`, `project_asset`, `project_analysis_state` | Worker 深度分析、Agent 直读 snapshot（见 [`09-analysis-ownership-python.md`](09-analysis-ownership-python.md)） |
 | 章节/时点 | `chapter_summary`, `timepoint`, `todo` | 摘要、待办 |
 | 关键事实 | `project_fact`, `project_fact_event` | 单项目分析、事件流（**event 不可 UPDATE 核心字段**） |
 | 规则引擎 | `trigger_rule`, `trigger_action`, `extraction_method`, `comparison_method` | 触发、抽取、对比 |
