@@ -46,6 +46,31 @@ def colorize(text: str, color: str) -> str:
     return f"{color}{text}{C.RESET}"
 
 
+def strip_ansi(text: str) -> str:
+    import re
+
+    return re.sub(r"\033\[[0-9;]*m", "", text)
+
+
+def print_answer_box(write, answer: str, *, no_color: bool = False) -> None:
+    """醒目打印最终答案（与 ReAct 步骤分区）."""
+    text = (answer or "").strip()
+    if not text:
+        write(colorize("（无最终答案）\n", C.YELLOW))
+        return
+    bar = "═" * 56
+    if no_color:
+        write(f"\n{bar}\n  最终答案\n{bar}\n")
+        write(text + f"\n{bar}\n")
+        return
+    write(colorize(f"\n{bar}\n", C.GREEN))
+    write(colorize("  最终答案\n", C.BOLD + C.GREEN))
+    write(colorize(f"{bar}\n", C.GREEN))
+    for line in text.splitlines() or [text]:
+        write(colorize(f"  {line}\n", C.BOLD + C.GREEN))
+    write(colorize(f"{bar}\n", C.GREEN))
+
+
 class QaAgentClient:
     """轻量 HTTP 客户端 — 调 qa-agent /v1/ask/stream + /v1/turn/{sid}/stream."""
 
@@ -141,6 +166,7 @@ class TuiRepl(cmd.Cmd):
         self.last_answer = ""
         self.last_steps: list[dict] = []
         self.last_sources: list[dict] = []
+        self.no_color = no_color
 
     # ============== 核心命令: 直接输入问题 ==============
 
@@ -297,7 +323,7 @@ class TuiRepl(cmd.Cmd):
             self.stdout.write(colorize("还没有响应记录\n", C.YELLOW))
             return
         self.stdout.write(colorize("\n── 上一次响应 ──\n", C.BOLD))
-        self.stdout.write(colorize(f"答案: {self.last_answer}\n\n", C.GREEN))
+        print_answer_box(self.stdout.write, self.last_answer, no_color=self.no_color)
         if self.last_steps:
             self.stdout.write(colorize(f"步骤 ({len(self.last_steps)}):\n", C.CYAN))
             for s in self.last_steps:
@@ -332,8 +358,26 @@ class TuiRepl(cmd.Cmd):
             with urllib.request.urlopen(req, timeout=self.client.timeout) as r:
                 resp = json.loads(r.read())
             elapsed = (time.time() - start) * 1000
-            self.stdout.write(colorize(f"\n耗时: {elapsed:.0f}ms\n", C.CYAN))
-            self.stdout.write(colorize(f"答案: {resp.get('answer', '(无)')[:200]}\n", C.GREEN))
+            self.stdout.write(colorize(f"\n耗时: {elapsed:.0f}ms\n", C.DIM))
+            print_answer_box(self.stdout.write, resp.get("answer", ""), no_color=self.no_color)
+            steps = resp.get("steps") or []
+            if steps:
+                self.stdout.write(colorize(f"\n步骤 ({len(steps)}):\n", C.CYAN))
+                for s in steps:
+                    self.stdout.write(
+                        f"  步 {s.get('iteration', '?')}: {s.get('tool', '?')}\n"
+                    )
+            self.last_answer = resp.get("answer", "") or ""
+            self.last_steps = [
+                {
+                    "iteration": s.get("iteration", 0),
+                    "thought": s.get("thought", ""),
+                    "tool": s.get("tool", ""),
+                    "toolArgs": s.get("toolArgs", ""),
+                    "observation": s.get("observation", ""),
+                }
+                for s in steps
+            ]
             if resp.get("degraded"):
                 self.stdout.write(colorize("(降级模式)\n", C.YELLOW))
         except Exception as e:
@@ -431,11 +475,10 @@ class TuiRepl(cmd.Cmd):
             self.stdout.write(colorize(f"❌ 失败: {err_msg}\n", C.RED))
             return
 
-        if not self.quiet and acc_answer.strip():
-            self.stdout.write(colorize(f"[{elapsed:.0f}ms] ", C.DIM))
-            self.stdout.write(colorize(acc_answer.strip() + "\n", C.GREEN))
+        final_answer = acc_answer.strip()
+        print_answer_box(self.stdout.write, final_answer, no_color=self.no_color)
 
-        # 元信息
+        # 元信息（时间/步数/徽章，不与答案混在一行）
         meta = f"⏱ {elapsed:.0f}ms  🔧 {tool_calls} 步"
         if badge:
             meta += f"  🏷 {badge}"
@@ -444,10 +487,13 @@ class TuiRepl(cmd.Cmd):
         self.stdout.write(colorize(meta + "\n", C.DIM))
 
         if not self.quiet and steps:
-            self.stdout.write(colorize("\n── 步骤 ──\n", C.CYAN))
+            self.stdout.write(colorize("\n── ReAct 步骤 ──\n", C.CYAN))
             for s in steps:
                 if s.get("tool") == "_resolve_reference":
                     self.stdout.write(colorize(f"  步 {s['iteration']} 🔗 锁定: ", C.MAGENTA) + colorize(s.get("observation", ""), C.CYAN) + "\n")
+                    continue
+                if s.get("tool") == "FINAL_ANSWER":
+                    self.stdout.write(colorize(f"  步 {s['iteration']} ✅ FINAL_ANSWER\n", C.GREEN))
                     continue
                 thought = s.get("thought", "")[:60]
                 tool = s.get("tool", "?")
@@ -465,7 +511,7 @@ class TuiRepl(cmd.Cmd):
                 self.stdout.write(f"  [{i}] {colorize(t, C.MAGENTA)} · {title}\n")
 
         # 保存
-        self.last_answer = acc_answer
+        self.last_answer = final_answer
         self.last_steps = steps
         self.last_sources = sources
 
