@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from app.analysis.models import FEATURE_ANALYSIS_WORKER, FEATURE_DEPLOY_SANDBOX, FEATURE_LLM_DESENSITIZE
 from app.agent.react_helpers import FEATURE_EVIDENCE_ROUTING, FEATURE_PROPOSAL_COUNT_ROUTING, FEATURE_DEBT_TARGET_ROUTING, FEATURE_COLLATERAL_ROUTING
 from app.services.self_update import QA_AGENT_ROOT, read_version
 
@@ -22,6 +23,9 @@ FEATURE_FLAGS: dict[str, str] = {
     "proposal_count_routing": FEATURE_PROPOSAL_COUNT_ROUTING,
     "debt_target_routing": FEATURE_DEBT_TARGET_ROUTING,
     "collateral_routing": FEATURE_COLLATERAL_ROUTING,
+    "analysis_worker": FEATURE_ANALYSIS_WORKER,
+    "llm_desensitize": FEATURE_LLM_DESENSITIZE,
+    "deploy_sandbox": FEATURE_DEPLOY_SANDBOX,
 }
 
 

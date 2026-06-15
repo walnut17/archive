@@ -38,3 +38,42 @@ class ExtractResponse(BaseModel):
     failure_type: str | None = None
     message: str | None = None
     retryable: bool | None = None
+
+
+class AnalysisEnqueueRequest(BaseModel):
+    project_id: int | None = None
+    project_code: str | None = None
+    reason: str | None = "manual"
+
+
+class AnalysisEnqueueResponse(BaseModel):
+    job_id: int
+    project_id: int
+
+
+class AnalysisRunOnceResponse(BaseModel):
+    discovered: int
+    processed: bool
+    queue: dict = {}
+
+
+class AnalysisStatusResponse(BaseModel):
+    enabled: bool
+    alive: bool = False
+    running_job_id: int | None = None
+    jobs_processed: int = 0
+    last_tick_at: float | None = None
+    last_error: str | None = None
+    queue: dict = {}
+    tables_ready: bool = False
+    templates: list[dict] = []
+
+
+class ProjectAnalysisResponse(BaseModel):
+    project_id: int
+    project_code: str
+    project_name: str
+    material_fingerprint: str
+    analysis_state: dict = {}
+    snapshots: list[dict] = []
+    queue: dict = {}

@@ -23,6 +23,19 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _env_bool(flat: dict, key: str, default: bool) -> bool:
+    raw = flat.get(key)
+    if raw is None:
+        env_key = key.upper().replace(".", "_")
+        env_val = os.environ.get(env_key)
+        if env_val is not None:
+            return env_val.strip().lower() in ("1", "true", "yes", "on")
+        return default
+    if isinstance(raw, bool):
+        return raw
+    return str(raw).strip().lower() in ("1", "true", "yes", "on")
+
+
 @dataclass
 class Settings:
     """Merged: config.json (primary) → QA_AGENT_* env (optional override)."""
@@ -54,6 +67,14 @@ class Settings:
     qa_agent_deploy_token: str = ""
     qa_agent_root: str = ""
     qa_agent_log_dir: str = "D:/archive/logs/qa-agent"
+
+    # qaAgent.analysisWorker.*
+    analysis_worker_enabled: bool = True
+    analysis_worker_poll_seconds: int = 30
+    analysis_worker_discover_batch: int = 3
+
+    # qaAgent.llmDesensitize.*
+    llm_desensitize_enabled: bool = True
 
     # archive.networkDict.*
     network_dict_enabled_sources: list[str] = field(default_factory=lambda: ["baidu_baike", "wiki"])
@@ -108,6 +129,10 @@ class Settings:
             qa_agent_deploy_token=get_str(flat, "qaAgent.deployToken")
             or get_str(flat, "qaAgent.deploy_token"),
             qa_agent_log_dir=f"{log_root}/qa-agent",
+            analysis_worker_enabled=_env_bool(flat, "qaAgent.analysisWorker.enabled", True),
+            analysis_worker_poll_seconds=get_int(flat, "qaAgent.analysisWorker.pollIntervalSeconds", 30),
+            analysis_worker_discover_batch=get_int(flat, "qaAgent.analysisWorker.discoverBatch", 3),
+            llm_desensitize_enabled=_env_bool(flat, "qaAgent.llmDesensitize.enabled", True),
             network_dict_enabled_sources=enabled_sources,
             network_dict_timeout_ms=get_int(flat, "archive.networkDict.timeout", 5000),
             network_dict_cache_ttl=get_int(flat, "archive.networkDict.cacheTtl", 3600),
@@ -147,6 +172,10 @@ class Settings:
             s.qa_agent_deploy_token = _env("QA_AGENT_DEPLOY_TOKEN")
         if _env("QA_AGENT_LOG_DIR"):
             s.qa_agent_log_dir = _env("QA_AGENT_LOG_DIR")
+        if os.environ.get("QA_AGENT_ANALYSIS_WORKER_ENABLED", "").strip():
+            s.analysis_worker_enabled = os.environ.get(
+                "QA_AGENT_ANALYSIS_WORKER_ENABLED", ""
+            ).strip().lower() in ("1", "true", "yes", "on")
 
         from pathlib import Path
 

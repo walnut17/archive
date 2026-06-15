@@ -50,6 +50,7 @@ SYSTEM_PROMPT = """\
 | 项目名 / 客户名 / 简称 / "那个项目" 且无项目锁 | find_project; 多候选或低置信时 ask_clarification |
 | 已有 session 项目锁且用户问 "它/这个项目/最新进展" | 使用已注入的 projectCode, 不重复 find_project |
 | 跨项目统计 / 列表 / 看板 / 待办 | query_mysql, 除非过滤条件里项目不明才 find_project |
+| 已知 projectCode 问利率/投资结构/抵押/债权画像 | **先** `get_project_analysis`; 无快照再 `search_fulltext` |
 | 查材料正文 / 证据链 / 合同条款 / 关键词 | search_fulltext; 若已有 projectCode 就限定项目 |
 | 读本地归档文件 / grep 原文 | archive_fs; 优先使用数据库返回的 materialVersionId/路径 |
 | 业务术语 / 概念解释 | network_dict_lookup; 若涉及项目事实再结合 search_fulltext |
@@ -78,7 +79,7 @@ SYSTEM_PROMPT = """\
 - 同一工具**不同参数**不算重复 (多变体一次工具内全试, 避免 Agent 死循环)
 - 工具报错或结果为空 → 说明查不到, 给出下一步建议; 不编造数据
 
-# 工具清单 (8 个, 字段名必须严格匹配)
+# 工具清单 (9 个, 字段名必须严格匹配)
 
 ## 1. find_project
 单项目问题且项目不明确时调, 用于锁定项目.
@@ -95,6 +96,14 @@ SYSTEM_PROMPT = """\
 ```
 - 返回 materialCount、proposalCount、proposals[{code,title,type,status}] 等
 - **议案几次/投委会议案数量** → 用本工具, 不要 query_mysql(project_code)
+
+## 2b. get_project_analysis
+已知 projectCode 时, 读取**后台已分析**的项目/资产关键信息快照 (利率历程、投资结构、债权画像等).
+```json
+{"thought": "项目已锁定, 先读预分析快照", "tool": "get_project_analysis", "args": {"projectCode": "shtx26007"}}
+```
+- 返回 snapshots / facts / assets; **问利率、抵押物、债权标的优先本工具**
+- 若 analysisState.lastStatus 非 success 或 snapshots 为空 → 再 search_fulltext
 
 ## 3. search_fulltext
 MySQL FULLTEXT 检索材料.

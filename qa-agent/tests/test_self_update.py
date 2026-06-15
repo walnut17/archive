@@ -59,7 +59,23 @@ def test_apply_zip_update_writes_files(qa_root: Path):
     assert (qa_root / "tools" / "tui.txt").read_bytes() == b"tui"
 
 
-def test_apply_zip_rejects_empty():
+def test_apply_zip_rejects_escape_via_symlink(qa_root: Path, tmp_path: Path):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    evil = outside / "evil.txt"
+    evil.write_text("hack", encoding="utf-8")
+    payload = _make_zip({"app/link.txt": b"placeholder"})
+    # 正常 zip 不能携带 symlink；验证 normalize 拒绝 .. 即可
+    with pytest.raises(ValueError):
+        su.apply_zip_update(_make_zip({"../outside/evil.txt": b"x"}))
+
+
+def test_safe_qa_path_blocks_parent(qa_root: Path):
+    with pytest.raises(ValueError, match="不允许"):
+        su._safe_qa_path("../../outside.py")
+
+
+def test_apply_zip_rejects_empty(qa_root: Path):
     with pytest.raises(ValueError, match="没有可更新"):
         su.apply_zip_update(_make_zip({}))
 

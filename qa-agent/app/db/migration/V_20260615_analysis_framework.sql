@@ -1,0 +1,2 @@
+-- 2026-06-15: 后台深度分析框架 (qa-agent analysis worker)
+-- 完整 DDL 见 deploy/sql/migrate_260615_analysis_framework.sql

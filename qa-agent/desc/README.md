@@ -14,6 +14,8 @@
 | [03-API与端点.md](./03-API与端点.md) | HTTP 路由、健康检查、热更新、版本对账 |
 | [04-部署与验收.md](./04-部署与验收.md) | 开发机→125 推送、重启陷阱、TUI 验收 |
 | [05-案例复盘.md](./05-案例复盘.md) | lmz 材料数 / 利率等真实 Case 与根因 |
+| [06-后台深度分析框架.md](./06-后台深度分析框架.md) | 异步分析队列、模板扩展、快照存储 |
+| [07-安全机制.md](./07-安全机制.md) | 热更新路径沙箱、LLM 脱敏 |
 
 ## 核心代码入口
 
@@ -24,6 +26,7 @@
 | ReAct 主循环 | `app/agent/engine.py` | 每步调用 `maybe_upgrade_step`、注入 `append_step_hints` |
 | 全文检索 | `app/agent/tools/search_fulltext.py` | 材料正文证据（利率/条款） |
 | 项目汇总 | `app/agent/tools/get_project_business_data.py` | 汇总字段（材料数等，**无利率正文**） |
+| 深度分析快照 | `app/analysis/` + `get_project_analysis` 工具 | 后台 LLM 提取的项目/资产关键信息 |
 
 ## 设计原则（一句话）
 

@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from app.services.path_sandbox import PathSandboxError, assert_under_root, resolve_under_root
+
 logger = logging.getLogger(__name__)
 
 QA_AGENT_ROOT = Path(__file__).resolve().parents[2]
@@ -62,13 +64,23 @@ def _normalize_zip_member(name: str) -> str | None:
     return "/".join(parts)
 
 
+def _safe_qa_path(rel: str) -> Path:
+    """解析为 qa-agent 根目录内的安全路径."""
+    try:
+        return resolve_under_root(QA_AGENT_ROOT, rel)
+    except PathSandboxError as e:
+        raise ValueError(str(e)) from e
+
+
 def apply_zip_update(zip_bytes: bytes) -> dict[str, Any]:
-    """解压 zip 到 qa-agent 目录（仅允许 app/tools/scripts）."""
+    """解压 zip 到 qa-agent 目录（仅允许 app/tools/scripts，禁止写出根目录）."""
     if len(zip_bytes) > MAX_ZIP_BYTES:
         raise ValueError(f"zip 超过上限 {MAX_ZIP_BYTES} 字节")
 
+    qa_root = QA_AGENT_ROOT.resolve()
     staging = Path(tempfile.mkdtemp(prefix="qa-agent-update-"))
-    backup_root = QA_AGENT_ROOT / ".update_backup" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    backup_root = qa_root / ".update_backup" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    assert_under_root(backup_root, qa_root)
     written: list[str] = []
     try:
         with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
@@ -81,6 +93,7 @@ def apply_zip_update(zip_bytes: bytes) -> dict[str, Any]:
                 rel = _normalize_zip_member(info.filename)
                 if rel is None:
                     raise ValueError(f"不允许的路径: {info.filename}")
+                _safe_qa_path(rel)
                 target = staging / rel
                 target.parent.mkdir(parents=True, exist_ok=True)
                 with zf.open(info) as src, open(target, "wb") as dst:
@@ -92,17 +105,16 @@ def apply_zip_update(zip_bytes: bytes) -> dict[str, Any]:
 
         backup_root.mkdir(parents=True, exist_ok=True)
         for rel in written:
-            src_live = QA_AGENT_ROOT / rel
-            if src_live.exists():
-                backup_dest = backup_root / rel
+            live = _safe_qa_path(rel)
+            if live.exists():
+                backup_dest = assert_under_root(backup_root / rel, qa_root)
                 backup_dest.parent.mkdir(parents=True, exist_ok=True)
-                if src_live.is_dir():
-                    shutil.copytree(src_live, backup_dest, dirs_exist_ok=True)
+                if live.is_dir():
+                    shutil.copytree(live, backup_dest, dirs_exist_ok=True)
                 else:
-                    shutil.copy2(src_live, backup_dest)
+                    shutil.copy2(live, backup_dest)
 
             staged = staging / rel
-            live = QA_AGENT_ROOT / rel
             live.parent.mkdir(parents=True, exist_ok=True)
             if staged.is_dir():
                 if live.exists():
@@ -111,7 +123,11 @@ def apply_zip_update(zip_bytes: bytes) -> dict[str, Any]:
             else:
                 shutil.copy2(staged, live)
 
-        for cache_dir in QA_AGENT_ROOT.rglob("__pycache__"):
+        for cache_dir in qa_root.rglob("__pycache__"):
+            try:
+                assert_under_root(cache_dir, qa_root)
+            except PathSandboxError:
+                continue
             shutil.rmtree(cache_dir, ignore_errors=True)
 
         return {
@@ -119,6 +135,7 @@ def apply_zip_update(zip_bytes: bytes) -> dict[str, Any]:
             "paths": written[:20],
             "backup_dir": str(backup_root),
             "version": read_version(),
+            "sandbox_root": str(qa_root),
         }
     finally:
         shutil.rmtree(staging, ignore_errors=True)
@@ -126,7 +143,7 @@ def apply_zip_update(zip_bytes: bytes) -> dict[str, Any]:
 
 def schedule_restart(config_json: str | None = None, log_dir: str | None = None) -> dict[str, Any]:
     """拉起独立 PowerShell 执行 stop+start（勿在 BackgroundTasks 里依赖本进程存活）."""
-    script = QA_AGENT_ROOT / "scripts" / "apply_update_and_restart.ps1"
+    script = assert_under_root(QA_AGENT_ROOT / "scripts" / "apply_update_and_restart.ps1", QA_AGENT_ROOT.resolve())
     log_path = Path(log_dir or "D:/archive/logs/qa-agent")
     log_path.mkdir(parents=True, exist_ok=True)
     spawn_log = log_path / "schedule_restart_spawn.log"
@@ -139,7 +156,7 @@ def schedule_restart(config_json: str | None = None, log_dir: str | None = None)
         logger.warning("非 Windows 环境，跳过自动重启；请手工重启 qa-agent")
         return {"ok": False, "error": "non-windows"}
 
-    cmd_wrapper = QA_AGENT_ROOT / "scripts" / "run_apply_restart.cmd"
+    cmd_wrapper = assert_under_root(QA_AGENT_ROOT / "scripts" / "run_apply_restart.cmd", QA_AGENT_ROOT.resolve())
     if not cmd_wrapper.is_file():
         logger.error("缺少重启 cmd 包装: %s", cmd_wrapper)
         return {"ok": False, "error": f"missing cmd wrapper: {cmd_wrapper}"}
