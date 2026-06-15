@@ -33,6 +33,9 @@ TASKS.md
 | 路由 ID | 类型 | Case 路径 | 状态 | 最后 Agent | 最后更新 | 摘要 |
 |---|---|---|---|---|---|---|
 | `round-2026-06-12-qa-agent-react-iteration` | DEBUG | [`test-to-settle/round-2026-06-12-qa-agent-react-iteration.md`](test-to-settle/round-2026-06-12-qa-agent-react-iteration.md) | `待审` | Coder (Auto) | 2026-06-12 | qa-agent ReAct 递增 + lmz 材料数工具链（T-0612-07/08） |
+| `plan-2026-06-15-analysis-framework-scaffold` | UPGRADE | [`upgrade_to_settle/plan-2026-06-15-analysis-framework-scaffold.md`](upgrade_to_settle/plan-2026-06-15-analysis-framework-scaffold.md) | `未开发` | — | 2026-06-15 | 分析脚手架：DDL + Worker + get_project_analysis（C-0615-02） |
+| `plan-2026-06-15-analysis-ownership-cutover` | UPGRADE | [`upgrade_to_settle/plan-2026-06-15-analysis-ownership-cutover.md`](upgrade_to_settle/plan-2026-06-15-analysis-ownership-cutover.md) | `未开发` | — | 2026-06-15 | Java 瘦身 + enqueue + fact/timepoint（C-0615-03，依赖 scaffold） |
+| `plan-2026-06-15-proposal-semantics` | UPGRADE | [`upgrade_to_settle/plan-2026-06-15-proposal-semantics.md`](upgrade_to_settle/plan-2026-06-15-proposal-semantics.md) | `开发中` | Sisyphus | 2026-06-15 | 议案 vs 维护计数语义（C-0615-01） |
 
 > **辅索引**（可选）：[`test-to-settle/STATUS.md`](test-to-settle/STATUS.md) · [`upgrade_to_settle/STATUS.md`](upgrade_to_settle/STATUS.md)  
 > **不在本表**：complexity 中转 · AT-* 自动化 · 已 CLOSED（见各 `done/`）

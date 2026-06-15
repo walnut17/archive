@@ -4,6 +4,7 @@ import com.archive.agent.AgentContext;
 import com.archive.entity.Project;
 import com.archive.repository.MaterialRepository;
 import com.archive.repository.ProjectRepository;
+import com.archive.repository.ProposalRepository;
 import com.archive.repository.TodoRepository;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
@@ -20,6 +21,7 @@ public class GetProjectBusinessDataTool implements AgentTool {
     private final ProjectRepository projectRepo;
     private final TodoRepository todoRepo;
     private final MaterialRepository materialRepo;
+    private final ProposalRepository proposalRepo;
 
     @Override
     public String name() {
@@ -57,6 +59,11 @@ public class GetProjectBusinessDataTool implements AgentTool {
         data.put("customerName", project.getCustomerName());
         data.put("todoCount", todoRepo.countByProjectIdAndStatus(project.getId(), "pending"));
         data.put("materialCount", materialRepo.countByProjectId(project.getId()));
+        long committee = proposalRepo.countCommitteeByProjectId(project.getId());
+        long maintenance = proposalRepo.countMaintenanceByProjectId(project.getId());
+        data.put("proposalCount", committee + maintenance);
+        data.put("committeeProposalCount", committee);
+        data.put("maintenanceBundleCount", maintenance);
         return ToolResult.ok(data);
     }
 

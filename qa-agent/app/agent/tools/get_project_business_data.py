@@ -8,6 +8,7 @@ from app.db.connection import db_cursor
 logger = logging.getLogger(__name__)
 
 _MAX_PROPOSALS = 10
+_MAINTENANCE_TYPES = frozenset({"维护", "材料维护"})
 
 
 def run(args: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
@@ -25,7 +26,12 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
                        JOIN proposal pr ON pr.id = m.proposal_id
                        WHERE pr.project_id = p.id AND m.deleted_at IS NULL) AS material_count,
                       (SELECT COUNT(*) FROM proposal pr
-                       WHERE pr.project_id = p.id AND pr.deleted_at IS NULL) AS proposal_count
+                       WHERE pr.project_id = p.id AND pr.deleted_at IS NULL
+                         AND pr.status <> '草稿'
+                         AND (pr.type IS NULL OR pr.type NOT IN ('维护', '材料维护'))) AS committee_count,
+                      (SELECT COUNT(*) FROM proposal pr
+                       WHERE pr.project_id = p.id AND pr.deleted_at IS NULL
+                         AND pr.type IN ('维护', '材料维护')) AS maintenance_count
                FROM project p WHERE p.code = %s AND p.deleted_at IS NULL""",
             (project_code,),
         )
@@ -38,6 +44,8 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
             """SELECT code, title, type, status
                FROM proposal
                WHERE project_id = %s AND deleted_at IS NULL
+                 AND status <> '草稿'
+                 AND (type IS NULL OR type NOT IN ('维护', '材料维护'))
                ORDER BY id ASC
                LIMIT %s""",
             (project_id, _MAX_PROPOSALS),
@@ -52,6 +60,12 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
             for r in (cur.fetchall() or [])
         ]
 
+        committee_count = int(row["committee_count"] or 0)
+        maintenance_count = int(row["maintenance_count"] or 0)
+
+        logger.info("get_project_business_data: project=%s committee=%d maintenance=%d",
+                     project_code, committee_count, maintenance_count)
+
         return {
             "projectCode": row["code"],
             "projectName": row["name"],
@@ -61,6 +75,8 @@ def run(args: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
             "category": row["category"],
             "todoCount": row["todo_count"],
             "materialCount": int(row["material_count"] or 0),
-            "proposalCount": int(row["proposal_count"] or 0),
+            "proposalCount": committee_count + maintenance_count,
+            "committeeProposalCount": committee_count,
+            "maintenanceBundleCount": maintenance_count,
             "proposals": proposals,
         }
