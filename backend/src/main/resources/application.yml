@@ -88,6 +88,9 @@ app:
     enabled: ${QA_AGENT_ENABLED:true}
     base-url: http://${app.qa-agent.host:127.0.0.1}:${app.qa-agent.port:8001}
     timeout-seconds: ${QA_AGENT_TIMEOUT:120}
+    analysis-enqueue:
+      enabled: ${QA_AGENT_ANALYSIS_ENQUEUE:true}
+      reason: parse_complete
   glm:
     api-key:
     chat-url: https://open.bigmodel.cn/api/paas/v4/chat/completions

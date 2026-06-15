@@ -65,6 +65,24 @@ public class QaAgentClient {
         }
     }
 
+    /**
+     * 入队后台深度分析任务 (cutover §J1).
+     * 上传 parse 成功后调用，enqueue 失败只打 warn 不抛异常.
+     */
+    public void enqueueAnalysis(Long projectId, Long materialVersionId, String reason) {
+        try {
+            post("/v1/analysis/enqueue", Map.of(
+                    "project_id", projectId,
+                    "material_version_id", materialVersionId,
+                    "reason", reason
+            ), Void.class);
+            log.info("enqueueAnalysis OK: projectId={}, mvId={}", projectId, materialVersionId);
+        } catch (Exception e) {
+            log.warn("enqueueAnalysis failed (non-blocking): projectId={}, mvId={}, err={}",
+                    projectId, materialVersionId, e.getMessage());
+        }
+    }
+
     public boolean isHealthy() {
         try {
             var factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();

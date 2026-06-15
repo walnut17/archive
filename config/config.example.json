@@ -127,6 +127,11 @@
     "host": "127.0.0.1",
     "port": 8001,
     "maxIterations": 5,
-    "deployToken": ""
+    "deployToken": "",
+    "analysisWorker": {
+      "enabled": true,
+      "pollSeconds": 30,
+      "discoverBatch": 3
+    }
   }
 }

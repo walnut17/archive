@@ -57,6 +57,8 @@ public class MaterialVersionService {
     private ApplicationEventPublisher eventPublisher;
     @Autowired
     private ProjectService projectService;
+    @Autowired(required = false)
+    private com.archive.qaagent.QaAgentClient qaAgentClient;
 
     /**
      * 上传新版本(自动算 version_no:同 material 已有最大 + 1).
@@ -253,18 +255,33 @@ public class MaterialVersionService {
                 return;
             }
 
-            // 1. 字段抽取引擎
-            try {
-                extractionEngine.extract(materialVersionId);
-            } catch (Exception e) {
-                log.warn("Extraction engine call failed for version {}: {}", materialVersionId, e.getMessage());
-            }
+            // 1. 后台深度分析(cutover): 若 analysisEnqueue 开启则入队 Python qa-agent
+            if (analysisEnqueueEnabled && qaAgentClient != null) {
+                try {
+                    Long projectId = material.getProjectId() != null
+                            ? material.getProjectId()
+                            : (proposalRepository.findById(material.getProposalId())
+                                    .map(p -> p.getProject().getId()).orElse(null));
+                    if (projectId != null) {
+                        qaAgentClient.enqueueAnalysis(projectId, materialVersionId, "parse_complete");
+                    }
+                } catch (Exception e) {
+                    log.warn("enqueueAnalysis failed (non-blocking) for version {}: {}", materialVersionId, e.getMessage());
+                }
+            } else {
+                // 旧路径: 字段抽取引擎
+                try {
+                    extractionEngine.extract(materialVersionId);
+                } catch (Exception e) {
+                    log.warn("Extraction engine call failed for version {}: {}", materialVersionId, e.getMessage());
+                }
 
-            // 2. 时点抽取引擎
-            try {
-                timepointExtractor.extractTimepoints(materialVersionId);
-            } catch (Exception e) {
-                log.warn("Timepoint extraction failed for version {}: {}", materialVersionId, e.getMessage());
+                // 旧路径: 时点抽取引擎
+                try {
+                    timepointExtractor.extractTimepoints(materialVersionId);
+                } catch (Exception e) {
+                    log.warn("Timepoint extraction failed for version {}: {}", materialVersionId, e.getMessage());
+                }
             }
 
             // 3. 发布材料分类事件(触发规则引擎)
