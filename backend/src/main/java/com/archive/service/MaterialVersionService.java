@@ -262,10 +262,9 @@ public class MaterialVersionService {
             // 1. 后台深度分析(cutover): 若 analysisEnqueue 开启则入队 Python qa-agent
             if (analysisEnqueueEnabled && qaAgentClient != null) {
                 try {
-                    Long projectId = material.getProjectId() != null
-                            ? material.getProjectId()
-                            : (proposalRepository.findById(material.getProposalId())
-                                    .map(p -> p.getProject().getId()).orElse(null));
+                    Long projectId = proposalRepository.findById(material.getProposalId())
+                            .map(Proposal::getProjectId)
+                            .orElse(null);
                     if (projectId != null) {
                         qaAgentClient.enqueueAnalysis(projectId, materialVersionId, "parse_complete");
                     }

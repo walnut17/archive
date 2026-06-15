@@ -146,7 +146,7 @@ public class QaAgentClient {
                 .body(Mono.just(body), Map.class)
                 .retrieve()
                 .bodyToFlux(String.class)
-                .flatMapMany(line -> Flux.fromIterable(parseSseLine(line)))
+                .flatMap(line -> Flux.fromIterable(parseSseLine(line)))
                 .onErrorResume(e -> {
                     log.warn("qa-agent stream error: {}", e.getMessage());
                     StreamEvent err = new StreamEvent();
