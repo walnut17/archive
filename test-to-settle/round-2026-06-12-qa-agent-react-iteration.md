@@ -124,6 +124,56 @@ summary: T-0612-07/08 — ReAct 递增提示 + find 后强制 get_project_busine
 
 ----- agent-block end -----
 
+----- agent-block begin -----
+role: Recorder
+agent: qa-agent专修专测 worker
+time: 2026-06-15
+ref: T-0612-07, T-0612-08
+source: AUTO
+summary: 离线 64/65 pytest；125 live 工具链升级 OK 但 materialCount SQL 炸；流式无 JSON 泄漏
+
+**环境**：开发机 → `182.168.1.125:8001` · commit `1124e0a`（125 已部署新 ReAct 逻辑）
+
+### 自动化
+
+| 项 | 结果 | 说明 |
+|---|---|---|
+| `pytest tests/ -q`（离线） | **64 passed, 1 failed** | `test_streaming.py::test_run_agent_stream_yields_token_events` — `session_id` 触发 `load_memory` 连 MySQL，未 mock `db_cursor` |
+| `test_react_helpers.py` | **4/4 PASS** | `maybe_upgrade_step` / `try_recover_material_count_loop` 等 T-0612-07 回归 |
+| `test_api_http_live.py -m live` | **7/7 PASS** | AT-001 契约冒烟仍绿 |
+
+### T-0612-07（125 live · `/v1/ask`）
+
+问句：`lmz项目下有多少份材料？`
+
+| 验收项 | 结果 |
+|---|---|
+| 无连续同参双 `find_project` | ✅ 步序 `find_project` → `get_project_business_data` ×2 → `FINAL_ANSWER` |
+| 答案含具体材料份数 | ❌ 答案为「抱歉，多次尝试未找到匹配结果…」 |
+| 第 2 步换工具 | ✅ 引擎已升级至 `get_project_business_data` |
+
+**根因（live 步 observation）**：
+
+```text
+步 2/3 get_project_business_data → ERROR: (1054, "Unknown column 'p.stage' in 'field list'")
+步 4 引擎「检测到重复工具调用，强制结束」
+```
+
+`get_project_business_data.py` SELECT 含 `p.stage`，125 `archive_db.project` 无此列（见 `docs/architecture/DATABASE.md` 无 stage）。
+
+### T-0612-08（125 live · `/v1/ask/stream`）
+
+| 验收项 | 结果 |
+|---|---|
+| 答案区无 raw JSON / `` ```json `` | ✅ `stream_acc` 仅人类可读 apology 文案，无 `find_project`/`"thought"` 泄漏 |
+| `done.answer` 终稿 | ✅ 与流式累积一致 |
+
+### 结论
+
+**REQUEST_CHANGES** — ReAct 递增与工具升级逻辑已生效，T-0612-08 流式展示 OK；**T-0612-07 主验收未过**（`get_project_business_data` SQL 与 125 库表不一致 → 材料数无法返回）。Coder 须修 SQL（去掉或兼容 `p.stage`）并补 `test_streaming` 的 `db_cursor` mock；修后 125 `start.ps1 -Force` 重验 lmz。
+
+----- agent-block end -----
+
 ---
 
 ## 3. 关单检查

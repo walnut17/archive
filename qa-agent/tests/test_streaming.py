@@ -32,7 +32,7 @@ def test_sse_event_format():
     assert parsed["iteration"] == 1
 
 
-def test_run_agent_stream_yields_token_events(monkeypatch):
+def test_run_agent_stream_yields_token_events(monkeypatch, mock_db_cursor):
     """run_agent_stream 应该 yield token 事件 + step + done."""
     from app.agent import engine
 
